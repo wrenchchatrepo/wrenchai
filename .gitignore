@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+
+# Environment variables
+.env
+
+# Project-specific
+Archive/
+
+# OS-specific
+.DS_Store

@@ -1,0 +1,12 @@
+role: Super
+name: DefaultSuper
+description: Default configuration for the Super agent.
+llm: "gemini-1.5-flash"
+tools:
+  - web_search
+  - rag
+  - memory
+  - code_generation
+default_uncertainty_threshold: 0.8
+cost_estimation_enabled: true
+max_cost_per_task: 1.00

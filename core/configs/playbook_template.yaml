@@ -1,0 +1,12 @@
+name: "REPLACE_WITH_PLAYBOOK_NAME"
+description: "REPLACE_WITH_PLAYBOOK_DESCRIPTION"
+steps:
+  - step_id: 1
+    description: "REPLACE_WITH_STEP_DESCRIPTION"
+    action: "REPLACE_WITH_ACTION"
+    input: "REPLACE_WITH_INPUT_DESCRIPTION"
+    expected_output: "REPLACE_WITH_OUTPUT_DESCRIPTION"
+    error_handling:
+      type: "retry"
+      max_retries: 3
+      alternative_action: "REPLACE_WITH_ALTERNATIVE_ACTION"

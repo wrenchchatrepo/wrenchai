@@ -1,0 +1,8 @@
+role: Journey
+name: "REPLACE_WITH_AGENT_NAME"
+description: "REPLACE_WITH_AGENT_DESCRIPTION"
+llm: "REPLACE_WITH_LLM"
+tools:
+  - "REPLACE_WITH_TOOL_1"
+  - "REPLACE_WITH_TOOL_2"
+playbook: "REPLACE_WITH_PLAYBOOK_FILE.yaml"

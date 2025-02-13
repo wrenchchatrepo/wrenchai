@@ -1,0 +1,11 @@
+name: Example Playbook
+description: A simple example playbook.
+steps:
+  - step_id: 1
+    description: "Perform a web search."
+    action: "web_search"
+    input: "user_query"
+    expected_output: "A list of search results."
+    error_handling:
+      type: "retry"
+      max_retries: 2

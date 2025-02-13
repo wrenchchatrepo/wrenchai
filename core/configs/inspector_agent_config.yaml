@@ -1,0 +1,14 @@
+role: Inspector
+name: DefaultInspector
+description: Default configuration for the Inspector agent.
+llm: "gemini-1.5-flash"
+tools:
+  - memory
+  - data_analysis
+  - specialized_llm
+acceptance_threshold: 0.9
+qc_llms:
+  code_quality: "code_review_llm_v2"
+  content_quality: "content_quality_llm_v1"
+  redaction_accuracy: "redaction_llm_v3"
+cost_monitoring_enabled: true

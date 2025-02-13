@@ -1,0 +1,7 @@
+# requirements.txt (core framework)
+PyYAML
+requests # For making HTTP requests (e.g., web search, API calls)
+tiktoken #for token counting.
+openai #for access to openai models
+anthropic #for access to anthropic models
+google-api-python-client #for access to google models
