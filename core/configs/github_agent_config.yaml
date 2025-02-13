@@ -1,0 +1,44 @@
+# GitHub Journey Agent Configuration
+
+# Agent Configuration
+name: GitHubAgent
+description: Journey Agent specialized for GitHub project management
+llm: "gemini-1.5-flash"  # For generating descriptions, analyzing tasks
+
+# GitHub Configuration
+github_token: ${GITHUB_TOKEN}  # Will be replaced with environment variable
+github_repository: "wrenchchatrepo/wrenchai"
+
+# Templates Configuration
+template_directory: "core/playbooks/github_playbooks/templates"
+default_template: "task"
+
+# Project Board Configuration
+default_project: "MVP Development"
+default_columns:
+  - "To Do"
+  - "In Progress"
+  - "Review"
+  - "Done"
+
+# Label Configuration
+label_colors:
+  phase: "C2E0C6"  # Light Green
+  priority: "D93F0B"  # Red
+  component: "0366D6"  # Blue
+  status: "FEF2C0"  # Yellow
+  type: "BFD4F2"  # Light Blue
+  special: "7057FF"  # Purple
+
+# Issue Configuration
+default_labels:
+  - "status: ready"
+  - "type: feature"
+
+# Error Handling
+max_retries: 3
+retry_delay: 1  # seconds
+
+# Logging
+log_level: "INFO"
+log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
