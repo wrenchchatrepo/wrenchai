@@ -4,33 +4,99 @@
 import os
 import yaml
 import logging
-from typing import Dict, List, Any, Optional, Callable
-from pydantic_ai import Model, field
+from typing import Dict, List, Any, Optional, Callable, TypeVar, Generic, Union
+from dataclasses import dataclass
+from pydantic_ai import Agent as PydanticAgent, RunContext
+from pydantic import BaseModel
 from core.config_loader import load_config, validate_playbook_configuration
 
-class Agent(Model):
+# Define dependency and output types
+T = TypeVar('T')  # For dependencies
+O = TypeVar('O')  # For output
+
+@dataclass
+class AgentDependencies:
+    """Dependencies for agents"""
+    tool_registry: Any = None
+    bayesian_engine: Any = None
+
+class ToolResult(BaseModel, Generic[T]):
+    """Result from a tool execution"""
+    success: bool
+    data: Union[T, Dict[str, Any]]
+    error: Optional[str] = None
+
+class Agent(Generic[T, O]):
     """Base agent class powered by Pydantic-AI"""
-    role: str
-    state: Dict[str, Any] = {}
-    assigned_tools: List[str] = []
     
-    @field.function
-    def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def __init__(self, 
+                role: str, 
+                model: str,
+                instructions: str,
+                dependencies: Optional[T] = None,
+                tools: Optional[List[str]] = None):
+        """Initialize a Pydantic-AI agent
+        
+        Args:
+            role: The agent's role name
+            model: The LLM model to use (e.g., 'claude-3-sonnet')
+            instructions: Agent behavior instructions
+            dependencies: Optional dependencies for the agent
+            tools: Optional list of tool names that the agent can use
+        """
+        self.role = role
+        self.state = {}
+        self.assigned_tools = tools or []
+        
+        # Create the Pydantic-AI agent
+        self.agent = PydanticAgent(
+            model,
+            deps_type=T,
+            output_type=O,
+            instructions=instructions
+        )
+        
+        # Store dependencies
+        self.dependencies = dependencies
+        
+        # Register tools methods
+        self._register_tools()
+        
+    def _register_tools(self):
+        """Register tools with the agent"""
+        
+        @self.agent.tool
+        async def use_tool(ctx: RunContext[T], tool_name: str, parameters: Dict[str, Any]) -> ToolResult:
+            """Use a tool from the available toolset"""
+            if tool_name not in self.assigned_tools:
+                return ToolResult(
+                    success=False,
+                    data={},
+                    error=f"Tool '{tool_name}' is not available to this agent"
+                )
+                
+            try:
+                # This is where we'd call the tool registry
+                # Placeholder for now
+                result = {"status": "success", "tool": tool_name, "parameters": parameters}
+                return ToolResult(success=True, data=result)
+            except Exception as e:
+                return ToolResult(success=False, data={}, error=str(e))
+        
+        @self.agent.tool
+        async def update_beliefs(ctx: RunContext[T], evidence: Dict[str, Any]) -> ToolResult:
+            """Update belief state with new evidence"""
+            try:
+                # This is where we'd call the Bayesian engine
+                # Placeholder for now
+                self.state.update(evidence)
+                return ToolResult(success=True, data=self.state)
+            except Exception as e:
+                return ToolResult(success=False, data={}, error=str(e))
+                
+    async def process(self, input_data: Dict[str, Any]) -> O:
         """Process input data according to agent role"""
-        # This will be implemented by the LLM
-        pass
-    
-    @field.function
-    def use_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
-        """Use a tool from the available toolset"""
-        # This will be implemented by the LLM
-        pass
-    
-    @field.function
-    def update_beliefs(self, evidence: Dict[str, Any]) -> Dict[str, Any]:
-        """Update belief state with new evidence"""
-        # This will be implemented by the LLM
-        pass
+        return await self.agent.run(self.dependencies, input_data)
 
 class AgentManager:
     """Factory and orchestrator for agent instances"""
@@ -40,6 +106,7 @@ class AgentManager:
         self.config_dir = config_dir
         self.agents = {}
         self.tool_registry = None  # Will be set by the system
+        self.bayesian_engine = None  # Will be set by the system
         
         # Load configurations
         self.agent_configs = load_config(os.path.join(config_dir, "agents.yaml"))
@@ -53,6 +120,10 @@ class AgentManager:
         """Set the tool registry for this agent manager"""
         self.tool_registry = tool_registry
     
+    def set_bayesian_engine(self, bayesian_engine):
+        """Set the Bayesian engine for this agent manager"""
+        self.bayesian_engine = bayesian_engine
+    
     def initialize_agent(self, role_name: str) -> Agent:
         """Initialize an agent with a specific role"""
         # Find the role configuration
@@ -62,8 +133,19 @@ class AgentManager:
         if not role_config:
             raise ValueError(f"Agent role not found: {role_name}")
         
+        # Create dependencies
+        dependencies = AgentDependencies(
+            tool_registry=self.tool_registry,
+            bayesian_engine=self.bayesian_engine
+        )
+        
         # Create the agent instance
-        agent = Agent(role=role_name)
+        agent = Agent[AgentDependencies, Dict[str, Any]](
+            role=role_name,
+            model=role_config['model'],
+            instructions=role_config['system_prompt'],
+            dependencies=dependencies
+        )
         
         # Store the agent
         agent_id = id(agent)
@@ -89,10 +171,24 @@ class AgentManager:
                     final_tool_names.add(required_tool)
                     logging.info(f"Auto-adding required dependency {required_tool} for {tool_name}")
         
-        # Assign final tool set to agent
-        self.agents[agent_id].assigned_tools = list(final_tool_names)
+        # Create a new agent with the assigned tools
+        agent = self.agents[agent_id]
+        role_config = next((r for r in self.agent_configs['agent_roles'] 
+                            if r['name'] == agent.role), None)
         
-        logging.info(f"Agent {agent_id} assigned tools: {self.agents[agent_id].assigned_tools}")
+        # Create a new agent with updated tools
+        new_agent = Agent[AgentDependencies, Dict[str, Any]](
+            role=agent.role,
+            model=role_config['model'],
+            instructions=role_config['system_prompt'],
+            dependencies=agent.dependencies,
+            tools=list(final_tool_names)
+        )
+        
+        # Replace the agent in the registry
+        self.agents[agent_id] = new_agent
+        
+        logging.info(f"Agent {agent_id} assigned tools: {new_agent.assigned_tools}")
     
     async def run_workflow(self, playbook_name: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Run a workflow defined in a playbook"""
