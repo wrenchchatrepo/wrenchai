@@ -6,12 +6,53 @@ __pycache__/
 .Python
 venv/
 env/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Environment variables
 .env
 
 # Project-specific
-Archive/
+archive/
+wrenchai_backup/
+*.log
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.devcontainer/
 
 # OS-specific
 .DS_Store
+Thumbs.db
+
+# Documentation/Temp
+docs/Bayes_Theorem.html
+streamlit_app/Streamlit_UI.html
+.$*
+
+# Scripts
+create_doc_issues.sh
+create_labels.sh
+create_missing_labels.sh
+create_mvp_issues.sh
+create_mvp_phase2_issues.sh
+get_refresh_token.js
+test_stripe.js
+
+# Temporary/Personal
+ML_Models.md
+MVP_Tasks.md
+README_wrenchai.md
+wrenchai_README.md
+wrenchai_outline.md
+agenticFramework.drawio
+agenticFramework.pdf
+agenticFrameworkParts.pdf
