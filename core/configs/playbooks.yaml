@@ -1,0 +1,100 @@
+playbooks:
+  - name: collaborative_writing
+    description: Create content with review cycles
+    workflow:
+      - step_id: collaborative_draft
+        type: partner_loop
+        description: "Write and review document collaboratively"
+        agents:
+          creator: JourneyAgent
+          reviewer: InspectorAgent
+        roles:
+          - role: creator
+            operation: "draft_content"
+          - role: reviewer
+            operation: "provide_feedback"
+        iterations: 3
+        next: finalize_document
+      - step_id: finalize_document
+        type: standard
+        description: "Finalize the document"
+        agent: SuperAgent
+        operation: "finalize_content"
+    tools_allowed:
+      - web_search
+      - supabase
+      - mcp
+    agents:
+      - JourneyAgent
+      - InspectorAgent
+      - SuperAgent
+  
+  - name: data_analysis
+    description: Process and analyze data
+    workflow:
+      - step_id: process_data
+        type: parallel
+        description: "Process data concurrently"
+        agents:
+          - InspectorAgent:validate
+          - JourneyAgent:transform
+        input_distribution: 
+          type: split
+          field: "datasets"
+        output_aggregation: 
+          type: merge
+          strategy: "combine_results"
+        next: analyze_results
+      - step_id: analyze_results
+        type: standard
+        description: "Analyze processed data"
+        agent: SuperAgent
+        operation: "analyze_data"
+    tools_allowed:
+      - code_execution
+      - bayesian_update
+    agents:
+      - InspectorAgent
+      - JourneyAgent
+      - SuperAgent
+      
+  - name: github_repository_setup
+    description: Set up a new GitHub repository with initial structure
+    workflow:
+      - step_id: validate_inputs
+        type: standard
+        description: "Validate inputs and requirements"
+        agent: InspectorAgent
+        operation: "validate_repository_inputs"
+        next: initialize_repository
+      - step_id: initialize_repository
+        type: standard
+        description: "Initialize repository structure"
+        agent: GithubJourneyAgent
+        operation: "initialize_repository"
+        tools:
+          - github_tool
+        next: evaluate_setup
+      - step_id: evaluate_setup
+        type: standard
+        description: "Evaluate setup success probability"
+        agent: SuperAgent
+        operation: "evaluate_probability"
+        tools:
+          - bayesian_update
+        next: finalize_configuration
+      - step_id: finalize_configuration
+        type: standard
+        description: "Finalize repository configuration"
+        agent: GithubJourneyAgent
+        operation: "finalize_repository"
+        tools:
+          - github_tool
+    tools_allowed:
+      - github_tool
+      - code_execution
+      - bayesian_update
+    agents:
+      - GithubJourneyAgent
+      - InspectorAgent 
+      - SuperAgent

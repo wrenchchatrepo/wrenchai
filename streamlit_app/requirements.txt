@@ -1,2 +1,8 @@
 # streamlit_app/requirements.txt
-streamlit
+streamlit>=1.44.0
+pandas>=2.0.0
+numpy>=1.25.0
+matplotlib>=3.7.0
+pyyaml>=6.0.0
+requests>=2.32.0
+pillow>=10.0.0

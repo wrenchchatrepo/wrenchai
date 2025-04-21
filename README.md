@@ -1,6 +1,39 @@
 # Wrench AI
 
-This repository contains the code for Wrench AI, an open-source agentic AI framework. The framework allows you to define and orchestrate intelligent agents to perform complex tasks by combining the power of Large Language Models (LLMs) with Bayesian reasoning and a flexible tool integration system.
+This repository contains the code for Wrench AI, an open-source agentic AI framework. The framework allows you to define and orchestrate intelligent agents to perform complex tasks by combining the power of Large Language Models (LLMs) with Bayesian reasoning, Model Context Protocol (MCP), and a flexible tool integration system.
+
+## Architecture
+
+```
+┌───────────────┐    ┌────────────────┐    ┌─────────────────┐
+│  Streamlit UI │────│ FastAPI Backend │────│ Agent Framework │
+└───────────────┘    └────────────────┘    └─────────────────┘
+                                                │       │
+                            ┌─────────────────┐ │       │ ┌────────────────┐
+                            │ Bayesian Engine  │─┘       └─│   Tool System  │
+                            └─────────────────┘           └────────────────┘
+```
+
+## Key Features
+
+- **Pydantic-AI Integration**: Strongly typed LLM agent interfaces with validation
+- **PyMC Integration**: Bayesian reasoning and decision-making under uncertainty
+- **YAML Configuration**: Easy-to-edit configuration for agents, tools, and workflows
+- **Dynamic Tool Registry**: Plug-and-play tools with dependency resolution
+- **FastAPI Backend**: Performant API with websocket support
+- **Streamlit UI**: User-friendly interface for interacting with agents
+- **Model Context Protocol**: Flexible context management across multiple backends
+
+## Agent Interaction Patterns
+
+The framework supports various agent interaction patterns:
+
+1. **Work-in-Parallel**: Multiple agents working concurrently
+2. **Self-Feedback Loop**: Agent improves its output through iteration
+3. **Partner-Feedback Loop**: Agents collaborate by iteratively refining each other's work
+4. **Conditional Process**: Workflow with conditional branching
+5. **Agent-versus-Agent**: Competitive agent interactions
+6. **Handoff Pattern**: Sequential workflow with clear transitions
 
 ## Getting Started
 
@@ -18,13 +51,21 @@ This repository contains the code for Wrench AI, an open-source agentic AI frame
     pip install -r streamlit_app/requirements.txt
     ```
 
-3.  **Run the Streamlit App:**
+3.  **Run the FastAPI Backend:**
+
+    ```bash
+    uvicorn core.api:app --reload
+    ```
+
+    This will start the backend API server.
+
+4.  **Run the Streamlit App:**
 
     ```bash
     streamlit run streamlit_app/app.py
     ```
 
-    This will open the application in your web browser.
+    This will open the application in your web browser. The UI will connect to the backend API.
 
 ## Project Structure
 
@@ -44,8 +85,17 @@ wrenchai/
 │   │   ├── super_agent.py      # Super agent class
 │   │   ├── inspector_agent.py  # Inspector agent class
 │   │   ├── journey_agent.py    # Base class for Journey agents
+│   │   ├── github_journey_agent.py # GitHub specialized journey agent
 │   │   └── __init__.py
+│   ├── agent_system.py # Pydantic-AI agent management system
+│   ├── api.py          # FastAPI backend implementation
+│   ├── bayesian_engine.py # PyMC-based Bayesian reasoning engine
+│   ├── config_loader.py  # Configuration loading and validation
+│   ├── tool_system.py    # Tool registry and management
 │   ├── configs/        # YAML configuration files
+│   │   ├── agents.yaml   # Agent role definitions
+│   │   ├── tools.yaml    # Tool definitions with dependencies
+│   │   ├── playbooks.yaml # Workflow definitions
 │   │   ├── super_agent_config.yaml
 │   │   ├── inspector_agent_config.yaml
 │   │   ├── journey_agent_template.yaml
@@ -54,8 +104,11 @@ wrenchai/
 │   ├── playbooks/      # Playbook definitions (YAML)
 │   │   └── example_playbook.yaml # Example playbook
 │   ├── tools/          # Tool implementations
-│   │   ├── web_search.py       # Example tool: Web search
-│   │   ├── code_execution.py    # Example tool: Code execution
+│   │   ├── web_search.py      # Example tool: Web search
+│   │   ├── code_execution.py  # Example tool: Code execution
+│   │   ├── github_tool.py     # GitHub integration tool
+│   │   ├── mcp.py             # Model Context Protocol implementation
+│   │   ├── bayesian_tools.py  # PyMC bridge for bayesian reasoning
 │   │   ├── __init__.py
 │   │   └── ...  # Other tools
 │   ├── utils.py        # Utility functions (e.g., cost calculation, logging)
@@ -67,14 +120,19 @@ wrenchai/
 ```
 
 *   **`core/`**: Contains the core logic of the agentic framework, including agent definitions, configuration files, playbooks, and tools.
-*   **`core/agents/`**: Defines the `SuperAgent`, `InspectorAgent`, and `JourneyAgent` classes.
-*   **`core/configs/`**: Stores YAML configuration files for agents, playbooks, and pricing data.
-*   **`core/playbooks/`**: Contains example playbooks in YAML format.
-*   **`core/tools/`**: Implements the tools that agents can use (e.g., web search, code execution).
-*   **`core/utils.py`**: Provides utility functions like cost calculation and logging.
-*   **`streamlit_app/`**: Contains the code for the Streamlit user interface.
-*   **`docker/`**:  Will contain Dockerfiles and other Docker-related files for containerization (future).
-*   **`tests/`**: Will contain unit tests for the framework (future).
+*   **`core/agents/`**: Defines the agent classes (`SuperAgent`, `InspectorAgent`, `JourneyAgent`, etc.)
+*   **`core/agent_system.py`**: Implements the Pydantic-AI based agent system
+*   **`core/api.py`**: Provides the FastAPI backend endpoints
+*   **`core/bayesian_engine.py`**: Implements the PyMC-based Bayesian reasoning engine
+*   **`core/config_loader.py`**: Handles configuration loading and validation
+*   **`core/tool_system.py`**: Manages the tool registry and dependencies
+*   **`core/configs/`**: Stores YAML configuration files for agents, playbooks, and tools
+*   **`core/playbooks/`**: Contains example playbooks in YAML format
+*   **`core/tools/`**: Implements tools that agents can use (web search, MCP, Bayesian reasoning, etc.)
+*   **`core/utils.py`**: Provides utility functions
+*   **`streamlit_app/`**: Contains the Streamlit user interface
+*   **`docker/`**:  Contains Docker-related files (future)
+*   **`tests/`**: Contains unit tests (future)
 
 ## Roadmap
 

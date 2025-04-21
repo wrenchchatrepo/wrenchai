@@ -1,0 +1,65 @@
+tool_dependencies:
+  - primary: supabase
+    requires: mcp
+  - primary: chromadb
+    requires: mcp
+  - primary: pinecone
+    requires: mcp
+
+tools:
+  - name: mcp
+    description: Core Model Context Protocol operations
+    parameters:
+      operation: string
+      context_id: string
+      data: object
+      query: string
+    implementation: core.tools.mcp.standard_operations
+    
+  - name: supabase
+    description: Supabase-specific MCP implementation
+    parameters:
+      operation: string
+      table: string
+      data: object
+      filters: object
+    implementation: core.tools.supabase.execute_operation
+    
+  - name: chromadb
+    description: ChromaDB vector database integration
+    parameters:
+      operation: string
+      collection: string
+      vectors: array
+      metadata: object
+    implementation: core.tools.chromadb.execute_operation
+    
+  - name: web_search
+    description: Search the web for information
+    parameters:
+      query: string
+      max_results: integer
+    implementation: core.tools.web_search.search
+
+  - name: code_execution
+    description: Execute code snippets
+    parameters:
+      language: string
+      code: string
+      timeout: integer
+    implementation: core.tools.code_execution.execute
+
+  - name: github_tool
+    description: Interact with GitHub repositories
+    parameters:
+      action: string
+      repo: string
+      payload: object
+    implementation: core.tools.github_tool.github_action
+
+  - name: bayesian_update
+    description: Update Bayesian beliefs using PyMC
+    parameters:
+      model: string
+      evidence: object
+    implementation: core.tools.bayesian_tools.update_beliefs

@@ -1,7 +1,18 @@
 # requirements.txt (core framework)
-PyYAML
-requests # For making HTTP requests (e.g., web search, API calls)
-tiktoken #for token counting.
-openai #for access to openai models
-anthropic #for access to anthropic models
-google-api-python-client #for access to google models
+PyYAML>=6.0.2
+requests>=2.32.3  # For making HTTP requests (e.g., web search, API calls)
+tiktoken>=0.6.0   # For token counting
+openai>=1.74.0    # For OpenAI models
+anthropic>=0.49.0 # For Claude models
+google-api-python-client>=2.123.0  # For Google models
+
+# New dependencies for enhanced framework
+pydantic>=2.10.0
+pydantic-ai>=0.1.3
+pydantic-ai-slim>=0.1.3
+fastapi>=0.115.0
+uvicorn>=0.34.0
+streamlit>=1.44.0
+pymc>=5.22.0
+logfire>=3.14.0
+starlette>=0.40.0
