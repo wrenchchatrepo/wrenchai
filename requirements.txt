@@ -10,6 +10,7 @@ google-api-python-client>=2.123.0  # For Google models
 pydantic>=2.10.0
 pydantic-ai>=0.1.3
 pydantic-ai-slim>=0.1.3
+pydantic-ai-slim[duckduckgo] # For DuckDuckGo search capability
 fastapi>=0.115.0
 uvicorn>=0.34.0
 streamlit>=1.44.0
