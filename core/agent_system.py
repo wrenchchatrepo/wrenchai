@@ -6,7 +6,15 @@ import yaml
 import logging
 from typing import Dict, List, Any, Optional, Callable, TypeVar, Generic, Union
 from dataclasses import dataclass
-from pydantic_ai import Agent as PydanticAgent, RunContext
+from pydantic_ai import Agent as PydanticAgent, RunContext, Agent
+from typing import Optional, List
+
+# Try to import MCP components
+try:
+    from pydantic_ai.mcp import MCPServerHTTP, MCPServerStdio
+    MCP_AVAILABLE = True
+except ImportError:
+    MCP_AVAILABLE = False
 from pydantic import BaseModel
 from core.config_loader import load_config, validate_playbook_configuration
 
@@ -20,11 +28,17 @@ class AgentDependencies:
     tool_registry: Any = None
     bayesian_engine: Any = None
 
-class ToolResult(BaseModel, Generic[T]):
-    """Result from a tool execution"""
-    success: bool
+class ToolSuccess(BaseModel, Generic[T]):
+    """Successful result from a tool execution"""
     data: Union[T, Dict[str, Any]]
-    error: Optional[str] = None
+
+class ToolError(BaseModel):
+    """Error result from a tool execution"""
+    error: str
+    details: Optional[Dict[str, Any]] = None
+
+# Define tool result as a union of success and error
+ToolResult = Union[ToolSuccess, ToolError]
 
 class AgentWrapper(Generic[T, O]):
     """Base agent wrapper class powered by Pydantic-AI"""
@@ -34,7 +48,8 @@ class AgentWrapper(Generic[T, O]):
                 model: str,
                 instructions: str,
                 dependencies: Optional[T] = None,
-                tools: Optional[List[str]] = None):
+                tools: Optional[List[str]] = None,
+                mcp_servers: Optional[List[Union[MCPServerHTTP, MCPServerStdio]]] = None):
         """Initialize a Pydantic-AI agent
         
         Args:
@@ -43,10 +58,12 @@ class AgentWrapper(Generic[T, O]):
             instructions: Agent behavior instructions
             dependencies: Optional dependencies for the agent
             tools: Optional list of tool names that the agent can use
+            mcp_servers: Optional list of MCP servers to attach to the agent
         """
         self.role = role
         self.state = {}
         self.assigned_tools = tools or []
+        self.mcp_servers = mcp_servers or []
         
         # Create the Pydantic-AI agent
         self.agent = PydanticAgent(
@@ -67,21 +84,26 @@ class AgentWrapper(Generic[T, O]):
         
         @self.agent.tool
         async def use_tool(ctx: RunContext[T], tool_name: str, parameters: Dict[str, Any]) -> ToolResult:
-            """Use a tool from the available toolset"""
+            """Use a tool from the available toolset
+            
+            Args:
+                tool_name: The name of the tool to use
+                parameters: The parameters to pass to the tool
+                
+            Returns:
+                Either a ToolSuccess with the tool's result data or a ToolError with error details
+            """
             if tool_name not in self.assigned_tools:
-                return ToolResult(
-                    success=False,
-                    data={},
-                    error=f"Tool '{tool_name}' is not available to this agent"
+                return ToolError(
+                    error=f"Tool '{tool_name}' is not available to this agent",
+                    details={"available_tools": self.assigned_tools}
                 )
                 
             try:
                 # Get the tool registry from dependencies
                 tool_registry = ctx.deps.tool_registry
                 if tool_registry is None:
-                    return ToolResult(
-                        success=False,
-                        data={},
+                    return ToolError(
                         error="Tool registry not available"
                     )
                     
@@ -90,9 +112,12 @@ class AgentWrapper(Generic[T, O]):
                 
                 # Execute the tool
                 result = await tool_func(**parameters)
-                return ToolResult(success=True, data=result)
+                return ToolSuccess(data=result)
             except Exception as e:
-                return ToolResult(success=False, data={}, error=str(e))
+                return ToolError(
+                    error=f"Error executing tool '{tool_name}'",
+                    details={"exception": str(e), "parameters": parameters}
+                )
         
         @self.agent.tool
         async def update_beliefs(ctx: RunContext[T], evidence: Dict[str, Any]) -> ToolResult:
@@ -133,14 +158,61 @@ class AgentWrapper(Generic[T, O]):
         """Get the system prompt for this agent"""
         return self.agent.instructions
                 
-    async def process(self, input_data: Dict[str, Any]) -> O:
-        """Process input data according to agent role"""
-        return await self.agent.run(self.dependencies, input_data)
+    async def process(self, input_data: Dict[str, Any], message_history=None) -> O:
+        """Process input data according to agent role
         
-    async def process_stream(self, input_data: Dict[str, Any]):
-        """Process input data and stream the response"""
-        async for chunk in self.agent.run_stream(self.dependencies, input_data):
-            yield chunk
+        Args:
+            input_data: The input data to process
+            message_history: Optional message history to provide conversation context
+        """
+        if self.mcp_servers and MCP_AVAILABLE:
+            # Run with MCP servers if available
+            async with self.agent.run_mcp_servers(*self.mcp_servers):
+                return await self.agent.run(
+                    self.dependencies, 
+                    input_data, 
+                    message_history=message_history
+                )
+        else:
+            # Run without MCP servers
+            return await self.agent.run(
+                self.dependencies, 
+                input_data, 
+                message_history=message_history
+            )
+        
+    async def process_stream(self, input_data: Dict[str, Any], message_history=None):
+        """Process input data and stream the response
+        
+        Args:
+            input_data: The input data to process
+            message_history: Optional message history to provide conversation context
+        """
+        if self.mcp_servers and MCP_AVAILABLE:
+            # Stream with MCP servers if available
+            async with self.agent.run_mcp_servers(*self.mcp_servers):
+                async for chunk in self.agent.run_stream(
+                    self.dependencies, 
+                    input_data, 
+                    message_history=message_history
+                ):
+                    yield chunk
+        else:
+            # Stream without MCP servers
+            async for chunk in self.agent.run_stream(
+                self.dependencies, 
+                input_data, 
+                message_history=message_history
+            ):
+                yield chunk
+            
+    def get_message_history(self):
+        """Get the message history from the agent's last run"""
+        return self.agent.messages
+        
+    def get_new_messages(self):
+        """Get only the new messages from the agent's last run"""
+        return self.agent.messages.new_messages()
 
 class AgentManager:
     """Factory and orchestrator for agent instances"""
@@ -159,6 +231,13 @@ class AgentManager:
         
         # Extract tool dependencies
         self.tool_dependencies = self.tool_configs.get('tool_dependencies', [])
+        
+        # Enable instrumentation for all agents
+        try:
+            Agent.instrument_all()
+            logging.info("Pydantic AI agent instrumentation enabled")
+        except Exception as e:
+            logging.warning(f"Failed to enable agent instrumentation: {e}")
     
     def set_tool_registry(self, tool_registry):
         """Set the tool registry for this agent manager"""
@@ -168,8 +247,16 @@ class AgentManager:
         """Set the Bayesian engine for this agent manager"""
         self.bayesian_engine = bayesian_engine
     
-    def initialize_agent(self, role_name: str) -> AgentWrapper:
-        """Initialize an agent with a specific role"""
+    def initialize_agent(self, role_name: str, mcp_servers: Optional[List[str]] = None) -> AgentWrapper:
+        """Initialize an agent with a specific role
+        
+        Args:
+            role_name: The role name to initialize
+            mcp_servers: Optional list of MCP server names to attach to the agent
+            
+        Returns:
+            Initialized agent wrapper
+        """
         # Find the role configuration
         role_config = next((r for r in self.agent_configs['agent_roles'] 
                             if r['name'] == role_name), None)
@@ -183,12 +270,27 @@ class AgentManager:
             bayesian_engine=self.bayesian_engine
         )
         
+        # Prepare MCP servers if requested
+        attached_mcp_servers = []
+        if mcp_servers and MCP_AVAILABLE:
+            # Import MCP client manager
+            from core.tools.mcp_client import get_mcp_manager
+            
+            # Get MCP server instances
+            manager = get_mcp_manager("mcp_config.json")
+            for server_name in mcp_servers:
+                server = manager.get_server_from_config(server_name)
+                if server:
+                    attached_mcp_servers.append(server)
+                    logging.info(f"Attached MCP server '{server_name}' to agent with role '{role_name}'")
+        
         # Create the agent instance
         agent = AgentWrapper[AgentDependencies, Dict[str, Any]](
             role=role_name,
             model=role_config['model'],
             instructions=role_config['system_prompt'],
-            dependencies=dependencies
+            dependencies=dependencies,
+            mcp_servers=attached_mcp_servers
         )
         
         # Store the agent

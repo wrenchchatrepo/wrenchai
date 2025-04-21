@@ -3,7 +3,7 @@
 # For full license information, see the LICENSE file in the repo root.
 
 import sys
-from wrenchai.cli import run_cli
+from cli import run_cli
 
 if __name__ == "__main__":
     sys.exit(run_cli())
