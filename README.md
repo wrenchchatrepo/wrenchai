@@ -16,13 +16,15 @@ This repository contains the code for Wrench AI, an open-source agentic AI frame
 
 ## Key Features
 
-- **Pydantic-AI Integration**: Strongly typed LLM agent interfaces with validation
+- **Pydantic-AI Integration**: Fully compliant Pydantic-AI agents with proper dependency injection
 - **PyMC Integration**: Bayesian reasoning and decision-making under uncertainty
 - **YAML Configuration**: Easy-to-edit configuration for agents, tools, and workflows
 - **Dynamic Tool Registry**: Plug-and-play tools with dependency resolution
 - **FastAPI Backend**: Performant API with websocket support
 - **Streamlit UI**: User-friendly interface for interacting with agents
 - **Model Context Protocol**: Flexible context management across multiple backends
+- **Streaming Support**: Built-in streaming for real-time agent responses
+- **Type Safety**: Strong typing with generics for better code quality
 
 ## Agent Interaction Patterns
 

@@ -26,8 +26,8 @@ class ToolResult(BaseModel, Generic[T]):
     data: Union[T, Dict[str, Any]]
     error: Optional[str] = None
 
-class Agent(Generic[T, O]):
-    """Base agent class powered by Pydantic-AI"""
+class AgentWrapper(Generic[T, O]):
+    """Base agent wrapper class powered by Pydantic-AI"""
     
     def __init__(self, 
                 role: str, 
@@ -76,9 +76,20 @@ class Agent(Generic[T, O]):
                 )
                 
             try:
-                # This is where we'd call the tool registry
-                # Placeholder for now
-                result = {"status": "success", "tool": tool_name, "parameters": parameters}
+                # Get the tool registry from dependencies
+                tool_registry = ctx.deps.tool_registry
+                if tool_registry is None:
+                    return ToolResult(
+                        success=False,
+                        data={},
+                        error="Tool registry not available"
+                    )
+                    
+                # Get the tool function
+                tool_func = tool_registry.get_tool(tool_name)
+                
+                # Execute the tool
+                result = await tool_func(**parameters)
                 return ToolResult(success=True, data=result)
             except Exception as e:
                 return ToolResult(success=False, data={}, error=str(e))
@@ -87,16 +98,49 @@ class Agent(Generic[T, O]):
         async def update_beliefs(ctx: RunContext[T], evidence: Dict[str, Any]) -> ToolResult:
             """Update belief state with new evidence"""
             try:
-                # This is where we'd call the Bayesian engine
-                # Placeholder for now
+                # Get the Bayesian engine from dependencies
+                bayesian_engine = ctx.deps.bayesian_engine
+                if bayesian_engine is None:
+                    return ToolResult(
+                        success=False,
+                        data={},
+                        error="Bayesian engine not available"
+                    )
+                
+                # Create or update a model if specified
+                if "model_name" in evidence and "variables" in evidence:
+                    bayesian_engine.create_model(
+                        evidence["model_name"], 
+                        evidence["variables"]
+                    )
+                    
+                # Update beliefs if model and evidence provided
+                if "model" in evidence and "data" in evidence:
+                    updated_beliefs = bayesian_engine.update_beliefs(
+                        evidence["model"], 
+                        evidence["data"]
+                    )
+                    return ToolResult(success=True, data=updated_beliefs)
+                    
+                # Store in local state otherwise
                 self.state.update(evidence)
                 return ToolResult(success=True, data=self.state)
             except Exception as e:
                 return ToolResult(success=False, data={}, error=str(e))
+    
+    @property
+    def system_prompt(self):
+        """Get the system prompt for this agent"""
+        return self.agent.instructions
                 
     async def process(self, input_data: Dict[str, Any]) -> O:
         """Process input data according to agent role"""
         return await self.agent.run(self.dependencies, input_data)
+        
+    async def process_stream(self, input_data: Dict[str, Any]):
+        """Process input data and stream the response"""
+        async for chunk in self.agent.run_stream(self.dependencies, input_data):
+            yield chunk
 
 class AgentManager:
     """Factory and orchestrator for agent instances"""
@@ -124,7 +168,7 @@ class AgentManager:
         """Set the Bayesian engine for this agent manager"""
         self.bayesian_engine = bayesian_engine
     
-    def initialize_agent(self, role_name: str) -> Agent:
+    def initialize_agent(self, role_name: str) -> AgentWrapper:
         """Initialize an agent with a specific role"""
         # Find the role configuration
         role_config = next((r for r in self.agent_configs['agent_roles'] 
@@ -140,7 +184,7 @@ class AgentManager:
         )
         
         # Create the agent instance
-        agent = Agent[AgentDependencies, Dict[str, Any]](
+        agent = AgentWrapper[AgentDependencies, Dict[str, Any]](
             role=role_name,
             model=role_config['model'],
             instructions=role_config['system_prompt'],
@@ -177,7 +221,7 @@ class AgentManager:
                             if r['name'] == agent.role), None)
         
         # Create a new agent with updated tools
-        new_agent = Agent[AgentDependencies, Dict[str, Any]](
+        new_agent = AgentWrapper[AgentDependencies, Dict[str, Any]](
             role=agent.role,
             model=role_config['model'],
             instructions=role_config['system_prompt'],

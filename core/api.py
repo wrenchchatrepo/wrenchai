@@ -62,7 +62,13 @@ async def startup_event():
         
         agent_manager = AgentManager(CONFIG_DIR)
         agent_manager.set_tool_registry(tool_registry)
+        agent_manager.set_bayesian_engine(bayesian_engine)
         logging.info("Initialized agent manager")
+        
+        # Register bayesian_tools with the bayesian engine
+        from core.tools import bayesian_tools
+        bayesian_tools.set_bayesian_engine(bayesian_engine)
+        logging.info("Registered Bayesian engine with tools")
         
     except Exception as e:
         logging.error(f"Error initializing system: {e}")
