@@ -1,0 +1,61 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github",
+        "env",
+        "${keychain:mcp-servers:github-mcp:pat}"
+      ]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },
+    "seq-think": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },    
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@Deploya-labs/mcp-supabase",
+        "--config",
+        "{\"supabaseProjectRef\":\"${keychain:mcp-servers:supabase:project-ref}\",\"supabaseDbPassword\":\"${keychain:mcp-servers:supabase:db-password}\"}"
+      ]
+    },
+    "browser-tools": {
+      "command": "npx",
+      "args": [
+        "@agentdeskai/browser-tools-mcp@1.1.0"
+      ]
+    }
+  },
+  "unconfiguredServers": {
+    "mac-apps": "@modelcontextprotocol/server-mac-apps",
+    "docker": "@modelcontextprotocol/server-docker",
+    "brave": "modelcontextprotocol/server-brave-search",
+    "playwright": "@modelcontextprotocol/server-playwright",
+    "stripe": "@stripe/mcp",
+    "chroma": "@modelcontextprotocol/inspector",
+    "google-calendar": "@modelcontextprotocol/server-google-calendar",
+    "gmail": "@gongrzhe/server-gmail-autoauth-mcp"
+  }
+}

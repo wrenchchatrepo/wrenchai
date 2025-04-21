@@ -1,9 +1,34 @@
 tool_dependencies:
+  # Configured MCP Servers
   - primary: supabase
+    requires: mcp
+  - primary: github_mcp
+    requires: mcp
+  - primary: puppeteer
+    requires: mcp
+  - primary: sequential_thinking
+    requires: mcp
+  - primary: memory
+    requires: mcp
+  - primary: browser_tools
+    requires: mcp
+  
+  # Not Yet Configured MCP Servers
+  - primary: mac_apps
+    requires: mcp
+  - primary: docker_mcp
+    requires: mcp
+  - primary: brave_search
+    requires: mcp
+  - primary: playwright
+    requires: mcp
+  - primary: stripe
     requires: mcp
   - primary: chromadb
     requires: mcp
-  - primary: pinecone
+  - primary: google_calendar
+    requires: mcp
+  - primary: gmail
     requires: mcp
 
 tools:
@@ -14,17 +39,101 @@ tools:
       context_id: string
       data: object
       query: string
+      server: string
     implementation: core.tools.mcp.standard_operations
-    
+  
+  # Configured MCP Servers
   - name: supabase
-    description: Supabase-specific MCP implementation
+    description: Supabase-specific MCP implementation for vector storage and retrieval
     parameters:
       operation: string
       table: string
       data: object
       filters: object
-    implementation: core.tools.supabase.execute_operation
-    
+    implementation: core.tools.mcp_servers.supabase_operations
+  
+  - name: github_mcp
+    description: GitHub operations through MCP
+    parameters:
+      operation: string
+      repo: string
+      owner: string
+      data: object
+    implementation: core.tools.mcp_servers.github_operations
+  
+  - name: puppeteer
+    description: Web automation and scraping with Puppeteer
+    parameters:
+      operation: string
+      url: string
+      script: string
+    implementation: core.tools.mcp_servers.puppeteer_operations
+  
+  - name: sequential_thinking
+    description: Sequential reasoning tool for complex problem solving
+    parameters:
+      operation: string
+      problem: string
+      steps: integer
+    implementation: core.tools.mcp_servers.sequential_thinking_operations
+  
+  - name: memory
+    description: Long-term memory storage and retrieval
+    parameters:
+      operation: string
+      memory_id: string
+      data: object
+    implementation: core.tools.mcp_servers.memory_operations
+  
+  - name: browser_tools
+    description: Browser-based tools for web interactions
+    parameters:
+      operation: string
+      url: string
+      action: string
+    implementation: core.tools.mcp_servers.browser_tools_operations
+  
+  # Not Yet Configured MCP Servers
+  - name: mac_apps
+    description: Integration with macOS applications
+    parameters:
+      operation: string
+      app: string
+      command: string
+    implementation: core.tools.mcp_servers.mac_apps_operations
+  
+  - name: docker_mcp
+    description: Docker container management
+    parameters:
+      operation: string
+      container: string
+      command: string
+    implementation: core.tools.mcp_servers.docker_operations
+  
+  - name: brave_search
+    description: Private search using Brave Search
+    parameters:
+      operation: string
+      query: string
+      filters: object
+    implementation: core.tools.mcp_servers.brave_search_operations
+  
+  - name: playwright
+    description: Advanced web automation with Playwright
+    parameters:
+      operation: string
+      url: string
+      script: string
+    implementation: core.tools.mcp_servers.playwright_operations
+  
+  - name: stripe
+    description: Payment processing with Stripe
+    parameters:
+      operation: string
+      action: string
+      data: object
+    implementation: core.tools.mcp_servers.stripe_operations
+  
   - name: chromadb
     description: ChromaDB vector database integration
     parameters:
@@ -32,7 +141,23 @@ tools:
       collection: string
       vectors: array
       metadata: object
-    implementation: core.tools.chromadb.execute_operation
+    implementation: core.tools.mcp_servers.chromadb_operations
+  
+  - name: google_calendar
+    description: Google Calendar integration
+    parameters:
+      operation: string
+      action: string
+      event: object
+    implementation: core.tools.mcp_servers.google_calendar_operations
+  
+  - name: gmail
+    description: Gmail integration for email operations
+    parameters:
+      operation: string
+      action: string
+      email: object
+    implementation: core.tools.mcp_servers.gmail_operations
     
   - name: web_search
     description: Search the web for information

@@ -2,19 +2,92 @@
 # For full license information, see the LICENSE file in the repo root.
 
 import logging
+import json
+import os
+import subprocess
 from typing import Dict, Any, Optional, List
 
 class MCPClient:
     """
     Model Context Protocol (MCP) client for managing contexts.
-    This is a simple in-memory implementation for demonstration.
+    Supports both in-memory implementation and external MCP servers.
     """
     
-    def __init__(self, default_embedding_model: str = "text-embedding-3-large"):
+    def __init__(self, default_embedding_model: str = "text-embedding-3-large", 
+                mcp_config_path: Optional[str] = None):
         """Initialize the MCP client"""
         self.contexts = {}
         self.default_embedding_model = default_embedding_model
+        self.mcp_servers = {}
+        self.server_processes = {}
+        
+        # Load MCP server configurations if provided
+        if mcp_config_path and os.path.exists(mcp_config_path):
+            try:
+                with open(mcp_config_path, 'r') as f:
+                    config = json.load(f)
+                self.mcp_servers = config.get('mcpServers', {})
+                logging.info(f"Loaded MCP server configurations: {list(self.mcp_servers.keys())}")
+            except Exception as e:
+                logging.error(f"Error loading MCP configuration: {str(e)}")
+        
         logging.info(f"Initialized MCP client with model: {default_embedding_model}")
+    
+    def start_server(self, server_name: str) -> bool:
+        """Start an MCP server by name"""
+        if server_name not in self.mcp_servers:
+            logging.error(f"MCP server '{server_name}' not found in configuration")
+            return False
+            
+        server_config = self.mcp_servers[server_name]
+        command = server_config.get('command')
+        args = server_config.get('args', [])
+        
+        if not command:
+            logging.error(f"Invalid configuration for MCP server '{server_name}'")
+            return False
+            
+        try:
+            # Start the server process
+            process = subprocess.Popen(
+                [command] + args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            self.server_processes[server_name] = process
+            logging.info(f"Started MCP server: {server_name}")
+            return True
+        except Exception as e:
+            logging.error(f"Error starting MCP server '{server_name}': {str(e)}")
+            return False
+    
+    def stop_server(self, server_name: str) -> bool:
+        """Stop an MCP server by name"""
+        if server_name not in self.server_processes:
+            logging.error(f"MCP server '{server_name}' is not running")
+            return False
+            
+        try:
+            process = self.server_processes[server_name]
+            process.terminate()
+            process.wait(timeout=5)
+            
+            del self.server_processes[server_name]
+            logging.info(f"Stopped MCP server: {server_name}")
+            return True
+        except Exception as e:
+            logging.error(f"Error stopping MCP server '{server_name}': {str(e)}")
+            return False
+    
+    def list_available_servers(self) -> List[str]:
+        """List all available MCP servers"""
+        return list(self.mcp_servers.keys())
+    
+    def list_running_servers(self) -> List[str]:
+        """List all running MCP servers"""
+        return list(self.server_processes.keys())
     
     async def store(self, context_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Store data in a context"""
@@ -95,33 +168,62 @@ class MCPClient:
             "status": "deleted"
         }
 
-# Singleton client instance
-_mcp_client = None
+# Singleton client instances (keyed by config path)
+_mcp_clients = {}
 
-def get_client() -> MCPClient:
+def get_client(mcp_config_path: Optional[str] = None) -> MCPClient:
     """Get the singleton MCP client instance"""
-    global _mcp_client
-    if _mcp_client is None:
-        _mcp_client = MCPClient()
-    return _mcp_client
+    global _mcp_clients
+    
+    # Use default key for clients with no config path
+    key = mcp_config_path or "default"
+    
+    if key not in _mcp_clients:
+        _mcp_clients[key] = MCPClient(mcp_config_path=mcp_config_path)
+        
+    return _mcp_clients[key]
 
 async def standard_operations(operation: str, context_id: str, 
                           data: Optional[Dict[str, Any]] = None,
-                          query: Optional[str] = None) -> Dict[str, Any]:
+                          query: Optional[str] = None,
+                          server: Optional[str] = None) -> Dict[str, Any]:
     """Standard MCP operations
     
     Args:
-        operation: One of "store", "retrieve", "query", "update", "delete"
-        context_id: Identifier for the context
+        operation: One of "store", "retrieve", "query", "update", "delete", "list_servers", "start_server", "stop_server"
+        context_id: Identifier for the context (not used for server operations)
         data: Optional data to store or update
         query: Optional query string for semantic search
+        server: Optional server name for server operations
         
     Returns:
         Operation result
     """
-    client = get_client()
+    client = get_client(mcp_config_path="mcp_config.json")
     
-    if operation == "store":
+    # Server management operations
+    if operation == "list_available_servers":
+        servers = client.list_available_servers()
+        return {"status": "success", "servers": servers}
+        
+    elif operation == "list_running_servers":
+        servers = client.list_running_servers()
+        return {"status": "success", "servers": servers}
+        
+    elif operation == "start_server":
+        if not server:
+            raise ValueError("Server name is required for start_server operation")
+        success = client.start_server(server)
+        return {"status": "success" if success else "error", "server": server}
+        
+    elif operation == "stop_server":
+        if not server:
+            raise ValueError("Server name is required for stop_server operation")
+        success = client.stop_server(server)
+        return {"status": "success" if success else "error", "server": server}
+    
+    # Context operations
+    elif operation == "store":
         if not data:
             raise ValueError("Data is required for store operation")
         return await client.store(context_id, data)
