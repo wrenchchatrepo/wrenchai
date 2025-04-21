@@ -6,11 +6,21 @@ from .inspector_agent import InspectorAgent
 from .journey_agent import JourneyAgent
 from .github_journey_agent import GitHubJourneyAgent
 from .web_researcher_agent import WebResearcher
+from .code_generator_agent import CodeGenerator
+from .ux_designer_agent import UXDesigner
+from .devops_agent import DevOps
+from .gcp_architect_agent import GCPArchitect
+from .data_scientist_agent import DataScientist
 
 __all__ = [
     'SuperAgent',
     'InspectorAgent',
     'JourneyAgent',
     'GitHubJourneyAgent',
-    'WebResearcher'
+    'WebResearcher',
+    'CodeGenerator',
+    'UXDesigner',
+    'DevOps',
+    'GCPArchitect',
+    'DataScientist'
 ]
