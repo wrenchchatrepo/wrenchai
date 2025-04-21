@@ -69,27 +69,42 @@ class GitHubJourneyAgent(JourneyAgent):
         return issue_numbers
         
     def _format_issue_body(self, template: str, task: Dict) -> str:
-        """Format issue body using template and task data.
+        """Format issue body using task data.
         
         Args:
-            template: Template name
+            template: Template identifier (not used, kept for API compatibility)
             task: Task data dictionary
             
         Returns:
             Formatted issue body
         """
-        # Load template
-        template_path = f"core/playbooks/github_playbooks/templates/{template}.md"
-        with open(template_path, 'r') as f:
-            template_content = f.read()
+        # Create issue body directly from task data
+        body = f"## Task: {task.get('title', '')}\n\n"
+        
+        # Add description if available
+        if 'description' in task:
+            body += f"## Description\n{task['description']}\n\n"
             
-        # Replace placeholders with task data
-        body = template_content
-        for key, value in task.items():
-            if key not in ['title', 'labels', 'assignee', 'dependencies']:
-                placeholder = f"{{{key}}}"
-                body = body.replace(placeholder, str(value))
+        # Add objectives if available
+        if 'objectives' in task:
+            body += "## Objectives\n"
+            objectives = task['objectives']
+            if isinstance(objectives, list):
+                for objective in objectives:
+                    body += f"- {objective}\n"
+            else:
+                body += f"{objectives}\n\n"
                 
+        # Add acceptance criteria if available
+        if 'acceptance_criteria' in task:
+            body += "## Acceptance Criteria\n"
+            criteria = task['acceptance_criteria']
+            if isinstance(criteria, list):
+                for criterion in criteria:
+                    body += f"- [ ] {criterion}\n"
+            else:
+                body += f"{criteria}\n\n"
+        
         return body
         
     def _add_dependencies(self, issue_number: str, dependencies: List[str]) -> None:
