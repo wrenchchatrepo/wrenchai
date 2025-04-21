@@ -1,0 +1,147 @@
+# Web Research Playbook
+name: Standard Web Research Playbook
+description: Systematic approach for conducting thorough web research
+version: 1.0.0
+author: Wrench AI
+agent_type: WebResearcher
+
+# Prerequisites
+prerequisites:
+  - Valid research query
+  - Web search tool availability
+  - RAG system access
+
+# Steps
+steps:
+  - step_id: 1
+    description: Analyze and refine the research query
+    action: analyze_query
+    parameters:
+      min_terms: 3
+      max_terms: 10
+    acceptance_criteria:
+      - Query contains specific technical terms
+      - Query scope is appropriately defined
+      - Query has clear research objective
+
+  - step_id: 2
+    description: Conduct initial research
+    action: research
+    parameters:
+      depth: 1
+      min_sources: 5
+    acceptance_criteria:
+      - At least 5 relevant sources identified
+      - Sources represent diverse perspectives
+      - Information relevance score > 0.7
+
+  - step_id: 3
+    description: Validate information accuracy
+    action: validate
+    parameters:
+      min_sources: 3
+      reliability_threshold: 0.75
+    acceptance_criteria:
+      - Information confirmed by multiple sources
+      - Source reliability score > 0.8
+      - No contradictory information found
+
+  - step_id: 4
+    description: Identify knowledge gaps
+    action: identify_gaps
+    parameters:
+      max_gaps: 5
+    acceptance_criteria:
+      - Missing information clearly identified
+      - Gaps are prioritized by importance
+      - Each gap has suggested research approach
+
+  - step_id: 5
+    description: Conduct deep research on gaps
+    action: research
+    parameters:
+      depth: 2
+      queries_from_gaps: true
+    acceptance_criteria:
+      - All critical gaps addressed
+      - Additional sources provide new insights
+      - Information hierarchy is maintained
+
+  - step_id: 6
+    description: Identify patterns and trends
+    action: analyze_patterns
+    parameters:
+      min_patterns: 3
+    acceptance_criteria:
+      - Patterns are substantiated by multiple sources
+      - Trends include temporal components when relevant
+      - Pattern confidence score > 0.7
+
+  - step_id: 7
+    description: Develop actionable recommendations
+    action: develop_recommendations
+    parameters:
+      min_recommendations: 3
+      max_recommendations: 7
+    acceptance_criteria:
+      - Recommendations directly address research query
+      - Each recommendation has supporting evidence
+      - Recommendations are practical and actionable
+
+  - step_id: 8
+    description: Generate comprehensive research report
+    action: generate_report
+    parameters:
+      format: markdown
+      include_sources: true
+      include_confidence_scores: true
+    acceptance_criteria:
+      - Report includes all required sections
+      - Citations are properly formatted
+      - Information is organized logically
+      - Executive summary captures key findings
+
+  - step_id: 9
+    description: Update knowledge base with findings
+    action: update_knowledge_base
+    parameters:
+      add_sources: true
+      add_patterns: true
+    acceptance_criteria:
+      - New information properly categorized
+      - Existing information updated as needed
+      - Source metadata complete
+      - No duplicate entries created
+
+# Output Format
+output:
+  format: markdown
+  sections:
+    - Executive Summary
+    - Research Methodology
+    - Key Findings
+    - Patterns and Trends
+    - Recommendations
+    - Knowledge Gaps
+    - Sources and Citations
+
+# Error Handling
+error_handling:
+  on_insufficient_sources:
+    action: broaden_search
+    parameters:
+      increase_source_count: 5
+  on_validation_failure:
+    action: verify_with_additional_sources
+    parameters:
+      min_additional_sources: 3
+  on_conflicting_information:
+    action: highlight_conflicts
+    parameters:
+      include_in_report: true
+
+# Cost Management
+cost_management:
+  max_search_queries: 20
+  estimate_before_deep_research: true
+  abort_if_estimated_cost_exceeds: 2.0

@@ -1,0 +1,43 @@
+# WebResearcher Agent Configuration
+role: Journey
+name: WebResearcher
+description: Advanced research agent specializing in complex problem investigation
+llm: "gemini-1.5-pro-latest"
+
+# Tools
+tools:
+  - web_search
+  - rag
+  - memory
+  - document_analyzer
+
+# Research Configuration
+research_sources:
+  - arxiv.org
+  - scholar.google.com
+  - stackoverflow.com
+  - github.com
+  - developer.mozilla.org
+  - w3.org
+  - ieee.org
+  - researchgate.net
+
+# Knowledge Base
+knowledge_base_path: "research_knowledge_base.json"
+max_sources_per_query: 8
+validation_threshold: 0.75
+min_sources_for_validation: 3
+
+# Reporting
+default_report_format: "markdown"
+include_citations: true
+include_confidence_scores: true
+
+# Performance
+max_concurrent_searches: 4
+cache_duration_days: 30
+max_research_depth: 3
+
+# Cost Management
+cost_per_query_limit: 0.5
+max_total_cost: 5.0
