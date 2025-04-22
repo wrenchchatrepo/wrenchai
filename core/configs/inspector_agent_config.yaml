@@ -6,7 +6,7 @@ tools:
   - memory
   - data_analysis
   - specialized_llm
-acceptance_threshold: 0.9
+acceptance_threshold: 0.95
 qc_llms:
   code_quality: "code_review_llm_v2"
   content_quality: "content_quality_llm_v1"

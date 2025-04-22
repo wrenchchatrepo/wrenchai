@@ -45,37 +45,56 @@ if 'config_editor' not in st.session_state:
     st.session_state.config_editor = {}
 if 'output' not in st.session_state:
     st.session_state.output = []
+if 'uploaded_content' not in st.session_state:
+    st.session_state.uploaded_content = []
+if 'temp_files' not in st.session_state:
+    st.session_state.temp_files = []
 
 # Utility functions
 def load_configs():
     """Load all configuration files"""
     configs = {}
+    # Use absolute paths for reliable file loading
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_dir = os.path.join(base_dir, 'core', 'configs')
+    
     config_paths = {
-        'agents': '../core/configs/agents.yaml',
-        'tools': '../core/configs/tools.yaml',
-        'playbooks': '../core/configs/playbooks.yaml',
+        'agents': os.path.join(config_dir, 'agents.yaml'),
+        'tools': os.path.join(config_dir, 'tools.yaml'),
+        'playbooks': os.path.join(config_dir, 'playbooks.yaml'),
     }
     
     for key, path in config_paths.items():
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                configs[key] = yaml.safe_load(f)
-        else:
+        try:
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    configs[key] = yaml.safe_load(f)
+            else:
+                logger.warning(f"Configuration file not found: {path}")
+                configs[key] = {}
+        except Exception as e:
+            logger.error(f"Error loading config {key} from {path}: {str(e)}")
             configs[key] = {}
     
     return configs
 
 def save_config(config_type, data):
     """Save configuration to file"""
-    config_dir = '../core/configs'
+    # Use absolute paths for reliable file saving
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_dir = os.path.join(base_dir, 'core', 'configs')
     os.makedirs(config_dir, exist_ok=True)
     
-    path = f'{config_dir}/{config_type}.yaml'
-    with open(path, 'w') as f:
-        yaml.dump(data, f, sort_keys=False)
-    
-    st.success(f"Configuration saved to {path}")
-    logger.info(f"Configuration saved to {path}")
+    path = os.path.join(config_dir, f'{config_type}.yaml')
+    try:
+        with open(path, 'w') as f:
+            yaml.dump(data, f, sort_keys=False)
+        
+        st.success(f"Configuration saved to {path}")
+        logger.info(f"Configuration saved to {path}")
+    except Exception as e:
+        st.error(f"Error saving configuration: {str(e)}")
+        logger.error(f"Error saving {config_type} configuration: {str(e)}")
     
 def add_log(message):
     """Add a message to the logs"""
@@ -93,36 +112,66 @@ def add_output(content, type="text"):
         "content": content
     })
 
-def run_api_request(endpoint, method="GET", data=None):
+def run_api_request(endpoint, method="GET", data=None, timeout=10):
     """Run API request and handle errors"""
     url = f"{API_URL}{endpoint}"
     
     try:
         if method == "GET":
-            response = requests.get(url)
+            response = requests.get(url, timeout=timeout)
         elif method == "POST":
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data, timeout=timeout)
         else:
             st.error(f"Unsupported method: {method}")
+            add_log(f"Unsupported API method: {method}")
             return None
             
         response.raise_for_status()
         return response.json()
     except requests.exceptions.ConnectionError:
-        st.error(f"Could not connect to API at {url}. Is the server running?")
+        error_msg = f"Could not connect to API at {url}. Is the server running?"
+        st.error(error_msg)
+        add_log(error_msg)
+        return None
+    except requests.exceptions.Timeout:
+        error_msg = f"Request to {url} timed out after {timeout} seconds"
+        st.error(error_msg)
+        add_log(error_msg)
         return None
     except requests.exceptions.HTTPError as e:
-        st.error(f"HTTP error: {e}")
+        error_msg = f"HTTP error: {e}"
+        st.error(error_msg)
+        add_log(error_msg)
         return None
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        error_msg = f"Error: {str(e)}"
+        st.error(error_msg)
+        add_log(error_msg)
         return None
+
+# Define cleanup function for temporary files
+def cleanup_temp_files():
+    """Clean up temporary files when the app shuts down"""
+    for temp_file in st.session_state.temp_files:
+        try:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+                logger.info(f"Cleaned up temporary file: {temp_file}")
+        except Exception as e:
+            logger.error(f"Failed to clean up temporary file {temp_file}: {str(e)}")
+    st.session_state.temp_files = []
+
+# Register cleanup handler
+def on_session_end():
+    """Handle app session end"""
+    cleanup_temp_files()
 
 # Load configurations
 try:
     configs = load_configs()
 except Exception as e:
     st.error(f"Error loading configurations: {str(e)}")
+    logger.error(f"Error loading configurations: {str(e)}")
     configs = {'agents': {}, 'tools': {}, 'playbooks': {}}
 
 # Main UI
@@ -150,9 +199,16 @@ if page == "Chat Interface":
             selected_playbook = st.selectbox("Select Playbook", playbooks)
         
         with col2:
-            agents = ["SuperAgent", "InspectorAgent", "JourneyAgent", "WebResearcher", 
-                     "CodeGenerator", "UXDesigner", "DevOps", "DataScientist",
-                     "Codifier", "InfoSec", "Comptroller", "TestEngineer", "DBA"]
+            # Dynamically load agent names from config
+            agents = ["SuperAgent"]  # Default in case config is empty
+            if 'agents' in configs and 'agent_roles' in configs['agents']:
+                try:
+                    agent_roles = configs['agents'].get('agent_roles', [])
+                    if agent_roles and isinstance(agent_roles, list):
+                        agents = [agent.get('name', f"Agent{i}") for i, agent in enumerate(agent_roles)]
+                except Exception as e:
+                    add_log(f"Error loading agent list from config: {str(e)}")
+            
             selected_agent = st.selectbox("Direct Agent (if no playbook)", agents)
         
         # Chat history display
@@ -181,22 +237,39 @@ if page == "Chat Interface":
                 # Log the interaction
                 add_log(f"User input: {user_input[:50]}{'...' if len(user_input) > 50 else ''}")
                 
-                # In a real implementation, this would call your API
-                # Replace with API call when backend is ready:
-                # response = run_api_request(
-                #    "/api/chat",
-                #    method="POST",
-                #    data={
-                #        "message": user_input,
-                #        "playbook": selected_playbook if selected_playbook != "None" else None,
-                #        "agent": selected_agent,
-                #        "uploads": uploaded_content
-                #    }
-                # )
-                
-                # Placeholder response
-                time.sleep(1)  # Simulate processing time
-                agent_response = f"Received your message. Using {'playbook: ' + selected_playbook if selected_playbook != 'None' else 'agent: ' + selected_agent}."
+                # Try to call the API, fall back to simulation if not available
+                try:
+                    # Check if API is available with a health check
+                    health_check = run_api_request("/api/health", method="GET")
+                    
+                    if health_check and health_check.get("status") == "ok":
+                        # API is available, make the real call
+                        response = run_api_request(
+                            "/api/chat",
+                            method="POST",
+                            data={
+                                "message": user_input,
+                                "playbook": selected_playbook if selected_playbook != "None" else None,
+                                "agent": selected_agent,
+                                "uploads": st.session_state.uploaded_content
+                            }
+                        )
+                        
+                        if response and "response" in response:
+                            agent_response = response["response"]
+                        else:
+                            # API error or unexpected response format
+                            agent_response = "Error processing your request. Please check logs for details."
+                    else:
+                        # API not available, use simulation
+                        add_log("API not available, using simulation mode")
+                        time.sleep(1)  # Simulate processing time
+                        agent_response = f"[SIMULATION MODE] Received your message. Using {'playbook: ' + selected_playbook if selected_playbook != 'None' else 'agent: ' + selected_agent}."
+                except Exception as e:
+                    # Error connecting to API, use simulation
+                    add_log(f"Error connecting to API: {str(e)}")
+                    time.sleep(1)  # Simulate processing time
+                    agent_response = f"[SIMULATION MODE] Received your message. Using {'playbook: ' + selected_playbook if selected_playbook != 'None' else 'agent: ' + selected_agent}."
                 
                 # Add agent response to chat history
                 st.session_state.chat_history.append({
@@ -221,14 +294,13 @@ if page == "Chat Interface":
         )
         
         # Process uploads
-        uploaded_content = []
         if uploaded_files:
             for file in uploaded_files:
                 try:
                     # Handle text files
                     if file.type.startswith('text/') or file.name.endswith(('.py', '.js', '.html', '.css', '.json', '.yaml')):
                         content = file.read().decode('utf-8')
-                        uploaded_content.append({
+                        st.session_state.uploaded_content.append({
                             'name': file.name,
                             'type': 'text',
                             'content': content
@@ -244,7 +316,8 @@ if page == "Chat Interface":
                         # Save for processing
                         with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.type.split('/')[1]}") as tmp:
                             tmp.write(file.getvalue())
-                            uploaded_content.append({
+                            st.session_state.temp_files.append(tmp.name)  # Track for cleanup
+                            st.session_state.uploaded_content.append({
                                 'name': file.name,
                                 'type': 'image',
                                 'path': tmp.name
@@ -256,7 +329,8 @@ if page == "Chat Interface":
                     elif file.type == 'application/pdf':
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                             tmp.write(file.getvalue())
-                            uploaded_content.append({
+                            st.session_state.temp_files.append(tmp.name)  # Track for cleanup
+                            st.session_state.uploaded_content.append({
                                 'name': file.name,
                                 'type': 'pdf',
                                 'path': tmp.name
@@ -274,7 +348,7 @@ if page == "Chat Interface":
         st.subheader("🔗 URL Input")
         url_input = st.text_input("Enter URL to process")
         if url_input and st.button("Process URL"):
-            uploaded_content.append({
+            st.session_state.uploaded_content.append({
                 'name': url_input,
                 'type': 'url',
                 'content': url_input
@@ -354,6 +428,15 @@ agent_roles:
     system_prompt: |
       You are a Super Agent responsible for coordinating workflows.
             """, language="yaml")
+            st.markdown("""
+**Agent Configuration Fields:**
+- `name`: Unique identifier for the agent (required)
+- `description`: Brief description of the agent's purpose
+- `capabilities`: List of agent capabilities
+- `model`: LLM model to use (e.g., claude-3-sonnet)
+- `system_prompt`: Initial instructions for the agent
+- `tools_allowed`: List of tools this agent can use
+            """)
     
     # Tools tab
     with config_tabs[1]:
@@ -412,6 +495,14 @@ tools:
       max_results: integer
     implementation: core.tools.web_search.search
             """, language="yaml")
+            st.markdown("""
+**Tool Configuration Fields:**
+- `name`: Unique identifier for the tool (required)
+- `description`: Brief description of what the tool does
+- `parameters`: Input parameters with their types
+- `implementation`: Path to the implementation function
+- `requires`: Optional dependencies needed for this tool
+            """)
     
     # Playbooks tab
     with config_tabs[2]:
@@ -478,6 +569,18 @@ playbooks:
       - InspectorAgent
       - JourneyAgent
             """, language="yaml")
+            st.markdown("""
+**Playbook Configuration Fields:**
+- `name`: Unique identifier for the playbook (required)
+- `description`: Brief description of the playbook's purpose
+- `workflow`: List of workflow steps defining the execution plan
+  - `step_id`: Unique identifier for each step
+  - `type`: Workflow type (standard, parallel, feedback_loop, process, versus, handoff)
+  - `description`: What this step accomplishes
+  - `agents`: List of agents involved in this step, with optional task specifics
+- `tools_allowed`: List of tools available in this playbook
+- `agents`: List of agents used in this playbook
+            """)
     
     # Custom Config tab
     with config_tabs[3]:
