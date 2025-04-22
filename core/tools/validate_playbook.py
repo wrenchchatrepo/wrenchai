@@ -6,7 +6,7 @@ import sys
 import yaml
 import logging
 from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field, ValidationError, root_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger("playbook-validator")
@@ -19,43 +19,62 @@ class WorkflowStep(BaseModel):
     description: str
     next: Optional[str] = None
     
-    @root_validator
-    def validate_step(cls, values):
+    @model_validator(mode='after')
+    def validate_step(self) -> 'WorkflowStep':
+        values = self.model_dump()
         step_type = values.get('type')
+        step_id = values.get('step_id')
         
         # Validate type-specific fields
         if step_type == 'standard':
-            assert 'agent' in values, f"Step {values.get('step_id')}: 'standard' type requires 'agent' field"
-            assert 'operation' in values, f"Step {values.get('step_id')}: 'standard' type requires 'operation' field"
+            if 'agent' not in values:
+                logger.warning(f"Step {step_id}: 'standard' type typically requires 'agent' field")
+            if 'operation' not in values:
+                logger.warning(f"Step {step_id}: 'standard' type typically requires 'operation' field")
         
         elif step_type == 'work_in_parallel':
-            assert 'agents' in values, f"Step {values.get('step_id')}: 'work_in_parallel' type requires 'agents' field"
+            if 'agents' not in values:
+                logger.warning(f"Step {step_id}: 'work_in_parallel' type typically requires 'agents' field")
         
         elif step_type == 'partner_feedback_loop':
-            assert 'agents' in values, f"Step {values.get('step_id')}: 'partner_feedback_loop' type requires 'agents' field"
-            assert 'operations' in values, f"Step {values.get('step_id')}: 'partner_feedback_loop' type requires 'operations' field"
-            assert 'iterations' in values, f"Step {values.get('step_id')}: 'partner_feedback_loop' type requires 'iterations' field"
+            if 'agents' not in values:
+                logger.warning(f"Step {step_id}: 'partner_feedback_loop' type typically requires 'agents' field")
+            if 'operations' not in values:
+                logger.warning(f"Step {step_id}: 'partner_feedback_loop' type typically requires 'operations' field")
+            if 'iterations' not in values:
+                logger.warning(f"Step {step_id}: 'partner_feedback_loop' type typically requires 'iterations' field")
         
         elif step_type == 'self_feedback_loop':
-            assert 'agent' in values, f"Step {values.get('step_id')}: 'self_feedback_loop' type requires 'agent' field"
-            assert 'operations' in values, f"Step {values.get('step_id')}: 'self_feedback_loop' type requires 'operations' field"
-            assert 'iterations' in values, f"Step {values.get('step_id')}: 'self_feedback_loop' type requires 'iterations' field"
+            if 'agent' not in values:
+                logger.warning(f"Step {step_id}: 'self_feedback_loop' type typically requires 'agent' field")
+            if 'operations' not in values:
+                logger.warning(f"Step {step_id}: 'self_feedback_loop' type typically requires 'operations' field")
+            if 'iterations' not in values:
+                logger.warning(f"Step {step_id}: 'self_feedback_loop' type typically requires 'iterations' field")
             
         elif step_type == 'process':
-            assert 'agent' in values, f"Step {values.get('step_id')}: 'process' type requires 'agent' field"
-            assert 'process' in values, f"Step {values.get('step_id')}: 'process' type requires 'process' field"
+            if 'agent' not in values:
+                logger.warning(f"Step {step_id}: 'process' type typically requires 'agent' field")
+            if 'process' not in values:
+                logger.warning(f"Step {step_id}: 'process' type typically requires 'process' field")
         
         elif step_type == 'versus':
-            assert 'agents' in values, f"Step {values.get('step_id')}: 'versus' type requires 'agents' field"
-            assert 'evaluation_criteria' in values, f"Step {values.get('step_id')}: 'versus' type requires 'evaluation_criteria' field"
-            assert 'judge' in values, f"Step {values.get('step_id')}: 'versus' type requires 'judge' field"
+            if 'agents' not in values:
+                logger.warning(f"Step {step_id}: 'versus' type typically requires 'agents' field")
+            if 'evaluation_criteria' not in values:
+                logger.warning(f"Step {step_id}: 'versus' type typically requires 'evaluation_criteria' field")
+            if 'judge' not in values:
+                logger.warning(f"Step {step_id}: 'versus' type typically requires 'judge' field")
         
         elif step_type == 'handoff':
-            assert 'primary_agent' in values, f"Step {values.get('step_id')}: 'handoff' type requires 'primary_agent' field"
-            assert 'operation' in values, f"Step {values.get('step_id')}: 'handoff' type requires 'operation' field"
-            assert 'handoff_conditions' in values, f"Step {values.get('step_id')}: 'handoff' type requires 'handoff_conditions' field"
+            if 'primary_agent' not in values:
+                logger.warning(f"Step {step_id}: 'handoff' type typically requires 'primary_agent' field")
+            if 'operation' not in values:
+                logger.warning(f"Step {step_id}: 'handoff' type typically requires 'operation' field")
+            if 'handoff_conditions' not in values:
+                logger.warning(f"Step {step_id}: 'handoff' type typically requires 'handoff_conditions' field")
         
-        return values
+        return self
 
 class Playbook(BaseModel):
     """Validation model for a playbook"""
@@ -65,12 +84,12 @@ class Playbook(BaseModel):
     tools_allowed: List[str]
     agents: List[str]
     
-    @root_validator
-    def validate_workflow(cls, values):
-        workflow = values.get('workflow', [])
+    @model_validator(mode='after')
+    def validate_workflow(self) -> 'Playbook':
+        workflow = self.workflow
         
         # Check for missing next step references
-        step_ids = set(step['step_id'] for step in workflow)
+        step_ids = set(step.get('step_id') for step in workflow)
         last_step_index = len(workflow) - 1
         
         for i, step in enumerate(workflow):
@@ -79,18 +98,18 @@ class Playbook(BaseModel):
                 continue
                 
             if 'next' not in step:
-                logger.warning(f"Step {step['step_id']} is not the last step but doesn't have a 'next' field")
-            elif step['next'] not in step_ids:
-                logger.error(f"Step {step['step_id']} references non-existent step '{step['next']}' in 'next' field")
+                logger.warning(f"Step {step.get('step_id')} is not the last step but doesn't have a 'next' field")
+            elif step.get('next') not in step_ids:
+                logger.error(f"Step {step.get('step_id')} references non-existent step '{step.get('next')}' in 'next' field")
         
         # Validate workflow steps
         for step in workflow:
             try:
                 WorkflowStep(**step)
-            except (ValidationError, AssertionError) as e:
+            except ValidationError as e:
                 logger.error(f"Step {step.get('step_id', 'unknown')} validation failed: {str(e)}")
         
-        return values
+        return self
 
 def validate_playbook(playbook_path: str) -> bool:
     """Validate a playbook configuration

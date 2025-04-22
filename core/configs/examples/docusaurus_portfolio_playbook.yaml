@@ -1,0 +1,200 @@
+# Docusaurus Portfolio Playbook
+
+name: docusaurus_portfolio_playbook
+description: Build a public-facing Docusaurus portfolio with six sections - GitHub projects (AI/ML in Python), useful scripts (Python, gcloud, SQL, LookML, JS/TS, Git), technical articles, frontend examples (NextJS, React), GCP Analytics Pipeline, and Data Science (Plotly + Dash, PyMC, PyTorch, SciPy).
+
+workflow:
+  # Step 1: Analyze source materials and create project plan
+  - step_id: analyze_source_materials
+    type: standard
+    description: "Analyze source materials and create a comprehensive project plan"
+    agent: SuperAgent
+    operation: "analyze_and_plan"
+    next: setup_repository
+    
+  # Step 2: Set up GitHub repository for the Docusaurus site
+  - step_id: setup_repository
+    type: standard
+    description: "Create and configure GitHub repository for Docusaurus site"
+    agent: GithubJourneyAgent
+    operation: "setup_docusaurus_repo"
+    tools:
+      - github_tool
+      - github_mcp
+    next: design_ui
+    
+  # Step 3: Design UI and site structure
+  - step_id: design_ui
+    type: partner_feedback_loop
+    description: "Design UI and site structure with feedback cycles"
+    agents:
+      creator: UXDesignerAgent
+      reviewer: InspectorAgent
+    operations:
+      - role: creator
+        name: "design_site_structure"
+      - role: reviewer
+        name: "review_design"
+      - role: creator
+        name: "refine_design"
+    iterations: 2
+    next: setup_docusaurus
+    
+  # Step 4: Set up Docusaurus environment
+  - step_id: setup_docusaurus
+    type: standard
+    description: "Set up and configure Docusaurus environment"
+    agent: CodeGeneratorAgent
+    operation: "setup_docusaurus_environment"
+    tools:
+      - code_execution
+      - code_generation
+    next: generate_content
+    
+  # Step 5: Generate content in parallel
+  - step_id: generate_content
+    type: work_in_parallel
+    description: "Generate content for all six sections concurrently"
+    agents:
+      - CodeGeneratorAgent:generate_github_projects
+      - CodeGeneratorAgent:generate_useful_scripts
+      - CodeGeneratorAgent:generate_technical_articles
+      - CodeGeneratorAgent:generate_frontend_examples
+      - CodeGeneratorAgent:generate_gcp_pipeline
+      - CodeGeneratorAgent:generate_data_science
+    input_distribution:
+      type: split
+      field: "sections"
+    output_aggregation:
+      type: merge
+      strategy: "combine_content"
+    next: standardize_code
+    
+  # Step 6: Standardize and optimize code
+  - step_id: standardize_code
+    type: partner_feedback_loop
+    description: "Standardize and optimize code across all sections"
+    agents:
+      creator: CodifierAgent
+      reviewer: InspectorAgent
+    operations:
+      - role: creator
+        name: "standardize_code"
+      - role: reviewer
+        name: "review_code_standards"
+      - role: creator
+        name: "apply_code_improvements"
+    iterations: 2
+    next: develop_tests
+    
+  # Step 7: Develop test suite
+  - step_id: develop_tests
+    type: standard
+    description: "Develop comprehensive test suite for the portfolio"
+    agent: TestEngineerAgent
+    operation: "develop_test_suite"
+    tools:
+      - code_execution
+      - github_tool
+    next: run_tests
+    
+  # Step 8: Run tests with structured process
+  - step_id: run_tests
+    type: process
+    description: "Run tests with validation and error handling"
+    agent: TestEngineerAgent
+    input:
+      source: "test_suite"
+    process:
+      - operation: "run_unit_tests"
+        condition: "unit_tests_passed == true"
+        failure_action: "log_and_fix"
+      - operation: "run_integration_tests"
+        condition: "integration_tests_passed == true"
+        failure_action: "log_and_fix" 
+      - operation: "run_e2e_tests"
+        condition: "e2e_tests_passed == true"
+        failure_action: "log_and_fix"
+    output:
+      destination: "test_results"
+    next: user_acceptance_testing
+    
+  # Step 9: User acceptance testing
+  - step_id: user_acceptance_testing
+    type: standard
+    description: "Perform user acceptance testing"
+    agent: UATAgent
+    operation: "perform_uat"
+    tools:
+      - browser_tools
+      - memory
+    next: final_review
+    
+  # Step 10: Final review and polish
+  - step_id: final_review
+    type: partner_feedback_loop
+    description: "Final review and polish of the entire portfolio"
+    agents:
+      creator: CodifierAgent
+      reviewer: InspectorAgent
+    operations:
+      - role: creator
+        name: "final_polish"
+      - role: reviewer
+        name: "comprehensive_review"
+      - role: creator
+        name: "apply_final_fixes"
+    iterations: 1
+    next: deploy
+    
+  # Step 11: Deploy to GitHub Pages
+  - step_id: deploy
+    type: handoff
+    description: "Deploy portfolio to GitHub Pages with specialist handling"
+    primary_agent: GithubJourneyAgent
+    operation: "prepare_deployment"
+    handoff_conditions:
+      - condition: "needs_ci_cd_setup == true"
+        target_agent: CodeGeneratorAgent
+        operation: "setup_ci_cd"
+      - condition: "needs_domain_config == true"
+        target_agent: UXDesignerAgent
+        operation: "configure_custom_domain"
+    completion_action: "deploy_to_github_pages"
+    # No next step as this is the final step
+
+# Tools that can be used in this playbook
+tools_allowed:
+  - web_search
+  - secrets_manager
+  - memory
+  - code_generation
+  - code_execution
+  - github_tool
+  - github_mcp
+  - puppeteer
+  - browser_tools
+  - bayesian_update
+  - data_analysis
+
+# Agents that participate in this playbook
+agents:
+  - SuperAgent
+  - GithubJourneyAgent
+  - CodeGeneratorAgent
+  - CodifierAgent
+  - UXDesignerAgent
+  - InspectorAgent
+  - TestEngineerAgent
+  - UATAgent
+
+# Agent LLM assignments
+agent_llms:
+  SuperAgent: "claude-3.7-sonnet"
+  GithubJourneyAgent: "gpt-4o"
+  CodeGeneratorAgent: "claude-3.7-sonnet"
+  CodifierAgent: "claude-3.7-sonnet"
+  UXDesignerAgent: "gpt-4o"
+  InspectorAgent: "claude-3.7-sonnet"
+  TestEngineerAgent: "claude-3.7-sonnet"
+  UATAgent: "gemini-2.5-flash"

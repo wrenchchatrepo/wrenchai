@@ -188,3 +188,11 @@ tools:
       model: string
       evidence: object
     implementation: core.tools.bayesian_tools.update_beliefs
+    
+  - name: document_analyzer
+    description: Analyze documents for structure, content, and code
+    parameters:
+      file_path: string
+      analysis_type: string
+      options: object
+    implementation: core.tools.document_analyzer.analyze_document
