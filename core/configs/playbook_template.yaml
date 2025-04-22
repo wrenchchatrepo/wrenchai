@@ -1,12 +1,77 @@
-name: "REPLACE_WITH_PLAYBOOK_NAME"
-description: "REPLACE_WITH_PLAYBOOK_DESCRIPTION"
-steps:
-  - step_id: 1
-    description: "REPLACE_WITH_STEP_DESCRIPTION"
-    action: "REPLACE_WITH_ACTION"
-    input: "REPLACE_WITH_INPUT_DESCRIPTION"
-    expected_output: "REPLACE_WITH_OUTPUT_DESCRIPTION"
-    error_handling:
-      type: "retry"
-      max_retries: 3
-      alternative_action: "REPLACE_WITH_ALTERNATIVE_ACTION"
+# Playbook Template
+# Replace placeholder values with your specific configuration
+
+name: "PLAYBOOK_NAME"  # Required: A unique name for your playbook
+description: "Detailed description of what this playbook accomplishes"  # Required: Explain the playbook's purpose
+
+# Define the workflow steps in sequence
+workflow:
+  # First step example - standard operation
+  - step_id: first_step_name  # Required: Unique identifier for this step
+    type: standard  # Required: One of standard, work_in_parallel, self_feedback_loop, partner_feedback_loop, process, versus, handoff
+    description: "Description of what this step does"  # Required: Human-readable description
+    agent: AgentName  # Required: The agent that performs this step
+    operation: "operation_name"  # Required: The operation the agent should perform
+    next: second_step_name  # Required unless this is the final step: The next step to execute
+    
+  # Second step example - parallel processing
+  - step_id: second_step_name
+    type: work_in_parallel
+    description: "Process data concurrently with multiple agents"
+    agents:
+      - FirstAgent:operation_one
+      - SecondAgent:operation_two
+    input_distribution:  # Optional: How to distribute input across agents
+      type: split
+      field: "input_field_name"
+    output_aggregation:  # Optional: How to combine agent outputs
+      type: merge
+      strategy: "aggregation_strategy"
+    next: third_step_name
+    
+  # Third step example - feedback loop
+  - step_id: third_step_name
+    type: partner_feedback_loop
+    description: "Collaborative refinement process"
+    agents:
+      creator: CreatorAgent
+      reviewer: ReviewerAgent
+    operations:
+      - role: creator
+        name: "create_content"
+      - role: reviewer
+        name: "review_content"
+      - role: creator
+        name: "revise_content"
+    iterations: 2  # Number of feedback cycles
+    next: final_step
+    
+  # Final step example - process with conditions
+  - step_id: final_step
+    type: process
+    description: "Final processing with validation"
+    agent: FinalAgent
+    input:
+      source: "previous_step_output"
+    process:
+      - operation: "validate"
+        condition: "validation_passed == true"
+      - operation: "finalize"
+    output:
+      destination: "final_result"
+    # No 'next' parameter since this is the final step
+
+# Tools that can be used in this playbook
+tools_allowed:
+  - tool_one
+  - tool_two
+  - tool_three
+
+# Agents that participate in this playbook
+agents:
+  - AgentName
+  - FirstAgent
+  - SecondAgent
+  - CreatorAgent
+  - ReviewerAgent
+  - FinalAgent

@@ -1,0 +1,60 @@
+# Simple Research Playbook Example
+# This playbook demonstrates a simple research workflow with Web Researcher and Writer agents
+
+name: "simple_web_research"
+description: "Search for information online, analyze findings, and create a summary report"
+
+workflow:
+  # Initial search step
+  - step_id: search_information
+    type: standard
+    description: "Search for information on the specified topic"
+    agent: WebResearcherAgent
+    operation: "search_web"
+    next: analyze_findings
+    
+  # Analysis step  
+  - step_id: analyze_findings
+    type: standard
+    description: "Analyze and categorize the search findings"
+    agent: DataScientistAgent
+    operation: "analyze_content"
+    next: create_report
+    
+  # Report creation with feedback loop
+  - step_id: create_report
+    type: partner_feedback_loop
+    description: "Create and refine the research report"
+    agents:
+      creator: JourneyAgent
+      reviewer: InspectorAgent
+    operations:
+      - role: creator
+        name: "draft_report"
+      - role: reviewer
+        name: "review_report"
+      - role: creator
+        name: "revise_report"
+    iterations: 2
+    next: finalize_report
+    
+  # Final review and formatting
+  - step_id: finalize_report
+    type: standard
+    description: "Finalize the research report"
+    agent: JourneyAgent
+    operation: "format_report"
+    # No 'next' parameter as this is the final step
+
+# Tools that can be used in this playbook
+tools_allowed:
+  - web_search
+  - data_analysis
+  - document_processor
+  
+# Agents that participate in this playbook
+agents:
+  - WebResearcherAgent
+  - DataScientistAgent
+  - JourneyAgent
+  - InspectorAgent
