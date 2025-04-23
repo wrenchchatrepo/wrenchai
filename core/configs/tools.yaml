@@ -1,198 +1,182 @@
 tool_dependencies:
-  # Configured MCP Servers
-  - primary: supabase
-    requires: mcp
-  - primary: github_mcp
-    requires: mcp
-  - primary: puppeteer
-    requires: mcp
-  - primary: sequential_thinking
-    requires: mcp
-  - primary: memory
-    requires: mcp
-  - primary: browser_tools
-    requires: mcp
-  
-  # Not Yet Configured MCP Servers
-  - primary: mac_apps
-    requires: mcp
-  - primary: docker_mcp
-    requires: mcp
-  - primary: brave_search
-    requires: mcp
-  - primary: playwright
-    requires: mcp
-  - primary: stripe
-    requires: mcp
-  - primary: chromadb
-    requires: mcp
-  - primary: google_calendar
-    requires: mcp
-  - primary: gmail
-    requires: mcp
-
+- primary: supabase
+  requires: mcp
+- primary: github_mcp
+  requires: mcp
+- primary: puppeteer
+  requires: mcp
+- primary: sequential_thinking
+  requires: mcp
+- primary: memory
+  requires: mcp
+- primary: browser_tools
+  requires: mcp
+- primary: mac_apps
+  requires: mcp
+- primary: docker_mcp
+  requires: mcp
+- primary: brave_search
+  requires: mcp
+- primary: playwright
+  requires: mcp
+- primary: stripe
+  requires: mcp
+- primary: chromadb
+  requires: mcp
+- primary: google_calendar
+  requires: mcp
+- primary: gmail
+  requires: mcp
 tools:
-  - name: mcp
-    description: Core Model Context Protocol operations
-    parameters:
-      operation: string
-      context_id: string
-      data: object
-      query: string
-      server: string
-    implementation: core.tools.mcp.standard_operations
-  
-  # Configured MCP Servers
-  - name: supabase
-    description: Supabase-specific MCP implementation for vector storage and retrieval
-    parameters:
-      operation: string
-      table: string
-      data: object
-      filters: object
-    implementation: core.tools.mcp_servers.supabase_operations
-  
-  - name: github_mcp
-    description: GitHub operations through MCP
-    parameters:
-      operation: string
-      repo: string
-      owner: string
-      data: object
-    implementation: core.tools.mcp_servers.github_operations
-  
-  - name: puppeteer
-    description: Web automation and scraping with Puppeteer
-    parameters:
-      operation: string
-      url: string
-      script: string
-    implementation: core.tools.mcp_servers.puppeteer_operations
-  
-  - name: sequential_thinking
-    description: Sequential reasoning tool for complex problem solving
-    parameters:
-      operation: string
-      problem: string
-      steps: integer
-    implementation: core.tools.mcp_servers.sequential_thinking_operations
-  
-  - name: memory
-    description: Long-term memory storage and retrieval
-    parameters:
-      operation: string
-      memory_id: string
-      data: object
-    implementation: core.tools.mcp_servers.memory_operations
-  
-  - name: browser_tools
-    description: Browser-based tools for web interactions
-    parameters:
-      operation: string
-      url: string
-      action: string
-    implementation: core.tools.mcp_servers.browser_tools_operations
-  
-  # Not Yet Configured MCP Servers
-  - name: mac_apps
-    description: Integration with macOS applications
-    parameters:
-      operation: string
-      app: string
-      command: string
-    implementation: core.tools.mcp_servers.mac_apps_operations
-  
-  - name: docker_mcp
-    description: Docker container management
-    parameters:
-      operation: string
-      container: string
-      command: string
-    implementation: core.tools.mcp_servers.docker_operations
-  
-  - name: brave_search
-    description: Private search using Brave Search
-    parameters:
-      operation: string
-      query: string
-      filters: object
-    implementation: core.tools.mcp_servers.brave_search_operations
-  
-  - name: playwright
-    description: Advanced web automation with Playwright
-    parameters:
-      operation: string
-      url: string
-      script: string
-    implementation: core.tools.mcp_servers.playwright_operations
-  
-  - name: stripe
-    description: Payment processing with Stripe
-    parameters:
-      operation: string
-      action: string
-      data: object
-    implementation: core.tools.mcp_servers.stripe_operations
-  
-  - name: chromadb
-    description: ChromaDB vector database integration
-    parameters:
-      operation: string
-      collection: string
-      vectors: array
-      metadata: object
-    implementation: core.tools.mcp_servers.chromadb_operations
-  
-  - name: google_calendar
-    description: Google Calendar integration
-    parameters:
-      operation: string
-      action: string
-      event: object
-    implementation: core.tools.mcp_servers.google_calendar_operations
-  
-  - name: gmail
-    description: Gmail integration for email operations
-    parameters:
-      operation: string
-      action: string
-      email: object
-    implementation: core.tools.mcp_servers.gmail_operations
-    
-  - name: web_search
-    description: Search the web for information
-    parameters:
-      query: string
-      max_results: integer
-    implementation: core.tools.web_search.search
-
-  - name: code_execution
-    description: Execute code snippets
-    parameters:
-      language: string
-      code: string
-      timeout: integer
-    implementation: core.tools.code_execution.execute
-
-  - name: github_tool
-    description: Interact with GitHub repositories
-    parameters:
-      action: string
-      repo: string
-      payload: object
-    implementation: core.tools.github_tool.github_action
-
-  - name: bayesian_update
-    description: Update Bayesian beliefs using PyMC
-    parameters:
-      model: string
-      evidence: object
-    implementation: core.tools.bayesian_tools.update_beliefs
-    
-  - name: document_analyzer
-    description: Analyze documents for structure, content, and code
-    parameters:
-      file_path: string
-      analysis_type: string
-      options: object
-    implementation: core.tools.document_analyzer.analyze_document
+- description: Core Model Context Protocol operations
+  implementation: core.tools.mcp.standard_operations
+  name: mcp
+  parameters:
+    context_id: string
+    data: object
+    operation: string
+    query: string
+    server: string
+- description: Supabase-specific MCP implementation for vector storage and retrieval
+  implementation: core.tools.mcp_servers.supabase_operations
+  name: supabase
+  parameters:
+    data: object
+    filters: object
+    operation: string
+    table: string
+- description: GitHub operations through MCP
+  implementation: core.tools.mcp_servers.github_operations
+  name: github_mcp
+  parameters:
+    data: object
+    operation: string
+    owner: string
+    repo: string
+- description: Web automation and scraping with Puppeteer
+  implementation: core.tools.mcp_servers.puppeteer_operations
+  name: puppeteer
+  parameters:
+    operation: string
+    script: string
+    url: string
+- description: Sequential reasoning tool for complex problem solving
+  implementation: core.tools.mcp_servers.sequential_thinking_operations
+  name: sequential_thinking
+  parameters:
+    operation: string
+    problem: string
+    steps: integer
+- description: Long-term memory storage and retrieval
+  implementation: core.tools.mcp_servers.memory_operations
+  name: memory
+  parameters:
+    data: object
+    memory_id: string
+    operation: string
+- description: Browser-based tools for web interactions
+  implementation: core.tools.mcp_servers.browser_tools_operations
+  name: browser_tools
+  parameters:
+    action: string
+    operation: string
+    url: string
+- description: Integration with macOS applications
+  implementation: core.tools.mcp_servers.mac_apps_operations
+  name: mac_apps
+  parameters:
+    app: string
+    command: string
+    operation: string
+- description: Docker container management
+  implementation: core.tools.mcp_servers.docker_operations
+  name: docker_mcp
+  parameters:
+    command: string
+    container: string
+    operation: string
+- description: Private search using Brave Search
+  implementation: core.tools.mcp_servers.brave_search_operations
+  name: brave_search
+  parameters:
+    filters: object
+    operation: string
+    query: string
+- description: Advanced web automation with Playwright
+  implementation: core.tools.mcp_servers.playwright_operations
+  name: playwright
+  parameters:
+    operation: string
+    script: string
+    url: string
+- description: Payment processing with Stripe
+  implementation: core.tools.mcp_servers.stripe_operations
+  name: stripe
+  parameters:
+    action: string
+    data: object
+    operation: string
+- description: ChromaDB vector database integration
+  implementation: core.tools.mcp_servers.chromadb_operations
+  name: chromadb
+  parameters:
+    collection: string
+    metadata: object
+    operation: string
+    vectors: array
+- description: Google Calendar integration
+  implementation: core.tools.mcp_servers.google_calendar_operations
+  name: google_calendar
+  parameters:
+    action: string
+    event: object
+    operation: string
+- description: Gmail integration for email operations
+  implementation: core.tools.mcp_servers.gmail_operations
+  name: gmail
+  parameters:
+    action: string
+    email: object
+    operation: string
+- description: Search the web for information
+  implementation: core.tools.web_search.search
+  name: web_search
+  parameters:
+    max_results: integer
+    query: string
+- description: Execute code snippets
+  implementation: core.tools.code_execution.execute
+  name: code_execution
+  parameters:
+    code: string
+    language: string
+    timeout: integer
+- description: Interact with GitHub repositories
+  implementation: core.tools.github_tool.github_action
+  name: github_tool
+  parameters:
+    action: string
+    payload: object
+    repo: string
+- description: Update Bayesian beliefs using PyMC
+  implementation: core.tools.bayesian_tools.update_beliefs
+  name: bayesian_update
+  parameters:
+    evidence: object
+    model: string
+- description: Analyze documents for structure, content, and code
+  implementation: core.tools.document_analyzer.analyze_document
+  name: document_analyzer
+  parameters:
+    analysis_type: string
+    file_path: string
+    options: object
+- description: Generate code, tests, and documentation
+  implementation: core.tools.code_generation.generate
+  name: code_generation
+  parameters:
+    spec: object
+    language: string
+    framework: string
+    output_type: string
+    context: object
