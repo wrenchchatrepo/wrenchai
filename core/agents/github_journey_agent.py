@@ -3,6 +3,7 @@
 
 from typing import Dict, List, Optional, Union
 import yaml
+import json
 
 from .journey_agent import JourneyAgent
 from ..tools.github_tool import GitHubTool
@@ -133,8 +134,11 @@ class GitHubJourneyAgent(JourneyAgent):
         Returns:
             Current issue body text
         """
-        # TODO: Implement using gh api
-        return ""
+        # Use gh api to get issue body
+        result = self.github.run_gh_command(
+            ['api', f'/repos/{self.config["github_repository"]}/issues/{issue_number}', '--jq', '.body']
+        )
+        return result.strip() if result else ""
         
     def setup_project_board(self,
                           name: str,
@@ -153,7 +157,24 @@ class GitHubJourneyAgent(JourneyAgent):
         # Create project
         project_url = self.github.create_project(name, columns)
         
-        # TODO: Add automation rules once supported
+        # Add automation rules if specified
+        if automation:
+            project_id = project_url.split('/')[-1]
+            
+            # Configure automation rules using the API
+            for rule in automation.get('rules', []):
+                trigger = rule.get('trigger', {})
+                action = rule.get('action', {})
+                
+                # Create automation rule
+                self.github.run_gh_command([
+                    'api',
+                    f'/projects/{project_id}/automation/rules',
+                    '-X', 'POST',
+                    '-F', f'event_type={trigger.get("event")}',
+                    '-F', f'action_type={action.get("type")}',
+                    '-F', f'configuration={json.dumps(action.get("config", {}))}'
+                ])
         
         return project_url
         
@@ -174,4 +195,19 @@ class GitHubJourneyAgent(JourneyAgent):
                     description=label.get('description')
                 )
                 
-        # TODO: Implement label updates once supported by gh CLI
+        # Update existing labels
+        if updates:
+            for update in updates:
+                old_name = update.get('old_name')
+                if not old_name:
+                    continue
+                    
+                # Update label using the API
+                self.github.run_gh_command([
+                    'api',
+                    f'/repos/{self.config["github_repository"]}/labels/{old_name}',
+                    '-X', 'PATCH',
+                    '-F', f'new_name={update.get("new_name", old_name)}',
+                    '-F', f'color={update.get("color", "")}',
+                    '-F', f'description={update.get("description", "")}'
+                ])
