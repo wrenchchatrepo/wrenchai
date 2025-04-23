@@ -176,6 +176,10 @@ tools_allowed:
   - browser_tools
   - bayesian_update
   - data_analysis
+  - test_tool
+  - database_tool
+  - monitoring_tool
+  - gcp_tool
 
 # Agents that participate in this playbook
 agents:
@@ -187,6 +191,8 @@ agents:
   - InspectorAgent
   - TestEngineerAgent
   - UATAgent
+  - DBA
+  - GCPArchitect
 
 # Agent LLM assignments
 agent_llms:
@@ -198,3 +204,5 @@ agent_llms:
   InspectorAgent: "claude-3.7-sonnet"
   TestEngineerAgent: "claude-3.7-sonnet"
   UATAgent: "gemini-2.5-flash"
+  DBA: "claude-3.7-sonnet"
+  GCPArchitect: "claude-3.7-sonnet"

@@ -1,65 +1,66 @@
 # MIT License - Copyright (c) 2024 Wrench AI
 # For full license information, see the LICENSE file in the repo root.
 
-import asyncio
+import os
+import json
+import requests
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
 
-# Try to import the DuckDuckGo search tool from Pydantic AI
-try:
-    from pydantic_ai.common.tools.duckduckgo import duckduckgo_search
-    DUCKDUCKGO_AVAILABLE = True
-except ImportError:
-    DUCKDUCKGO_AVAILABLE = False
-    
-class SearchResult(BaseModel):
-    """Model for search results"""
-    title: str
-    url: Optional[str] = None
-    snippet: Optional[str] = None
-    source: str = "custom"
-
-async def web_search(query: str, max_results: int = 5) -> List[SearchResult]:
-    """
-    Perform a web search using available search providers
+def search(query: str, max_results: Optional[int] = 5) -> Dict[str, Any]:
+    """Search the web using Brave Search API.
     
     Args:
         query: The search query
-        max_results: Maximum number of results to return
+        max_results: Maximum number of results to return (default: 5)
         
     Returns:
-        List of search results with title, URL and snippet
+        Dict containing search results and metadata
     """
-    if DUCKDUCKGO_AVAILABLE:
-        # Use the Pydantic AI DuckDuckGo search
-        raw_results = await duckduckgo_search(query, max_results=max_results)
+    api_key = os.getenv('BRAVE_SEARCH_API_KEY')
+    if not api_key:
+        raise ValueError("BRAVE_SEARCH_API_KEY environment variable not set")
         
-        # Convert to our standard format
-        results = [
-            SearchResult(
-                title=item.get("title", ""),
-                url=item.get("href", ""),
-                snippet=item.get("body", ""),
-                source="duckduckgo"
-            )
-            for item in raw_results
-        ]
-        return results
-    else:
-        # Fallback to placeholder implementation
-        print(f"Performing web search for: {query}")
-        return [
-            SearchResult(
-                title=f"Result {i} for {query}",
-                url=f"https://example.com/result{i}",
-                snippet=f"This is a placeholder result {i} for the query: {query}",
-                source="placeholder"
-            )
-            for i in range(1, max_results + 1)
-        ]
-
-# For backward compatibility
-def sync_web_search(query: str, max_results: int = 5) -> List[Dict[str, Any]]:
-    """Synchronous version of web_search for compatibility"""
-    results = asyncio.run(web_search(query, max_results))
-    return [result.model_dump() for result in results]
+    headers = {
+        'X-Subscription-Token': api_key,
+        'Accept': 'application/json'
+    }
+    
+    params = {
+        'q': query,
+        'count': max_results
+    }
+    
+    try:
+        response = requests.get(
+            'https://api.search.brave.com/res/v1/web/search',
+            headers=headers,
+            params=params
+        )
+        response.raise_for_status()
+        
+        results = response.json()
+        
+        # Format the results
+        formatted_results = {
+            'query': query,
+            'total_results': len(results.get('web', {}).get('results', [])),
+            'results': []
+        }
+        
+        for result in results.get('web', {}).get('results', [])[:max_results]:
+            formatted_results['results'].append({
+                'title': result.get('title'),
+                'url': result.get('url'),
+                'description': result.get('description'),
+                'published_date': result.get('published_date')
+            })
+            
+        return formatted_results
+        
+    except requests.exceptions.RequestException as e:
+        return {
+            'error': str(e),
+            'query': query,
+            'total_results': 0,
+            'results': []
+        }
