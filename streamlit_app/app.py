@@ -14,6 +14,7 @@ import logging
 from PIL import Image
 import io
 import tempfile
+from typing import Optional, Dict, Any
 
 # Configure the app
 st.set_page_config(
@@ -22,8 +23,8 @@ st.set_page_config(
     page_icon="🤖"
 )
 
-# API endpoint (change when deployed)
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+# API configuration
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")  # Using loopback IP
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +50,8 @@ if 'uploaded_content' not in st.session_state:
     st.session_state.uploaded_content = []
 if 'temp_files' not in st.session_state:
     st.session_state.temp_files = []
+if 'agent_id' not in st.session_state:
+    st.session_state.agent_id = None
 
 # Utility functions
 def load_configs():
@@ -112,8 +115,9 @@ def add_output(content, type="text"):
         "content": content
     })
 
-def run_api_request(endpoint, method="GET", data=None, timeout=10):
-    """Run API request and handle errors"""
+# Enhanced API request handling
+def run_api_request(endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, timeout: int = 10) -> Optional[Dict[str, Any]]:
+    """Make API request with proper error handling"""
     url = f"{API_URL}{endpoint}"
     
     try:
@@ -122,31 +126,19 @@ def run_api_request(endpoint, method="GET", data=None, timeout=10):
         elif method == "POST":
             response = requests.post(url, json=data, timeout=timeout)
         else:
-            st.error(f"Unsupported method: {method}")
-            add_log(f"Unsupported API method: {method}")
-            return None
+            raise ValueError(f"Unsupported method: {method}")
             
         response.raise_for_status()
         return response.json()
-    except requests.exceptions.ConnectionError:
-        error_msg = f"Could not connect to API at {url}. Is the server running?"
+    except requests.exceptions.RequestException as e:
+        error_msg = f"API request failed: {str(e)}"
+        logger.error(error_msg)
         st.error(error_msg)
-        add_log(error_msg)
-        return None
-    except requests.exceptions.Timeout:
-        error_msg = f"Request to {url} timed out after {timeout} seconds"
-        st.error(error_msg)
-        add_log(error_msg)
-        return None
-    except requests.exceptions.HTTPError as e:
-        error_msg = f"HTTP error: {e}"
-        st.error(error_msg)
-        add_log(error_msg)
         return None
     except Exception as e:
-        error_msg = f"Error: {str(e)}"
+        error_msg = f"Unexpected error in API request: {str(e)}"
+        logger.error(error_msg)
         st.error(error_msg)
-        add_log(error_msg)
         return None
 
 # Define cleanup function for temporary files
@@ -192,25 +184,21 @@ if page == "Chat Interface":
     chat_col, upload_col = st.columns([2, 1])
     
     with chat_col:
-        # Agent/Playbook selection
-        col1, col2 = st.columns(2)
-        with col1:
-            playbooks = ["None"] + [p["name"] for p in configs.get('playbooks', {}).get('playbooks', [])]
-            selected_playbook = st.selectbox("Select Playbook", playbooks)
+        # Playbook selection only
+        playbooks = ["None"] + [p["name"] for p in configs.get('playbooks', {}).get('playbooks', [])]
+        selected_playbook = st.selectbox("Select Playbook", playbooks)
         
-        with col2:
-            # Dynamically load agent names from config
-            agents = ["SuperAgent"]  # Default in case config is empty
-            if 'agents' in configs and 'agent_roles' in configs['agents']:
-                try:
-                    agent_roles = configs['agents'].get('agent_roles', [])
-                    if agent_roles and isinstance(agent_roles, list):
-                        agents = [agent.get('name', f"Agent{i}") for i, agent in enumerate(agent_roles)]
-                except Exception as e:
-                    add_log(f"Error loading agent list from config: {str(e)}")
-            
-            selected_agent = st.selectbox("Direct Agent (if no playbook)", agents)
-        
+        # Initialize WebSocket connection if needed
+        if not st.session_state.agent_id and selected_playbook != "None":
+            # Create agent for playbook
+            response = run_api_request(
+                "/api/agents/create",
+                method="POST",
+                data={"role": "SuperAgent", "playbook": selected_playbook}
+            )
+            if response and "agent_id" in response:
+                st.session_state.agent_id = response["agent_id"]
+
         # Chat history display
         st.subheader("Chat History")
         chat_container = st.container(height=400)
@@ -226,63 +214,59 @@ if page == "Chat Interface":
         user_input = st.text_area("Enter your message", height=100)
         
         # Submit button
-        if st.button("Send"):
-            if user_input:
-                # Add user message to chat history
-                st.session_state.chat_history.append({
-                    'role': 'user',
-                    'content': user_input
-                })
+        if st.button("Send") and user_input:
+            # Add user message to chat history
+            st.session_state.chat_history.append({
+                'role': 'user',
+                'content': user_input
+            })
+            
+            # Log the interaction
+            add_log(f"User input: {user_input[:50]}{'...' if len(user_input) > 50 else ''}")
+            
+            try:
+                # Check API health
+                health_check = run_api_request("/api/health", method="GET")
                 
-                # Log the interaction
-                add_log(f"User input: {user_input[:50]}{'...' if len(user_input) > 50 else ''}")
-                
-                # Try to call the API, fall back to simulation if not available
-                try:
-                    # Check if API is available with a health check
-                    health_check = run_api_request("/api/health", method="GET")
+                if health_check and health_check.get("status") == "ok":
+                    # Prepare message data
+                    message_data = {
+                        "message": user_input,
+                        "playbook": selected_playbook if selected_playbook != "None" else None,
+                        "agent": st.session_state.agent_id,
+                        "uploads": st.session_state.uploaded_content
+                    }
                     
-                    if health_check and health_check.get("status") == "ok":
-                        # API is available, make the real call
-                        response = run_api_request(
-                            "/api/chat",
-                            method="POST",
-                            data={
-                                "message": user_input,
-                                "playbook": selected_playbook if selected_playbook != "None" else None,
-                                "agent": selected_agent,
-                                "uploads": st.session_state.uploaded_content
-                            }
-                        )
-                        
-                        if response and "response" in response:
-                            agent_response = response["response"]
-                        else:
-                            # API error or unexpected response format
-                            agent_response = "Error processing your request. Please check logs for details."
+                    # Send message through WebSocket if available
+                    response = run_api_request(
+                        "/api/chat",
+                        method="POST",
+                        data=message_data
+                    )
+                    
+                    if response and "response" in response:
+                        agent_response = response["response"]
                     else:
-                        # API not available, use simulation
-                        add_log("API not available, using simulation mode")
-                        time.sleep(1)  # Simulate processing time
-                        agent_response = f"[SIMULATION MODE] Received your message. Using {'playbook: ' + selected_playbook if selected_playbook != 'None' else 'agent: ' + selected_agent}."
-                except Exception as e:
-                    # Error connecting to API, use simulation
-                    add_log(f"Error connecting to API: {str(e)}")
-                    time.sleep(1)  # Simulate processing time
-                    agent_response = f"[SIMULATION MODE] Received your message. Using {'playbook: ' + selected_playbook if selected_playbook != 'None' else 'agent: ' + selected_agent}."
-                
-                # Add agent response to chat history
-                st.session_state.chat_history.append({
-                    'role': 'assistant',
-                    'content': agent_response
-                })
-                
-                # Log the response and add to output panel
-                add_log(f"Agent response: {agent_response[:50]}{'...' if len(agent_response) > 50 else ''}")
-                add_output(f"Agent response: {agent_response}")
-                
-                # Refresh the UI
-                st.experimental_rerun()
+                        agent_response = "Error: No response received from agent"
+                else:
+                    agent_response = "Error: API is not available"
+            except Exception as e:
+                error_msg = f"Error processing message: {str(e)}"
+                logger.error(error_msg)
+                agent_response = f"Error: {error_msg}"
+            
+            # Add agent response to chat history
+            st.session_state.chat_history.append({
+                'role': 'assistant',
+                'content': agent_response
+            })
+            
+            # Log the response and add to output panel
+            add_log(f"Agent response: {agent_response[:50]}{'...' if len(agent_response) > 50 else ''}")
+            add_output(f"Agent response: {agent_response}")
+            
+            # Refresh the UI
+            st.rerun()
     
     with upload_col:
         # File upload panel
@@ -410,6 +394,7 @@ elif page == "Configuration Editor":
                     configs[config_type] = config_data  # Update the loaded configs
                     add_log(f"Saved {config_type} configuration")
                     add_output(f"Saved {config_type} configuration file")
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error saving configuration: {str(e)}")
                     add_log(f"Error saving {config_type} configuration: {str(e)}")
@@ -479,6 +464,7 @@ agent_roles:
                     configs[config_type] = config_data  # Update the loaded configs
                     add_log(f"Saved {config_type} configuration")
                     add_output(f"Saved {config_type} configuration file")
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error saving configuration: {str(e)}")
                     add_log(f"Error saving {config_type} configuration: {str(e)}")
@@ -545,6 +531,7 @@ tools:
                     configs[config_type] = config_data  # Update the loaded configs
                     add_log(f"Saved {config_type} configuration")
                     add_output(f"Saved {config_type} configuration file")
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error saving configuration: {str(e)}")
                     add_log(f"Error saving {config_type} configuration: {str(e)}")
@@ -653,11 +640,11 @@ elif page == "Logs Viewer":
         log_filter = st.text_input("Filter logs", "")
     with col2:
         if st.button("Refresh Logs"):
-            st.experimental_rerun()
+            st.rerun()
     with col3:
         if st.button("Clear Logs"):
             st.session_state.logs = []
-            st.experimental_rerun()
+            st.rerun()
     
     # Display logs
     st.subheader("Log Entries")
@@ -697,7 +684,7 @@ elif page == "Output Viewer":
     with col2:
         if st.button("Clear Output"):
             st.session_state.output = []
-            st.experimental_rerun()
+            st.rerun()
     
     # Display output items in reverse order (newest first)
     output_items = st.session_state.output.copy()

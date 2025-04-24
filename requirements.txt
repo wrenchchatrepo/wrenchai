@@ -7,7 +7,7 @@ anthropic>=0.49.0 # For Claude models
 google-api-python-client>=2.123.0  # For Google models
 
 # New dependencies for enhanced framework
-pydantic>=2.10.0
+pydantic>=2.5.0
 pydantic-ai>=0.1.3
 pydantic-ai-slim>=0.1.3
 pydantic-ai-slim[duckduckgo] # For DuckDuckGo search capability
@@ -36,8 +36,76 @@ aiosqlite>=0.19.0            # Async SQLite for chat app
 openai>=1.20.0               # OpenAI API client
 
 # Testing and monitoring
-pytest>=7.4.0
+pytest>=7.4.3
+pytest-cov>=4.1.0
 pytest-asyncio>=0.21.1
+unittest2>=1.1.0
 pydantic-ai[logfire]>=0.1.3  # For Logfire integration
 inline-snapshot>=0.5.0       # For testing assertions
 dirty-equals>=0.6.0          # For flexible comparisons in tests
+
+# Database dependencies
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9  # PostgreSQL
+pymysql>=1.1.0  # MySQL
+psutil>=5.9.6
+
+# Monitoring dependencies
+pandas>=2.1.3
+plotly>=5.18.0
+prometheus-client>=0.19.0
+
+# GCP dependencies
+google-cloud-storage>=2.13.0
+google-cloud-bigquery>=3.13.0
+google-cloud-pubsub>=2.18.4
+google-cloud-monitoring>=2.15.1
+google-cloud-aiplatform>=1.36.4
+google-cloud-compute>=1.14.1
+google-cloud-container>=2.33.0
+
+# Visualization
+matplotlib>=3.8.2
+seaborn>=0.13.0
+
+# New dependencies for enhanced database tool
+alembic>=1.12.0
+sqlalchemy-utils>=0.41.1
+python-dateutil>=2.8.2
+
+# Core dependencies
+pydantic>=2.5.0
+typing-extensions>=4.8.0
+
+# Testing dependencies
+pytest>=7.4.3
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.1
+unittest2>=1.1.0
+
+# Database dependencies
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9
+pymysql>=1.1.0
+alembic>=1.12.0
+sqlalchemy-utils>=0.41.1
+python-dateutil>=2.8.2
+psutil>=5.9.6
+
+# Monitoring dependencies
+pandas>=2.1.3
+plotly>=5.18.0
+prometheus-client>=0.19.0
+
+# GCP dependencies
+google-cloud-storage>=2.13.0
+google-cloud-bigquery>=3.13.0
+google-cloud-pubsub>=2.18.4
+google-cloud-monitoring>=2.15.1
+google-cloud-aiplatform>=1.36.4
+google-cloud-compute>=1.14.1
+google-cloud-container>=2.33.0
+
+# Visualization
+matplotlib>=3.8.2
+seaborn>=0.13.0
