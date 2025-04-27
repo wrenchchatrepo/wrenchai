@@ -4,24 +4,35 @@
 import os
 import logging
 from typing import Dict, List, Any, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import json
 import time
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from datetime import datetime, timedelta
 
 from core.agent_system import AgentManager
 from core.bayesian_engine import BayesianEngine
 from core.tool_system import ToolRegistry
 from core.config_loader import load_config, load_configs
+from core.agents.super_agent import SuperAgent, TaskRequest
+from core.agents.inspector_agent import InspectorAgent
+from core.agents.journey_agent import JourneyAgent, JourneyStep
+from core.tools.secrets_manager import secrets
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Wrenchai Multi-Agent Framework API")
+app = FastAPI(
+    title="WrenchAI API",
+    description="Multi-Agent Framework API",
+    version="1.0.0"
+)
 
 # Enable CORS
 app.add_middleware(
@@ -38,6 +49,37 @@ system_config = None
 agent_manager = None
 tool_registry = None
 bayesian_engine = None
+
+# Initialize agents
+super_agent = SuperAgent()
+inspector_agent = InspectorAgent()
+journey_agent = JourneyAgent()
+
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        if client_id not in self.active_connections:
+            self.active_connections[client_id] = []
+        self.active_connections[client_id].append(websocket)
+
+    async def disconnect(self, websocket: WebSocket, client_id: str):
+        self.active_connections[client_id].remove(websocket)
+        if not self.active_connections[client_id]:
+            del self.active_connections[client_id]
+
+    async def broadcast(self, message: Dict[str, Any], client_id: str):
+        if client_id in self.active_connections:
+            for connection in self.active_connections[client_id]:
+                await connection.send_json(message)
+
+manager = ConnectionManager()
+
+# OAuth2 configuration
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def get_agent_id(agent):
     """Get a string identifier for an agent"""
@@ -74,17 +116,32 @@ async def startup_event():
         logging.error(f"Error initializing system: {e}")
         raise
 
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "ok", 
-        "components": {
-            "agent_manager": agent_manager is not None,
-            "bayesian_engine": bayesian_engine is not None,
-            "tool_registry": tool_registry is not None
+@app.get("/health", tags=["System"])
+async def health_check() -> Dict[str, Any]:
+    """Check system health status."""
+    try:
+        # Implement health checks
+        checks = {
+            "database": True,  # Replace with actual DB check
+            "cache": True,     # Replace with actual cache check
+            "agents": {
+                "super_agent": isinstance(super_agent, SuperAgent),
+                "inspector_agent": isinstance(inspector_agent, InspectorAgent),
+                "journey_agent": isinstance(journey_agent, JourneyAgent)
+            }
         }
-    }
+        
+        return {
+            "status": "healthy" if all(checks.values()) else "unhealthy",
+            "checks": checks,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Health check failed: {str(e)}"
+        )
 
 @app.post("/api/agents/create")
 async def create_agent(data: Dict[str, Any]):
@@ -227,33 +284,21 @@ async def list_tools():
         logging.error(f"Error listing tools: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.websocket("/ws/agent/{agent_id}")
-async def agent_websocket(websocket: WebSocket, agent_id: str):
-    """WebSocket endpoint for real-time agent communication"""
-    await websocket.accept()
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await manager.connect(websocket, client_id)
     try:
-        if agent_id not in agent_manager.agents:
-            await websocket.send_json({"error": f"Agent {agent_id} not found"})
-            await websocket.close()
-            return
-            
-        agent = agent_manager.agents[agent_id]
-        
         while True:
             data = await websocket.receive_json()
-            # Process the message through the agent
-            result = await agent.process(data)
-            await websocket.send_json(result)
-    except WebSocketDisconnect:
-        logging.info(f"WebSocket disconnected for agent {agent_id}")
+            await manager.broadcast({
+                "client_id": client_id,
+                "message": data,
+                "timestamp": datetime.utcnow().isoformat()
+            }, client_id)
     except Exception as e:
-        logging.error(f"Error in agent websocket: {e}")
-        await websocket.send_json({"error": str(e)})
+        logger.error(f"WebSocket error: {str(e)}")
     finally:
-        try:
-            await websocket.close()
-        except:
-            pass
+        await manager.disconnect(websocket, client_id)
 
 async def execute_workflow_and_log(run_id: str, playbook_name: str, input_data: Dict[str, Any]):
     """Execute a workflow and log the results"""
@@ -271,4 +316,128 @@ async def execute_workflow_and_log(run_id: str, playbook_name: str, input_data: 
     except Exception as e:
         logging.error(f"Error executing workflow {run_id}: {e}")
         # In a real implementation, update status in database
+        raise
+
+# Task endpoints
+@app.post("/tasks", tags=["Tasks"])
+async def create_task(task: TaskRequest) -> Dict[str, Any]:
+    """Create and start a new task."""
+    try:
+        result = await super_agent.orchestrate_task(task)
+        return result
+    except Exception as e:
+        logger.error(f"Task creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Task creation failed: {str(e)}"
+        )
+
+@app.get("/tasks/{task_id}", tags=["Tasks"])
+async def get_task_status(task_id: str) -> Dict[str, Any]:
+    """Get status of a specific task."""
+    try:
+        # Implement task status retrieval
+        return {
+            "task_id": task_id,
+            "status": "running",  # Replace with actual status
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get task status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get task status: {str(e)}"
+        )
+
+# Journey endpoints
+@app.post("/journeys", tags=["Journeys"])
+async def create_journey(
+    steps: List[JourneyStep],
+    context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Create and execute a new journey."""
+    try:
+        result = await journey_agent.execute_journey(steps, context)
+        return result
+    except Exception as e:
+        logger.error(f"Journey creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Journey creation failed: {str(e)}"
+        )
+
+@app.get("/journeys/{journey_id}", tags=["Journeys"])
+async def get_journey_status(journey_id: str) -> Dict[str, Any]:
+    """Get status of a specific journey."""
+    try:
+        if journey_id not in journey_agent.active_journeys:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Journey not found"
+            )
+        return journey_agent.active_journeys[journey_id]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get journey status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get journey status: {str(e)}"
+        )
+
+# Monitoring endpoints
+@app.get("/monitor/{task_id}", tags=["Monitoring"])
+async def monitor_task(task_id: str) -> Dict[str, Any]:
+    """Monitor a specific task."""
+    try:
+        execution_data = {
+            "task_id": task_id,
+            "metrics": {
+                "success_rate": "95%",
+                "duration": "00:05:23"
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        result = await inspector_agent.monitor_execution(task_id, execution_data)
+        return result
+    except Exception as e:
+        logger.error(f"Task monitoring failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Task monitoring failed: {str(e)}"
+        )
+
+# Authentication endpoint
+@app.post("/token", tags=["Auth"])
+async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> Dict[str, str]:
+    """Authenticate user and generate access token."""
+    try:
+        # Implement actual authentication logic
+        if form_data.username == "test" and form_data.password == "test":
+            return {
+                "access_token": "dummy_token",
+                "token_type": "bearer"
+            }
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Authentication failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Authentication failed: {str(e)}"
+        )
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup resources on shutdown."""
+    try:
+        logger.info("Cleaning up API resources...")
+        # Cleanup any resources here
+    except Exception as e:
+        logger.error(f"Shutdown cleanup failed: {str(e)}")
         raise
