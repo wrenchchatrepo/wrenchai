@@ -1,0 +1,111 @@
+# Test Configuration File
+
+# Database Settings
+database:
+  url: "sqlite:///./test.db"  # Use SQLite for testing
+  echo: true  # Log SQL statements during tests
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+  pool_recycle: 1800
+
+# Agent Settings
+agent:
+  id: "test-agent"
+  name: "TestAgent"
+  description: "Agent for testing purposes"
+  capabilities:
+    - "code_review"
+    - "testing"
+    - "documentation"
+  max_retries: 3
+  timeout: 30  # seconds
+
+# Message Queue Settings
+message_queue:
+  max_size: 1000
+  timeout: 5  # seconds
+
+# Tool Registry Settings
+tool_registry:
+  default_timeout: 30  # seconds
+  max_retries: 3
+
+# Logging Settings
+logging:
+  level: "DEBUG"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_file: "test.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
+# Security Settings
+security:
+  secret_key: "test-secret-key"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+  password_min_length: 8
+  password_max_length: 50
+
+# Test Settings
+test:
+  enable_cleanup: true  # Clean up test data after each test
+  async_mode: true  # Use async test client
+  timeout: 30  # seconds
+  retry_count: 3
+  parallel_workers: 4
+
+# Mock Settings
+mock:
+  enable_network_calls: false  # Disable real network calls during tests
+  mock_responses_dir: "tests/mock_responses"
+  record_mode: "none"  # Don't record new responses during tests
+
+# WebSocket Test Settings
+websocket:
+  timeout: 5  # seconds
+  keep_alive: true
+  max_message_size: 1048576  # 1MB
+
+# Cache Settings
+cache:
+  enable: false  # Disable caching during tests
+  backend: "memory"
+  ttl: 300  # seconds
+
+# Rate Limit Settings
+rate_limit:
+  enable: true
+  max_requests: 100
+  time_window: 60  # seconds
+
+# Metrics Settings
+metrics:
+  enable: true
+  export_interval: 5  # seconds
+  statsd_host: "localhost"
+  statsd_port: 8125
+
+# Feature Flags
+features:
+  enable_websockets: true
+  enable_async_tasks: true
+  enable_rate_limiting: true
+  enable_caching: false
+  enable_metrics: true
+
+# Test Data Settings
+test_data:
+  seed: 12345  # Random seed for reproducible test data
+  num_agents: 5
+  num_tasks: 10
+  num_messages: 20
+
+# Error Injection Settings
+error_injection:
+  enable: true
+  probability: 0.1  # 10% chance of injecting errors
+  error_types:
+    - "network_timeout"
+    - "database_error"
+    - "validation_error" 

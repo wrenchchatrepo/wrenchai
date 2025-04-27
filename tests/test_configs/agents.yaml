@@ -1,0 +1,43 @@
+---
+# Test configuration for agents
+agents:
+  SuperAgent:
+    class: wrenchai.core.agents.super_agent.SuperAgent
+    tools:
+      - task_coordination
+      - workflow_management
+    config:
+      max_concurrent_tasks: 5
+      coordination_timeout: 30
+
+  JourneyAgent:
+    class: wrenchai.core.agents.journey_agent.JourneyAgent
+    tools:
+      - web_search
+      - code_generation
+      - github
+    config:
+      analysis_depth: 2
+      max_retries: 3
+
+  Codifier:
+    class: wrenchai.core.agents.codifier_agent.Codifier
+    tools:
+      - documentation_generation
+      - code_analysis
+    config:
+      doc_formats:
+        - markdown
+        - openapi
+      versioning: true
+
+  TestEngineer:
+    class: wrenchai.core.agents.test_engineer_agent.TestEngineer
+    tools:
+      - test_generation
+      - test_execution
+    config:
+      coverage_threshold: 80
+      test_frameworks:
+        - pytest
+        - unittest 
