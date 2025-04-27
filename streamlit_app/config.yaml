@@ -1,0 +1,44 @@
+# Streamlit App Configuration
+
+# API Settings
+api:
+  base_url: "http://localhost:8000"
+  websocket_url: "ws://localhost:8000/ws"
+  version: "v1"
+  timeout: 30
+
+# UI Settings
+ui:
+  page_title: "WrenchAI"
+  page_icon: "🔧"
+  layout: "wide"
+  initial_sidebar_state: "expanded"
+  theme:
+    primaryColor: "#FF10F0"  # Neon Pink
+    backgroundColor: "#0A0A0A"  # Pure Black
+    secondaryBackgroundColor: "#1B1B1B"  # Dark Grey
+    textColor: "#E3E3E3"  # Soft White
+    font: "sans serif"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "wrenchai-ui.log"
+
+# Cache Settings
+cache:
+  ttl: 3600  # Time to live in seconds
+  max_entries: 1000
+
+# Session Settings
+session:
+  expire_after: 3600  # Session expiry in seconds
+  max_size: 100  # Maximum session storage size in MB
+
+# Feature Flags
+features:
+  enable_websocket: true
+  enable_file_upload: true
+  enable_code_preview: true
+  enable_agent_monitoring: true 
