@@ -13,6 +13,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+chromadb_env/
 
 # Environment variables
 .env
@@ -21,6 +22,7 @@ htmlcov/
 archive/
 wrenchai_backup/
 *.log
+docs/
 
 # Editor/IDE
 .vscode/
@@ -37,6 +39,7 @@ Thumbs.db
 docs/Bayes_Theorem.html
 streamlit_app/Streamlit_UI.html
 .$*
+*.pdf
 
 # Scripts
 create_doc_issues.sh
