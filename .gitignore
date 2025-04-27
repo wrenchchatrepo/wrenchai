@@ -21,6 +21,7 @@ htmlcov/
 archive/
 wrenchai_backup/
 *.log
+docs/
 
 # Editor/IDE
 .vscode/
