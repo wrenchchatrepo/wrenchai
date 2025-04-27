@@ -1,0 +1,56 @@
+---
+# Test database configuration
+database:
+  test:
+    url: sqlite:///test.db
+    echo: true
+    pool_size: 5
+    max_overflow: 10
+    pool_timeout: 30
+    pool_recycle: 3600
+
+  tables:
+    - name: agents
+      columns:
+        - name: id
+          type: UUID
+          primary_key: true
+        - name: type
+          type: String
+        - name: status
+          type: String
+        - name: created_at
+          type: DateTime
+        - name: updated_at
+          type: DateTime
+
+    - name: tasks
+      columns:
+        - name: id
+          type: UUID
+          primary_key: true
+        - name: agent_id
+          type: UUID
+          foreign_key: agents.id
+        - name: status
+          type: String
+        - name: created_at
+          type: DateTime
+        - name: completed_at
+          type: DateTime
+
+    - name: messages
+      columns:
+        - name: id
+          type: UUID
+          primary_key: true
+        - name: sender_id
+          type: UUID
+          foreign_key: agents.id
+        - name: receiver_id
+          type: UUID
+          foreign_key: agents.id
+        - name: content
+          type: JSON
+        - name: sent_at
+          type: DateTime 

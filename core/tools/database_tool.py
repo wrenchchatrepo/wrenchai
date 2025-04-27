@@ -1,10 +1,9 @@
 from typing import List, Dict, Any, Optional, Union, Tuple
 from pydantic import BaseModel, Field, SecretStr
-from sqlalchemy import create_engine, text, event, inspect
+from sqlalchemy import create_engine, text, event, inspect, Index, Column, Integer, String, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
-from sqlalchemy.sql import explain
 import pandas as pd
 from contextlib import contextmanager
 import logging
@@ -23,6 +22,7 @@ from typing import Set
 from sqlalchemy_utils import database_exists, create_database
 import time
 import re
+from sqlalchemy.sql import func
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -83,6 +83,81 @@ class AuditLog(BaseModel):
     query: str = Field(..., description="SQL query executed")
     affected_rows: int = Field(..., description="Number of rows affected by the query")
     execution_time: float = Field(..., description="Execution time of the query in seconds")
+
+class Task(Base):
+    __tablename__ = "tasks"
+    
+    id = Column(Integer, primary_key=True)
+    task_id = Column(String, unique=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String)
+    status = Column(String, index=True)
+    priority = Column(String, index=True)
+    task_metadata = Column(JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), index=True)
+    
+    # Composite indexes for common query patterns
+    __table_args__ = (
+        # Index for status-based queries with priority sorting
+        Index('idx_task_status_priority', status, priority),
+        
+        # Index for time-range queries with status filtering
+        Index('idx_task_created_status', created_at, status),
+        
+        # Index for title search with status filtering
+        Index('idx_task_title_status', title, status),
+        
+        # Index for recent updates with status
+        Index('idx_task_updated_status', updated_at, status),
+        
+        # Index for priority-based queries with creation time
+        Index('idx_task_priority_created', priority, created_at)
+    )
+
+class TaskExecution(Base):
+    __tablename__ = "task_executions"
+    
+    id = Column(Integer, primary_key=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    agent_id = Column(String, index=True)
+    status = Column(String, index=True)
+    result = Column(JSON)
+    error = Column(JSON)
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    completed_at = Column(DateTime(timezone=True))
+    duration = Column(Integer)  # in milliseconds
+    
+    # Composite indexes for execution queries
+    __table_args__ = (
+        # Index for task-based queries with status
+        Index('idx_execution_task_status', task_id, status),
+        
+        # Index for agent performance analysis
+        Index('idx_execution_agent_status', agent_id, status),
+        
+        # Index for execution time analysis
+        Index('idx_execution_started_completed', started_at, completed_at),
+        
+        # Index for duration-based analysis with status
+        Index('idx_execution_duration_status', duration, status)
+    )
+
+class TaskDependency(Base):
+    __tablename__ = "task_dependencies"
+    
+    id = Column(Integer, primary_key=True)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    depends_on_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"))
+    
+    # Indexes for dependency management
+    __table_args__ = (
+        # Unique index to prevent duplicate dependencies
+        Index('idx_unique_dependency', task_id, depends_on_id, unique=True),
+        
+        # Index for finding dependent tasks
+        Index('idx_dependency_depends_on', depends_on_id)
+    )
 
 class DatabaseTool:
     """Tool for database operations and management"""
@@ -375,7 +450,7 @@ class DatabaseTool:
                 session.rollback()
                 if attempt == retry_count - 1:
                     raise e
-                logger.warning(f"Retrying transaction (attempt {attempt + 2}/{retry_count})")
+                self.logger.warning(f"Retrying transaction (attempt {attempt + 2}/{retry_count})")
             finally:
                 session.close()
                 
@@ -422,7 +497,7 @@ class DatabaseTool:
             with self.engines[connection_name].connect() as conn:
                 return self.engines[connection_name].dialect.has_table(conn, table_name)
         except Exception as e:
-            logger.error(f"Error checking table existence: {str(e)}")
+            self.logger.error(f"Error checking table existence: {str(e)}")
             return False
             
     def get_table_schema(self, table_name: str, connection_name: str = "default") -> Optional[Dict[str, Any]]:
@@ -445,7 +520,7 @@ class DatabaseTool:
                     "indexes": indexes
                 }
         except Exception as e:
-            logger.error(f"Error getting table schema: {str(e)}")
+            self.logger.error(f"Error getting table schema: {str(e)}")
             return None
             
     def create_backup(self, backup_path: str, connection_name: str = "default") -> bool:
@@ -495,7 +570,7 @@ class DatabaseTool:
                 
             return True
         except Exception as e:
-            logger.error(f"Error creating backup: {str(e)}")
+            self.logger.error(f"Error creating backup: {str(e)}")
             return False
             
     def restore_backup(self, backup_path: str, connection_name: str = "default") -> bool:
@@ -545,7 +620,7 @@ class DatabaseTool:
                 
             return True
         except Exception as e:
-            logger.error(f"Error restoring backup: {str(e)}")
+            self.logger.error(f"Error restoring backup: {str(e)}")
             return False
             
     def optimize_query(self, query: str, connection_name: str = "default") -> Dict[str, Any]:
@@ -553,7 +628,7 @@ class DatabaseTool:
         try:
             with self.session_scope(connection_name) as session:
                 # Get query plan
-                explain_stmt = explain(text(query))
+                explain_stmt = text(query)
                 result = session.execute(explain_stmt)
                 query_plan = [dict(row) for row in result]
                 
@@ -567,7 +642,7 @@ class DatabaseTool:
                     "recommendations": self._generate_optimization_recommendations(analysis)
                 }
         except Exception as e:
-            logger.error(f"Error optimizing query: {str(e)}")
+            self.logger.error(f"Error optimizing query: {str(e)}")
             return {
                 "error": str(e)
             }
@@ -634,4 +709,27 @@ class DatabaseTool:
                     processed[key] = value
             else:
                 processed[key] = value
-        return processed 
+        return processed
+
+    def get_query_plan(self, query: str, connection_name: str = "default") -> List[Dict[str, Any]]:
+        """
+        Get the query execution plan for a given SQL query.
+        
+        Args:
+            query (str): The SQL query to analyze
+            connection_name (str): The name of the database connection to use
+            
+        Returns:
+            List[Dict[str, Any]]: The query execution plan
+        """
+        try:
+            with self.session_scope(connection_name) as session:
+                # Get query plan using raw SQL EXPLAIN
+                explain_query = f"EXPLAIN {query}"
+                result = session.execute(text(explain_query))
+                query_plan = [dict(row) for row in result]
+                
+            return query_plan
+        except Exception as e:
+            self.logger.error(f"Error getting query plan: {str(e)}")
+            raise 

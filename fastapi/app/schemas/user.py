@@ -1,54 +1,41 @@
-from datetime import datetime
-from typing import Optional
-
+"""User schemas for request/response handling."""
+from typing import List
 from pydantic import BaseModel, EmailStr, Field
 
-class UserBase(BaseModel):
-    """Base user schema.
-    
-    Attributes:
-        email: User email
-        full_name: User's full name
-        is_active: Whether user is active
-        is_superuser: Whether user is superuser
-    """
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
-    is_active: Optional[bool] = True
-    is_superuser: Optional[bool] = False
+from app.schemas.base import BaseAPISchema, BaseSchema
+
+class UserBase(BaseSchema):
+    """Base schema for user data."""
+    email: EmailStr = Field(..., description="User's email address")
+    full_name: str | None = Field(None, description="User's full name")
+    is_active: bool = Field(True, description="Whether the user account is active")
+    is_superuser: bool = Field(False, description="Whether the user has superuser privileges")
 
 class UserCreate(UserBase):
-    """User creation schema.
-    
-    Attributes:
-        email: User email (required)
-        password: User password
-    """
-    email: EmailStr
-    password: str = Field(..., min_length=8)
+    """Schema for creating a new user."""
+    password: str = Field(
+        ...,
+        min_length=8,
+        description="User's password (min 8 characters)"
+    )
 
-class UserUpdate(UserBase):
-    """User update schema.
-    
-    Attributes:
-        password: Optional new password
-    """
-    password: Optional[str] = Field(None, min_length=8)
+class UserUpdate(BaseSchema):
+    """Schema for updating a user."""
+    email: EmailStr | None = None
+    full_name: str | None = None
+    password: str | None = Field(None, min_length=8)
+    is_active: bool | None = None
+    is_superuser: bool | None = None
 
-class UserResponse(UserBase):
-    """User response schema.
-    
-    Attributes:
-        id: User ID
-        email: User email
-        created_at: User creation timestamp
-        updated_at: User last update timestamp
-    """
-    id: int
-    email: EmailStr
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        """Pydantic config."""
-        from_attributes = True 
+class UserInDB(UserBase, BaseAPISchema):
+    """Schema for user information stored in DB."""
+    hashed_password: str
+
+class UserResponse(UserBase, BaseAPISchema):
+    """Schema for user information in API responses."""
+    pass
+
+class UserWithAgents(UserResponse):
+    """Schema for user information including owned agents."""
+    from app.schemas.agent import AgentResponse  # Avoid circular import
+    agents: List[AgentResponse] 
