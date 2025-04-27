@@ -7,8 +7,31 @@ import logging
 import asyncio
 import json
 from pathlib import Path
+from datetime import datetime
+from pydantic import BaseModel
+from core.agents.base_agent import BaseAgent
+from core.tools.documentation_tools import (
+    DocstringParser,
+    TypeHintAnalyzer,
+    MarkdownGenerator,
+    OpenAPIGenerator
+)
 
 from .journey_agent import JourneyAgent
+
+class DocumentationRequest(BaseModel):
+    """Request model for documentation generation."""
+    source_path: str
+    doc_type: str  # 'docstring', 'api', 'markdown', 'architecture'
+    include_private: bool = False
+    output_format: str = 'markdown'
+    
+class DocumentationResponse(BaseModel):
+    """Response model for documentation generation."""
+    content: str
+    metadata: Dict[str, Any]
+    format: str
+    generated_at: str
 
 class Codifier(JourneyAgent):
     """
@@ -20,6 +43,9 @@ class Codifier(JourneyAgent):
     3. Generate API documentation
     4. Write user guides
     5. Document system architecture
+    6. Version documentation
+    7. Validate documentation
+    8. Search documentation
     """
     
     def __init__(self, 
@@ -49,26 +75,30 @@ class Codifier(JourneyAgent):
                 "usage": "How to use the component/system",
                 "api_reference": "Detailed API documentation",
                 "examples": "Code examples and use cases",
-                "troubleshooting": "Common issues and solutions"
+                "troubleshooting": "Common issues and solutions",
+                "versioning": "Version history and changes",
+                "validation": "Documentation validation status"
             },
             "styling": {
                 "headers": "Use Markdown headers (# for top level)",
                 "code_blocks": "Use triple backticks with language specification",
                 "diagrams": "Use Mermaid diagrams for technical flows",
                 "links": "Use descriptive link text",
-                "images": "Include alt text for accessibility"
+                "images": "Include alt text for accessibility",
+                "versioning": "Include version numbers in headers"
             },
             "frequency": {
                 "api_docs": "Update with every API change",
                 "user_guides": "Update with every release",
-                "architecture": "Update with significant design changes"
+                "architecture": "Update with significant design changes",
+                "validation": "Run validation after each update"
             }
         }
         
         self.templates = templates or {}
         
         # Check tools availability
-        required_tools = ["document_tool"]
+        required_tools = ["document_tool", "document_analyzer", "search_tool"]
         for tool in required_tools:
             if tool not in tools:
                 logging.warning(f"Codifier agent should have '{tool}' tool")
@@ -285,6 +315,112 @@ class Codifier(JourneyAgent):
         
         return {"error": "Failed to generate architecture documentation"}
     
+    async def version_documentation(self, 
+                               doc_content: Dict[str, Any],
+                               version: str,
+                               changes: List[str]) -> Dict[str, Any]:
+        """Version documentation and track changes.
+        
+        Args:
+            doc_content: Documentation content to version
+            version: Version number/string
+            changes: List of changes in this version
+            
+        Returns:
+            Versioned documentation
+        """
+        try:
+            # Add version metadata
+            versioned_doc = {
+                "version": version,
+                "timestamp": datetime.utcnow().isoformat(),
+                "changes": changes,
+                "content": doc_content
+            }
+            
+            # Store version in version control
+            if "document_tool" in self.tools:
+                await self.tools["document_tool"].store_version(
+                    content=versioned_doc,
+                    version=version
+                )
+            
+            return versioned_doc
+        except Exception as e:
+            logging.error(f"Documentation versioning failed: {str(e)}")
+            raise
+
+    async def validate_documentation(self, 
+                                doc_content: Dict[str, Any],
+                                validation_rules: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Validate documentation against rules.
+        
+        Args:
+            doc_content: Documentation to validate
+            validation_rules: Optional custom validation rules
+            
+        Returns:
+            Validation results
+        """
+        try:
+            # Use document analyzer tool for validation
+            if "document_analyzer" in self.tools:
+                validation_result = await self.tools["document_analyzer"].analyze(
+                    content=doc_content,
+                    rules=validation_rules or self.doc_standards
+                )
+                
+                return {
+                    "is_valid": validation_result["passed"],
+                    "issues": validation_result.get("issues", []),
+                    "suggestions": validation_result.get("suggestions", [])
+                }
+            else:
+                return {
+                    "error": "Document analyzer tool not available",
+                    "is_valid": False
+                }
+        except Exception as e:
+            logging.error(f"Documentation validation failed: {str(e)}")
+            raise
+
+    async def search_documentation(self,
+                              query: str,
+                              doc_type: Optional[str] = None,
+                              limit: int = 10) -> Dict[str, Any]:
+        """Search through documentation.
+        
+        Args:
+            query: Search query
+            doc_type: Optional type of documentation to search
+            limit: Maximum number of results
+            
+        Returns:
+            Search results
+        """
+        try:
+            # Use search tool to find relevant documentation
+            if "search_tool" in self.tools:
+                search_result = await self.tools["search_tool"].search(
+                    query=query,
+                    doc_type=doc_type,
+                    limit=limit
+                )
+                
+                return {
+                    "query": query,
+                    "results": search_result["matches"],
+                    "total": search_result["total"]
+                }
+            else:
+                return {
+                    "error": "Search tool not available",
+                    "results": []
+                }
+        except Exception as e:
+            logging.error(f"Documentation search failed: {str(e)}")
+            raise
+
     async def run_playbook_step(self, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a specific playbook step.
         
@@ -324,6 +460,29 @@ class Codifier(JourneyAgent):
             
             arch_docs = await self.document_architecture(system_architecture, detail_level)
             return {"architecture_docs": arch_docs}
+            
+        elif action == "version_documentation":
+            doc_content = step.get("doc_content", context.get("doc_content", {}))
+            version = step.get("version", context.get("version", "1.0.0"))
+            changes = step.get("changes", context.get("changes", []))
+            
+            versioned_doc = await self.version_documentation(doc_content, version, changes)
+            return {"versioned_doc": versioned_doc}
+            
+        elif action == "validate_documentation":
+            doc_content = step.get("doc_content", context.get("doc_content", {}))
+            validation_rules = step.get("validation_rules", context.get("validation_rules"))
+            
+            validation_result = await self.validate_documentation(doc_content, validation_rules)
+            return {"validation_result": validation_result}
+            
+        elif action == "search_documentation":
+            query = step.get("query", context.get("query", ""))
+            doc_type = step.get("doc_type", context.get("doc_type"))
+            limit = step.get("limit", context.get("limit", 10))
+            
+            search_result = await self.search_documentation(query, doc_type, limit)
+            return {"search_result": search_result}
             
         else:
             return await super().run_playbook_step(step, context)
@@ -372,3 +531,153 @@ class Codifier(JourneyAgent):
             results["architecture_docs"] = context["architecture_docs"]
             
         return results
+
+class CodifierAgent(BaseAgent):
+    """Agent responsible for code documentation and standardization.
+    
+    This agent provides tools for:
+    - Generating and validating docstrings
+    - Creating API documentation
+    - Producing markdown documentation
+    - Analyzing type hints
+    - Enforcing documentation standards
+    """
+    
+    def __init__(self, agent_id: str, capabilities: List[str]):
+        super().__init__(agent_id=agent_id, capabilities=capabilities)
+        self.docstring_parser = DocstringParser()
+        self.type_analyzer = TypeHintAnalyzer()
+        self.md_generator = MarkdownGenerator()
+        self.openapi_generator = OpenAPIGenerator()
+        
+    async def generate_documentation(
+        self,
+        request: DocumentationRequest
+    ) -> DocumentationResponse:
+        """Generate documentation based on request type.
+        
+        Args:
+            request: Documentation request containing source and type
+            
+        Returns:
+            Generated documentation response
+        """
+        try:
+            if request.doc_type == 'docstring':
+                content = await self._generate_docstrings(
+                    request.source_path,
+                    request.include_private
+                )
+            elif request.doc_type == 'api':
+                content = await self._generate_api_docs(request.source_path)
+            elif request.doc_type == 'markdown':
+                content = await self._generate_markdown(request.source_path)
+            else:
+                raise ValueError(f"Unsupported doc type: {request.doc_type}")
+                
+            return DocumentationResponse(
+                content=content,
+                metadata=self._get_metadata(request),
+                format=request.output_format,
+                generated_at=datetime.utcnow().isoformat()
+            )
+        except Exception as e:
+            self.logger.error(f"Documentation generation failed: {str(e)}")
+            raise
+            
+    async def _generate_docstrings(
+        self,
+        source_path: str,
+        include_private: bool
+    ) -> str:
+        """Generate docstrings for Python source code.
+        
+        Args:
+            source_path: Path to source code
+            include_private: Whether to include private methods
+            
+        Returns:
+            Generated docstrings
+        """
+        # Parse existing docstrings
+        existing = await self.docstring_parser.parse_file(source_path)
+        
+        # Analyze type hints
+        type_info = await self.type_analyzer.analyze_file(source_path)
+        
+        # Generate missing docstrings
+        return await self.docstring_parser.generate_missing(
+            existing,
+            type_info,
+            include_private
+        )
+        
+    async def _generate_api_docs(self, source_path: str) -> str:
+        """Generate OpenAPI documentation.
+        
+        Args:
+            source_path: Path to API source code
+            
+        Returns:
+            OpenAPI documentation
+        """
+        return await self.openapi_generator.generate_docs(source_path)
+        
+    async def _generate_markdown(self, source_path: str) -> str:
+        """Generate markdown documentation.
+        
+        Args:
+            source_path: Path to source code
+            
+        Returns:
+            Markdown documentation
+        """
+        return await self.md_generator.generate_docs(source_path)
+        
+    def _get_metadata(self, request: DocumentationRequest) -> Dict[str, Any]:
+        """Get metadata for documentation response.
+        
+        Args:
+            request: Original documentation request
+            
+        Returns:
+            Documentation metadata
+        """
+        return {
+            "source": request.source_path,
+            "type": request.doc_type,
+            "include_private": request.include_private,
+            "agent_id": self.agent_id
+        }
+        
+    async def validate_documentation(
+        self,
+        source_path: str,
+        doc_type: str
+    ) -> Dict[str, Any]:
+        """Validate existing documentation.
+        
+        Args:
+            source_path: Path to source code
+            doc_type: Type of documentation to validate
+            
+        Returns:
+            Validation results
+        """
+        try:
+            if doc_type == 'docstring':
+                results = await self.docstring_parser.validate(source_path)
+            elif doc_type == 'api':
+                results = await self.openapi_generator.validate(source_path)
+            else:
+                raise ValueError(f"Unsupported validation type: {doc_type}")
+                
+            return {
+                "valid": all(r["valid"] for r in results),
+                "results": results,
+                "source": source_path,
+                "type": doc_type
+            }
+        except Exception as e:
+            self.logger.error(f"Documentation validation failed: {str(e)}")
+            raise
