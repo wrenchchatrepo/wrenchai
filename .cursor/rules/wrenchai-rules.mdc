@@ -1,0 +1,281 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## FastAPI Development Standards
+
+### API Structure
+- Use modular router organization
+- Implement dependency injection for shared resources
+- Follow RESTful principles for endpoint design
+- Use Pydantic models for request/response validation
+- Implement proper error handling and status codes
+
+### Code Organization
+```
+fastapi/
+├── app/
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── endpoints/
+│   │   │   └── dependencies/
+│   ├── core/
+│   │   ├── config.py
+│   │   └── security.py
+│   ├── db/
+│   │   ├── models/
+│   │   └── repositories/
+│   ├── schemas/
+│   └── services/
+├── tests/
+└── alembic/
+```
+
+### Type Hints and Documentation
+- All functions must include type hints
+- Use docstrings for all public functions and classes
+- Follow Google-style docstring format
+- Document all API endpoints with OpenAPI specifications
+
+### Environment Management
+- Use `.env` files for environment variables
+- Never commit `.env` files to version control
+- Use `pydantic_settings` for config management
+- Maintain separate environments for development, testing, and production
+
+### Async/Await Patterns
+- Use async/await for I/O-bound operations
+- Implement proper connection pooling
+- Handle background tasks appropriately
+- Use proper exception handling in async contexts
+
+### Security Standards
+- Implement OAuth2 with JWT tokens
+- Use secure password hashing (Argon2 or bcrypt)
+- Rate limiting on all public endpoints
+- Input validation using Pydantic models
+- CORS configuration for frontend integration
+
+### Testing Requirements
+- Minimum 80% test coverage
+- Use pytest for all testing
+- Implement integration tests for API endpoints
+- Use async test clients for API testing
+- Mock external services in tests
+
+### Database Practices
+- Use SQLAlchemy for ORM
+- Implement database migrations with Alembic
+- Use connection pooling
+- Implement proper transaction management
+- Follow async database access patterns
+
+### Dependency Management
+- Use `requirements.txt` for production dependencies
+- Use `requirements-dev.txt` for development dependencies
+- Pin all dependency versions
+- Regular security audits of dependencies
+
+### Code Style
+- Follow Black code formatting (88 characters)
+- Use isort for import sorting
+- Enable all strict type checking flags
+- Use pylint for code quality checks
+
+### Git Workflow
+- Branch naming: feature/, bugfix/, hotfix/, release/
+- Commit message format: type(scope): description
+- Required PR reviews
+- Automated CI/CD checks must pass
+- Squash commits on merge
+
+### Performance Guidelines
+- Use caching where appropriate
+- Implement pagination for list endpoints
+- Monitor endpoint response times
+- Use background tasks for long-running operations
+
+### Logging and Monitoring
+- Structured logging with JSON format
+- Log all API requests and responses
+- Implement proper error tracking
+- Use OpenTelemetry for tracing
+
+### Documentation Requirements
+- Maintain up-to-date API documentation
+- Document all environment variables
+- Include setup instructions in README
+- Document all breaking changes
+
+### Error Handling
+```python
+from fastapi import HTTPException, status
+
+class AppException(HTTPException):
+    def __init__(
+        self,
+        status_code: int,
+        detail: str,
+        headers: dict | None = None
+    ):
+        super().__init__(status_code=status_code, detail=detail, headers=headers)
+
+# Usage example
+raise AppException(
+    status_code=status.HTTP_400_BAD_REQUEST,
+    detail="Invalid input provided"
+)
+```
+
+### Response Format
+```python
+from pydantic import BaseModel
+from typing import Generic, TypeVar, Optional
+
+T = TypeVar('T')
+
+class ResponseModel(BaseModel, Generic[T]):
+    success: bool
+    message: str
+    data: Optional[T] = None
+    
+    class Config:
+        arbitrary_types_allowed = True
+```
+
+### Dependency Injection Pattern
+```python
+from fastapi import Depends
+from typing import Annotated
+
+async def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        await db.close()
+
+DB = Annotated[AsyncSession, Depends(get_db)]
+
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: DB
+) -> User:
+    return await auth_service.get_current_user(token, db)
+```
+
+### Configuration Management
+```python
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    APP_NAME: str = "WrenchAI"
+    DEBUG: bool = False
+    VERSION: str = "0.1.0"
+    API_V1_STR: str = "/api/v1"
+    
+    # Database
+    DATABASE_URL: str
+    
+    # Security
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+```
+
+### API Versioning
+- Use URL versioning (e.g., /api/v1/)
+- Maintain backwards compatibility
+- Document breaking changes
+- Implement API deprecation process
+
+### CI/CD Requirements
+- Automated testing on PR
+- Code coverage reporting
+- Security scanning
+- Automated deployments
+- Environment-specific configurations
+
+### Monitoring and Metrics
+- Track API response times
+- Monitor error rates
+- Implement health checks
+- Track system resources
+- Set up alerting
+
+### Development Workflow
+1. Create feature branch
+2. Implement changes
+3. Write/update tests
+4. Update documentation
+5. Create PR
+6. Pass CI checks
+7. Code review
+8. Merge to main
+
+### Production Deployment
+- Use Docker containers
+- Implement health checks
+- Set up monitoring
+- Configure auto-scaling
+- Implement backup strategy
+
+### Secrets Management
+- Use macOS Keychain for all credential storage
+- Default service name: 'mcp-servers'
+- Never store credentials in code or configuration files
+- Use async operations for all secrets management
+- Implement proper error handling for keychain operations
+
+Example usage:
+```python
+from core.tools.secrets_manager import secrets
+
+# Store a secret
+await secrets.store_secret('api_key', 'your-api-key')
+
+# Retrieve a secret
+api_key = await secrets.get_secret('api_key')
+
+# Update a secret
+await secrets.update_secret('api_key', 'new-api-key')
+
+# Delete a secret
+await secrets.delete_secret('api_key')
+
+# Check if a secret exists
+exists = await secrets.secret_exists('api_key')
+```
+
+Required Secret Names:
+- 'openai_api_key' - OpenAI API credentials
+- 'anthropic_api_key' - Anthropic API credentials
+- 'github_token' - GitHub access token
+- 'aws_access_key' - AWS access key
+- 'aws_secret_key' - AWS secret key
+
+Error Handling:
+```python
+from core.tools.secrets_manager import SecretNotFoundError, SecretStoreError
+
+try:
+    api_key = await secrets.get_secret('api_key')
+except SecretNotFoundError:
+    logger.error("API key not found in keychain")
+    # Handle missing key
+except SecretStoreError as e:
+    logger.error(f"Failed to access keychain: {e}")
+    # Handle keychain access error
+```
+
+## Additional Resources
+- FastAPI Documentation
+- SQLAlchemy Documentation
+- Pydantic Documentation
+- Alembic Documentation
+- pytest Documentation 
