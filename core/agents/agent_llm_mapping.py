@@ -32,13 +32,19 @@ class AgentLLMManager:
     """Manager for agent-LLM mappings."""
     
     def __init__(self):
-        """Initialize the Agent-LLM manager."""
+        """
+        Initializes the AgentLLMManager with empty mappings and LLM availability, and loads default agent-LLM mappings.
+        """
         self.mappings: Dict[str, List[AgentLLMMapping]] = {}
         self.llm_availability: Dict[str, LLMAvailability] = {}
         self._initialize_default_mappings()
         
     def _initialize_default_mappings(self):
-        """Initialize default mappings from agent definitions."""
+        """
+        Initializes default agent-to-LLM mappings and marks associated LLMs as available.
+        
+        For each predefined agent, creates a default mapping with priority 0 and sets the corresponding LLM's availability status to available.
+        """
         for agent_name, agent in AGENTS.items():
             self.add_mapping(
                 AgentLLMMapping(
@@ -56,10 +62,10 @@ class AgentLLMManager:
             )
     
     def add_mapping(self, mapping: AgentLLMMapping):
-        """Add a new agent-LLM mapping.
+        """
+        Adds or updates an agent-to-LLM mapping for a specific agent.
         
-        Args:
-            mapping: The mapping to add
+        If a mapping from the same source already exists for the agent, it is replaced; otherwise, the new mapping is added. Mappings for each agent are sorted by descending priority.
         """
         if mapping.agent_name not in self.mappings:
             self.mappings[mapping.agent_name] = []
@@ -78,11 +84,10 @@ class AgentLLMManager:
         self.mappings[mapping.agent_name].sort(key=lambda m: m.priority, reverse=True)
     
     def add_mappings_from_playbook(self, agent_llms: Dict[str, str], playbook_name: str):
-        """Add mappings from a playbook configuration.
+        """
+        Adds agent-to-LLM mappings from a playbook configuration with elevated priority.
         
-        Args:
-            agent_llms: Dictionary mapping agent names to LLM IDs
-            playbook_name: Name of the playbook (for tracking)
+        Each mapping is associated with the playbook name as its source and assigned a higher priority than default mappings.
         """
         for agent_name, llm_id in agent_llms.items():
             self.add_mapping(
@@ -95,13 +100,16 @@ class AgentLLMManager:
             )
     
     def get_agent_llm(self, agent_name: str) -> Optional[str]:
-        """Get the assigned LLM for an agent.
+        """
+        Returns the LLM ID assigned to the specified agent, considering mapping priority and LLM availability.
+        
+        If the highest priority mapped LLM is unavailable, attempts to use a fallback LLM if specified and available. If no suitable mapping is found, returns the agent's default LLM or None if the agent is unknown.
         
         Args:
-            agent_name: Name of the agent
-            
+            agent_name: The name of the agent.
+        
         Returns:
-            LLM ID to use, or None if no mapping found
+            The LLM ID to use for the agent, or None if no mapping or default is available.
         """
         if agent_name not in self.mappings or not self.mappings[agent_name]:
             # No mapping found, use default if agent exists in AGENTS
@@ -131,12 +139,10 @@ class AgentLLMManager:
         return None
     
     def update_llm_availability(self, llm_id: str, available: bool, error: Optional[str] = None):
-        """Update the availability status of an LLM.
+        """
+        Updates the availability status and error message for a specified LLM.
         
-        Args:
-            llm_id: ID of the LLM
-            available: Whether the LLM is available
-            error: Error message if unavailable
+        If the LLM does not already have an availability record, a new one is created.
         """
         if llm_id not in self.llm_availability:
             self.llm_availability[llm_id] = LLMAvailability(
@@ -152,23 +158,24 @@ class AgentLLMManager:
             logger.warning(f"LLM {llm_id} marked as unavailable: {error}")
     
     def check_llm_availability(self, llm_id: str) -> bool:
-        """Check if an LLM is available.
+        """
+        Returns True if the specified LLM is currently available, otherwise False.
         
         Args:
-            llm_id: ID of the LLM
-            
+            llm_id: The unique identifier of the LLM to check.
+        
         Returns:
-            Whether the LLM is available
+            True if the LLM is available; False if unavailable or not tracked.
         """
         if llm_id not in self.llm_availability:
             return False
         return self.llm_availability[llm_id].available
     
     def get_all_mappings(self) -> Dict[str, List[Dict[str, Any]]]:
-        """Get all agent-LLM mappings.
+        """
+        Returns all agent-to-LLM mappings as a dictionary.
         
-        Returns:
-            Dictionary mapping agent names to their LLM mappings
+        Each key is an agent name, and each value is a list of mapping dictionaries for that agent.
         """
         return {
             agent: [mapping.dict() for mapping in mappings] 
@@ -176,10 +183,11 @@ class AgentLLMManager:
         }
     
     def get_all_availability(self) -> Dict[str, Dict[str, Any]]:
-        """Get all LLM availability statuses.
+        """
+        Returns the availability status of all LLMs.
         
         Returns:
-            Dictionary mapping LLM IDs to their availability status
+            A dictionary mapping each LLM ID to its availability status as a dictionary.
         """
         return {
             llm_id: status.dict() 
@@ -187,7 +195,11 @@ class AgentLLMManager:
         }
     
     def reset_to_defaults(self):
-        """Reset all mappings to defaults."""
+        """
+        Restores agent-LLM mappings to their default configuration.
+        
+        Clears all current mappings and reinitializes them using the predefined default agent-LLM assignments.
+        """
         self.mappings.clear()
         self._initialize_default_mappings()
 

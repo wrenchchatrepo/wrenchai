@@ -49,26 +49,29 @@ class PuppeteerTool:
     """Tool for browser automation using Puppeteer."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize Puppeteer tool.
+        """
+        Initializes the PuppeteerTool with optional configuration.
         
-        Args:
-            config: Optional configuration dictionary
+        If a configuration dictionary is provided, it is used to set up PuppeteerConfig; otherwise, default settings are applied. Ensures the screenshot directory exists.
         """
         self.config = PuppeteerConfig(**(config or {}))
         self._ensure_screenshot_dir()
         
     def _ensure_screenshot_dir(self):
-        """Ensure screenshot directory exists."""
+        """
+        Creates the screenshot directory if it does not already exist.
+        """
         Path(self.config.screenshot_path).mkdir(parents=True, exist_ok=True)
         
     async def _execute_puppeteer_script(self, script: str) -> Dict[str, Any]:
-        """Execute a Puppeteer script using MCP.
+        """
+        Executes a JavaScript Puppeteer script asynchronously via MCP and returns the result.
         
         Args:
-            script: JavaScript code to execute
-            
+            script: The JavaScript code to execute in the Puppeteer context.
+        
         Returns:
-            Dictionary containing the result
+            A dictionary containing the script execution result or an error message if execution fails.
         """
         try:
             # Use MCP to execute the Puppeteer script
@@ -80,14 +83,15 @@ class PuppeteerTool:
             return {"error": str(e)}
             
     async def navigate(self, url: str, options: Optional[Dict[str, Any]] = None) -> PuppeteerResult:
-        """Navigate to a URL.
+        """
+        Navigates the browser to the specified URL.
         
         Args:
-            url: URL to navigate to
-            options: Optional navigation options
-            
+            url: The destination URL.
+            options: Optional navigation parameters for Puppeteer.
+        
         Returns:
-            PuppeteerResult with navigation status
+            A PuppeteerResult indicating whether navigation succeeded, with the current URL or an error message.
         """
         script = f"""
         await page.goto('{url}', {json.dumps(options) if options else '{}'});
@@ -102,14 +106,15 @@ class PuppeteerTool:
         )
         
     async def click(self, selector: str, options: Optional[Dict[str, Any]] = None) -> PuppeteerResult:
-        """Click an element.
+        """
+        Clicks the element identified by the given CSS selector.
         
         Args:
-            selector: CSS selector for element
-            options: Optional click options
-            
+            selector: The CSS selector of the element to click.
+            options: Optional dictionary of click options.
+        
         Returns:
-            PuppeteerResult indicating click success
+            A PuppeteerResult indicating whether the click was successful.
         """
         script = f"""
         await page.click('{selector}', {json.dumps(options) if options else '{}'});
@@ -124,15 +129,16 @@ class PuppeteerTool:
         )
         
     async def type(self, selector: str, text: str, options: Optional[Dict[str, Any]] = None) -> PuppeteerResult:
-        """Type text into an element.
+        """
+        Types the specified text into an input element identified by a CSS selector.
         
         Args:
-            selector: CSS selector for input element
-            text: Text to type
-            options: Optional typing options
-            
+            selector: CSS selector for the target input element.
+            text: The text to type into the element.
+            options: Optional typing options for Puppeteer.
+        
         Returns:
-            PuppeteerResult indicating typing success
+            A PuppeteerResult indicating whether the typing action was successful.
         """
         script = f"""
         await page.type('{selector}', '{text}', {json.dumps(options) if options else '{}'});
@@ -152,15 +158,16 @@ class PuppeteerTool:
         selector: Optional[str] = None,
         options: Optional[Dict[str, Any]] = None
     ) -> PuppeteerResult:
-        """Take a screenshot.
+        """
+        Captures a screenshot of the current page or a specific element.
         
         Args:
-            name: Name for the screenshot file
-            selector: Optional CSS selector to screenshot specific element
-            options: Optional screenshot options
-            
+            name: The filename (without extension) for the screenshot.
+            selector: Optional CSS selector to capture a specific element instead of the full page.
+            options: Optional dictionary of Puppeteer screenshot options.
+        
         Returns:
-            PuppeteerResult with screenshot path
+            PuppeteerResult containing the path to the saved screenshot or error information.
         """
         file_path = str(Path(self.config.screenshot_path) / f"{name}.png")
         
@@ -190,13 +197,14 @@ class PuppeteerTool:
         )
         
     async def evaluate(self, script: str) -> PuppeteerResult:
-        """Evaluate JavaScript in the page context.
+        """
+        Evaluates JavaScript code in the context of the current page.
         
         Args:
-            script: JavaScript code to evaluate
-            
+            script: The JavaScript code to execute.
+        
         Returns:
-            PuppeteerResult with evaluation result
+            A PuppeteerResult containing the result of the evaluation or an error message.
         """
         wrapped_script = f"""
         const result = await page.evaluate(() => {{
@@ -217,14 +225,15 @@ class PuppeteerTool:
         selector: str,
         options: Optional[Dict[str, Any]] = None
     ) -> PuppeteerResult:
-        """Wait for an element matching selector.
+        """
+        Waits for an element matching the given CSS selector to appear on the page.
         
         Args:
-            selector: CSS selector to wait for
-            options: Optional waiting options
-            
+            selector: The CSS selector of the element to wait for.
+            options: Optional dictionary of wait parameters, such as timeout or visibility.
+        
         Returns:
-            PuppeteerResult indicating wait success
+            A PuppeteerResult indicating whether the element appeared.
         """
         script = f"""
         await page.waitForSelector('{selector}', {json.dumps(options) if options else '{}'});
@@ -239,13 +248,14 @@ class PuppeteerTool:
         )
         
     async def get_text(self, selector: str) -> PuppeteerResult:
-        """Get text content of an element.
+        """
+        Retrieves the text content of the element matching the given CSS selector.
         
         Args:
-            selector: CSS selector for element
-            
+            selector: CSS selector identifying the target element.
+        
         Returns:
-            PuppeteerResult with element text
+            A PuppeteerResult containing the element's text content if found, or an error message if not.
         """
         script = f"""
         const element = await page.$('{selector}');
@@ -261,14 +271,15 @@ class PuppeteerTool:
         )
         
     async def get_attribute(self, selector: str, attribute: str) -> PuppeteerResult:
-        """Get attribute value of an element.
+        """
+        Retrieves the value of a specified attribute from the first element matching the selector.
         
         Args:
-            selector: CSS selector for element
-            attribute: Attribute name to get
-            
+            selector: CSS selector identifying the target element.
+            attribute: Name of the attribute to retrieve.
+        
         Returns:
-            PuppeteerResult with attribute value
+            A PuppeteerResult containing the attribute value if found, or an error message.
         """
         script = f"""
         const element = await page.$('{selector}');
@@ -284,15 +295,18 @@ class PuppeteerTool:
         )
 
 async def puppeteer_action(action: str, url: str = None, options: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Main entry point for Puppeteer tool.
+    """
+    Dispatches a browser automation action using Puppeteer and returns the result.
+    
+    Supports actions such as navigation, clicking, typing, taking screenshots, evaluating JavaScript, waiting for selectors, and retrieving element text or attributes. Returns a dictionary with the outcome or error details.
     
     Args:
-        action: Action to perform
-        url: URL for navigation actions
-        options: Additional options for the action
-        
+        action: The name of the Puppeteer action to perform (e.g., "navigate", "click").
+        url: The target URL for navigation actions, if applicable.
+        options: Additional parameters required for the specified action.
+    
     Returns:
-        Dictionary containing the action result
+        A dictionary containing the result of the action or an error message.
     """
     try:
         tool = PuppeteerTool()

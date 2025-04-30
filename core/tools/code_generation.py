@@ -44,17 +44,22 @@ async def generate(
     context: Optional[GenerationContext] = None
 ) -> GeneratedCode:
     """
-    Generate code, tests, and/or documentation based on specifications.
+    Asynchronously generates source code, tests, and documentation from a specification.
+    
+    Creates code artifacts based on the provided specification, language, and framework. Optionally generates tests and documentation according to the output type and specification flags. Returns a `GeneratedCode` object containing the generated code, tests, documentation, dependencies, and setup instructions.
     
     Args:
-        spec: Specification for what needs to be generated
-        language: Programming language to use
-        framework: Framework to use
-        output_type: Type of output to generate
-        context: Additional context for generation
-        
+        spec: The code generation specification.
+        language: Target programming language.
+        framework: Target framework or library.
+        output_type: Specifies which artifacts to generate ("code", "tests", "docs", or "all").
+        context: Optional generation context with project and style details.
+    
     Returns:
-        GeneratedCode object containing the generated content
+        A `GeneratedCode` instance with generated code, tests, documentation, dependencies, and setup instructions.
+    
+    Raises:
+        Exception: If code generation fails.
     """
     try:
         # Initialize context if not provided
@@ -91,13 +96,27 @@ async def generate(
         raise
 
 async def _get_generation_model(language: str, framework: str) -> Any:
-    """Get the appropriate model for code generation."""
+    """
+    Retrieves the code generation model for the specified language and framework.
+    
+    Currently returns a placeholder value. Intended for integration with actual code generation models or services.
+    """
     # This would integrate with your preferred code generation model/service
     # For now, we'll use a placeholder
     return None
 
 async def _generate_code(spec: CodeSpec, model: Any, context: GenerationContext) -> str:
-    """Generate code based on specifications."""
+    """
+    Generates source code from the provided specification using the given model and context.
+    
+    Args:
+        spec: The code generation specification.
+        model: The code generation model to use.
+        context: Additional generation context.
+    
+    Returns:
+        A string containing the generated source code.
+    """
     # This would use the model to generate actual code
     # For now, return a placeholder
     return "# Generated code placeholder"
@@ -108,7 +127,11 @@ async def _generate_tests(
     model: Any,
     context: GenerationContext
 ) -> str:
-    """Generate tests for the code."""
+    """
+    Generates test code for the specified source code and specification.
+    
+    Selects appropriate test templates and formats test components such as fixtures, setup, arrange, act, and assertions according to the target language and framework. Returns a dictionary containing the generated test code, language, framework, and type, or error information if generation fails.
+    """
     test_templates = {
         'python': {
             'pytest': '''import pytest
@@ -171,6 +194,16 @@ describe('{name}', () => {
         
         # Helper functions to format test components
         def _format_fixtures(fixtures: List[str], lang: str) -> str:
+            """
+            Formats test fixture definitions for the specified language.
+            
+            Args:
+                fixtures: List of fixture names or definitions.
+                lang: Target programming language (e.g., 'python').
+            
+            Returns:
+                A string containing formatted fixture code, or an empty string if no fixtures are provided or the language is unsupported.
+            """
             if not fixtures:
                 return ""
                 
@@ -180,6 +213,16 @@ describe('{name}', () => {
             return ""
             
         def _format_setup(setup: List[str], lang: str) -> str:
+            """
+            Formats setup statements for test code according to the specified language.
+            
+            Args:
+                setup: List of setup statements.
+                lang: Target programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string of setup statements with appropriate indentation for the language.
+            """
             if not setup:
                 return ""
                 
@@ -190,6 +233,16 @@ describe('{name}', () => {
             return ""
             
         def _format_arrange(arrange: List[str], lang: str) -> str:
+            """
+            Formats the arrange section of a test case for the specified language.
+            
+            Args:
+                arrange: List of statements to set up test data or state.
+                lang: Target programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string representing the arrange section, properly indented for the language.
+            """
             if not arrange:
                 return "pass" if lang == 'python' else ""
                 
@@ -200,6 +253,17 @@ describe('{name}', () => {
             return ""
             
         def _format_act(act: List[str], lang: str) -> str:
+            """
+            Formats the 'act' section of a test case for the specified programming language.
+            
+            Args:
+                act: List of statements representing the action phase of the test.
+                lang: Target programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string of the 'act' statements, properly indented for the given language.
+                Returns 'pass' for Python if the list is empty, or an empty string for TypeScript.
+            """
             if not act:
                 return "pass" if lang == 'python' else ""
                 
@@ -210,6 +274,17 @@ describe('{name}', () => {
             return ""
             
         def _format_assertions(assertions: List[str], lang: str) -> str:
+            """
+            Formats assertion statements for test code according to the specified language.
+            
+            Args:
+                assertions: A list of assertion statements as strings.
+                lang: The programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string of assertions, properly indented for the target language.
+                If no assertions are provided, returns a default assertion for the language.
+            """
             if not assertions:
                 return "assert True" if lang == 'python' else "expect(true).toBe(true)"
                 
@@ -262,7 +337,18 @@ async def _generate_docs(
     model: Any,
     context: GenerationContext
 ) -> str:
-    """Generate documentation for the code."""
+    """
+    Generates documentation for the provided source code based on the given specification, model, and context.
+    
+    Args:
+        code: The source code to document.
+        spec: The code generation specification.
+        model: The code generation model to use.
+        context: The generation context, including documentation format and style.
+    
+    Returns:
+        A string containing the generated documentation.
+    """
     # This would generate documentation in the specified format
     # For now, return a placeholder
     return "# Generated documentation placeholder"
@@ -272,7 +358,17 @@ async def _get_dependencies(
     language: str,
     framework: str
 ) -> list[str]:
-    """Determine required dependencies from the code."""
+    """
+    Analyzes the provided code to identify and return a list of required dependencies.
+    
+    Args:
+        code: The source code to analyze.
+        language: The programming language of the code.
+        framework: The framework associated with the code.
+    
+    Returns:
+        A list of dependency names required by the code.
+    """
     # This would analyze the code and determine required dependencies
     # For now, return a placeholder
     return [framework]
@@ -282,7 +378,17 @@ async def _generate_setup_instructions(
     language: str,
     framework: str
 ) -> str:
-    """Generate setup instructions for the code."""
+    """
+    Generates environment setup instructions based on dependencies, language, and framework.
+    
+    Args:
+        dependencies: List of required dependencies.
+        language: Target programming language.
+        framework: Target framework.
+    
+    Returns:
+        A string containing setup instructions for installing dependencies and configuring the environment.
+    """
     # This would generate instructions for setting up the environment
     # For now, return a placeholder
     return "# Setup instructions placeholder"
@@ -295,22 +401,24 @@ def _generate(
     context: Optional[Union[GenerationContext, Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
-    Generate code based on the provided specification.
+    Generates source code, tests, or documentation based on the provided specification.
+    
+    Converts input dictionaries to Pydantic models if necessary, validates the target language, and dispatches generation to the appropriate function based on the requested output type. Returns a dictionary containing the generated content, language, framework, output type, and any error encountered.
     
     Args:
-        spec: Code generation specification (CodeSpec or dict)
-        language: Target programming language (python/typescript)
-        framework: Optional framework to use (e.g. pytest, jest)
-        output_type: Type of output (source/test/docs)
-        context: Optional context information (GenerationContext or dict)
-        
+        spec: The code generation specification as a CodeSpec instance or dictionary.
+        language: The target programming language ("python" or "typescript").
+        framework: Optional framework to use (e.g., "pytest", "jest").
+        output_type: The type of output to generate ("source", "test", or "docs").
+        context: Optional generation context as a GenerationContext instance or dictionary.
+    
     Returns:
-        Dictionary containing:
-        - code: The generated code as a string
-        - language: The target language
-        - framework: The framework used (if any)
-        - type: The type of output generated
-        - error: Error message if generation failed
+        A dictionary with keys:
+            - code: The generated code, tests, or documentation as a string.
+            - language: The target language.
+            - framework: The framework used, if any.
+            - type: The type of output generated.
+            - error: An error message if generation failed, otherwise empty.
     """
     # Convert spec to CodeSpec if needed
     if isinstance(spec, dict):
@@ -354,7 +462,13 @@ def _generate_source(
     framework: str,
     context: GenerationContext
 ) -> Dict[str, Any]:
-    """Generate source code."""
+    """
+    Generates source code based on the provided specification, language, and framework.
+    
+    Returns:
+        A dictionary containing the generated source code, language, framework, and type.
+        If an error occurs, the dictionary includes an error message and empty code.
+    """
     code_templates = {
         'python': {
             'class': '''class {name}:
@@ -425,7 +539,11 @@ def _generate_test(
     framework: str,
     context: GenerationContext
 ) -> Dict[str, Any]:
-    """Generate test code."""
+    """
+    Generates test code for the specified language and framework using provided test components.
+    
+    Extracts test details such as module, function or class name, scenario, fixtures, setup, arrange, act, and assertions from the specification, and formats them into a language- and framework-appropriate test template. Returns a dictionary containing the generated test code, language, framework, and type. If an error occurs, returns an error message and empty code.
+    """
     test_templates = {
         'python': {
             'pytest': '''import pytest
@@ -488,6 +606,16 @@ describe('{name}', () => {
         
         # Helper functions to format test components
         def _format_fixtures(fixtures: List[str], lang: str) -> str:
+            """
+            Formats test fixture definitions for the specified language.
+            
+            Args:
+                fixtures: A list of fixture names to include in the test code.
+                lang: The programming language for which to format the fixtures.
+            
+            Returns:
+                A string containing formatted fixture definitions, or an empty string if no fixtures are provided or the language is unsupported.
+            """
             if not fixtures:
                 return ""
                 
@@ -497,6 +625,16 @@ describe('{name}', () => {
             return ""
             
         def _format_setup(setup: List[str], lang: str) -> str:
+            """
+            Formats setup statements for test code according to the specified language.
+            
+            Args:
+                setup: List of setup statements.
+                lang: Target programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string of setup statements with appropriate indentation for the language.
+            """
             if not setup:
                 return ""
                 
@@ -507,6 +645,16 @@ describe('{name}', () => {
             return ""
             
         def _format_arrange(arrange: List[str], lang: str) -> str:
+            """
+            Formats the arrange section of test code for the specified language.
+            
+            Args:
+                arrange: List of statements to set up test conditions.
+                lang: Target programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string representing the arrange section, properly indented for the language.
+            """
             if not arrange:
                 return "pass" if lang == 'python' else ""
                 
@@ -517,6 +665,17 @@ describe('{name}', () => {
             return ""
             
         def _format_act(act: List[str], lang: str) -> str:
+            """
+            Formats the 'act' section of a test case for the specified programming language.
+            
+            Args:
+                act: List of statements representing the action phase of the test.
+                lang: Target programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string of the 'act' statements with appropriate indentation.
+                Returns 'pass' for Python if the list is empty, or an empty string for TypeScript.
+            """
             if not act:
                 return "pass" if lang == 'python' else ""
                 
@@ -527,6 +686,16 @@ describe('{name}', () => {
             return ""
             
         def _format_assertions(assertions: List[str], lang: str) -> str:
+            """
+            Formats assertion statements for test code according to the specified language.
+            
+            Args:
+                assertions: A list of assertion statements as strings.
+                lang: The programming language ('python' or 'typescript').
+            
+            Returns:
+                A formatted string of assertions with appropriate indentation and syntax for the given language. If no assertions are provided, returns a default assertion for the specified language.
+            """
             if not assertions:
                 return "assert True" if lang == 'python' else "expect(true).toBe(true)"
                 
@@ -579,7 +748,11 @@ def _generate_docs(
     framework: Optional[str],
     context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Generate documentation."""
+    """
+    Generates documentation for code using language- and framework-specific templates.
+    
+    Selects the appropriate documentation template (Google, NumPy, or JSDoc style) based on the specified language and framework, formats the documentation sections using provided specification fields, and returns the generated documentation string along with metadata. Returns an error dictionary if the language or framework is unsupported.
+    """
     doc_templates = {
         'python': {
             'google': '''"""{summary}

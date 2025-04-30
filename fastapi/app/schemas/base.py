@@ -40,7 +40,11 @@ class BaseAISchema(AIModel):
     
     @classmethod
     def validate_semantic_content(cls, value: str) -> bool:
-        """Validate semantic meaning of text content."""
+        """
+        Validates the semantic meaning and content safety of the provided text.
+        
+        Attempts AI-powered semantic validation; returns True if validation passes or if an error occurs during validation.
+        """
         try:
             return cls.semantic_validator.validate(value)
         except Exception:
@@ -49,7 +53,12 @@ class BaseAISchema(AIModel):
 
     @classmethod
     def model_validate(cls, obj, *args, **kwargs):
-        """Override model_validate to handle both AI and basic validation."""
+        """
+        Validates an object using AI-powered validation, falling back to basic validation on failure.
+        
+        Attempts to validate the input object with AI-enhanced validation. If an exception occurs,
+        performs standard Pydantic validation as a fallback to ensure compatibility.
+        """
         try:
             # Try AI-powered validation first
             return super().model_validate(obj, *args, **kwargs)
@@ -103,7 +112,16 @@ class BaseResponse(BaseAISchema, Generic[ModelType]):
     
     @classmethod
     def create_success(cls, data: ModelType, message: str = "Success") -> "BaseResponse[ModelType]":
-        """Create a success response with AI-validated data."""
+        """
+        Creates a successful API response with AI-validated message and data.
+        
+        Args:
+            data: The response payload to include.
+            message: Optional success message. Defaults to "Success".
+        
+        Returns:
+            An instance of BaseResponse with success status, message, and data.
+        """
         return cls(
             success=True,
             message=message,
@@ -112,7 +130,16 @@ class BaseResponse(BaseAISchema, Generic[ModelType]):
     
     @classmethod
     def create_error(cls, message: str, details: Optional[dict] = None) -> "BaseResponse[ModelType]":
-        """Create an error response with AI-validated message."""
+        """
+        Creates an error response with an AI-validated message and optional error details.
+        
+        Args:
+            message: The error message to include in the response.
+            details: Optional dictionary containing additional error information.
+        
+        Returns:
+            An instance of BaseResponse with success set to False, the provided message, and optional error details.
+        """
         return cls(
             success=False,
             message=message,

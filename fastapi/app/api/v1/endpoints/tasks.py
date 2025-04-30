@@ -28,7 +28,11 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[TaskResponse]:
-    """Create a new task."""
+    """
+    Creates a new task associated with an agent owned by the current user.
+    
+    Verifies that the specified agent exists and belongs to the authenticated user before creating the task. Returns the created task data on success, or raises an HTTP 404 error if the agent is not found.
+    """
     try:
         # Verify agent exists and belongs to user
         result = await db.execute(
@@ -83,7 +87,12 @@ async def list_tasks(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[List[TaskResponse]]:
-    """Get all tasks for the current user."""
+    """
+    Retrieves all tasks associated with agents owned by the current user.
+    
+    Returns:
+        A response model containing a list of task data for the user's agents, ordered by creation date descending.
+    """
     try:
         # Get tasks for all user's agents
         result = await db.execute(
@@ -117,7 +126,18 @@ async def get_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[TaskResponse]:
-    """Get task by ID."""
+    """
+    Retrieves a specific task by its UUID for the current authenticated user.
+    
+    Args:
+        task_id: The UUID of the task to retrieve.
+    
+    Returns:
+        A response model containing the task data if found.
+    
+    Raises:
+        HTTPException: If the task does not exist or does not belong to the user, or on database errors.
+    """
     try:
         # Query task
         result = await db.execute(
@@ -160,7 +180,11 @@ async def update_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[TaskResponse]:
-    """Update task."""
+    """
+    Updates an existing task belonging to the current user.
+    
+    Retrieves the specified task by UUID, applies the provided update fields, and returns the updated task data. Raises a 404 error if the task is not found or does not belong to the user.
+    """
     try:
         # Query task
         result = await db.execute(
@@ -210,7 +234,15 @@ async def delete_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[bool]:
-    """Delete task."""
+    """
+    Deletes a task by its UUID if it belongs to an agent owned by the current user.
+    
+    Raises:
+        HTTPException: If the task is not found or an internal error occurs.
+    
+    Returns:
+        ResponseModel[bool]: Success response with True if the task was deleted.
+    """
     try:
         # Query task
         result = await db.execute(

@@ -21,7 +21,9 @@ def test_agent_types():
     assert AgentType.REVIEWER in AgentType
 
 def test_agent_capabilities():
-    """Test that all agent capabilities are properly defined."""
+    """
+    Verifies that all expected agent capabilities are present in the AgentCapability enum.
+    """
     # Test orchestrator capabilities
     assert AgentCapability.PROJECT_PLANNING in AgentCapability
     assert AgentCapability.TASK_COORDINATION in AgentCapability
@@ -36,7 +38,9 @@ def test_agent_capabilities():
     assert AgentCapability.USER_FLOW in AgentCapability
 
 def test_llm_providers():
-    """Test that all LLM providers are properly defined."""
+    """
+    Verifies that the LLMProvider enum defines the expected string values for each provider.
+    """
     assert LLMProvider.CLAUDE.value == "claude-3.7-sonnet"
     assert LLMProvider.GPT4.value == "gpt-4o"
     assert LLMProvider.GEMINI.value == "gemini-2.5-flash"
