@@ -722,6 +722,7 @@ class AgentManager:
         return results
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
+<<<<<<< HEAD
         """
         Safely evaluates a condition expression against a given context dictionary.
         
@@ -733,12 +734,8 @@ class AgentManager:
             True if the condition evaluates to a truthy value, False if evaluation fails or the result is falsy.
         """
         try:
-            # Create a safe evaluation environment
-            eval_globals = {"__builtins__": {}}
-            eval_locals = context.copy()
-            
-            # Evaluate the condition
-            return bool(eval(condition, eval_globals, eval_locals))
+            # Use the safer condition evaluator
+            return evaluate_condition(condition, context)
         except Exception as e:
             logging.error(f"Error evaluating condition '{condition}': {e}")
             return False
