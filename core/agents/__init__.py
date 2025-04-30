@@ -15,7 +15,17 @@ from .agent_definitions import (
     AGENTS
 )
 
+from .agent_factory import AgentFactory
+from .agent_state import agent_state_manager
+from .agent_llm_mapping import agent_llm_manager
+
+# Import specialized agent classes
+from .codifier_agent import CodifierAgent, Codifier
+from .ux_designer_agent import UXDesignerAgent, UXDesigner
+from .uat_agent import UATAgent, UAT
+
 __all__ = [
+    # Agent definitions
     'Agent',
     'AgentType',
     'AgentCapability',
@@ -24,5 +34,18 @@ __all__ = [
     'get_agents_by_type',
     'get_agents_by_capability',
     'get_active_agents',
-    'AGENTS'
+    'AGENTS',
+    
+    # Factory and managers
+    'AgentFactory',
+    'agent_state_manager',
+    'agent_llm_manager',
+    
+    # Specialized agents
+    'CodifierAgent',
+    'Codifier',
+    'UXDesignerAgent',
+    'UXDesigner',
+    'UATAgent',
+    'UAT'
 ]
