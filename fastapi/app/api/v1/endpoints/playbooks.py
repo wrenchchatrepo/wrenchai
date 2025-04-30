@@ -77,7 +77,18 @@ async def get_agents(
     agent_names: List[str],
     settings: Settings = Depends(get_settings)
 ) -> Dict:
-    """Initialize required agents for playbook execution."""
+    """
+    Asynchronously initializes and returns agent instances based on provided agent names.
+    
+    Raises:
+        HTTPException: If an unknown agent type is specified or agent initialization fails.
+    
+    Args:
+        agent_names: List of agent type names to initialize ("super", "inspector", "journey").
+    
+    Returns:
+        A dictionary mapping agent names to their initialized instances.
+    """
     try:
         agents = {}
         for name in agent_names:
@@ -207,13 +218,13 @@ async def execute_playbook(
 )
 async def get_execution_status(task_id: str) -> ResponseModel[Dict]:
     """
-    Get the current status of a playbook execution task.
+    Retrieves the current status of a playbook execution task by its unique task ID.
     
-    Args:
-        task_id: Unique task ID
+    Raises:
+        HTTPException: If the specified task ID does not exist.
     
     Returns:
-        Current status of the execution task
+        ResponseModel containing the status information for the specified task.
     """
     if task_id not in task_statuses:
         raise HTTPException(
@@ -232,7 +243,16 @@ async def initialize_agents(
     agents_config: List[PlaybookAgent],
     user: User
 ) -> List[Agent]:
-    """Initialize required agents for playbook execution."""
+    """
+    Creates and persists agent records for the given user based on provided agent configurations.
+    
+    Args:
+        agents_config: List of agent configurations to initialize for the playbook.
+        user: The user to associate with the created agents.
+    
+    Returns:
+        A list of initialized Agent objects linked to the user.
+    """
     initialized_agents = []
     
     for agent_config in agents_config:
@@ -256,7 +276,17 @@ async def create_execution_tasks(
     steps: List[PlaybookStep],
     agents: List[Agent]
 ) -> List[Task]:
-    """Create tasks for each playbook step."""
+    """
+    Creates and persists a database task for each playbook step, assigning steps to agents in a round-robin manner.
+    
+    Args:
+        playbook_id: The unique identifier for the playbook execution.
+        steps: A list of playbook steps to be executed.
+        agents: A list of agent instances to assign tasks to.
+    
+    Returns:
+        A list of created Task objects corresponding to each playbook step.
+    """
     tasks = []
     
     for i, step in enumerate(steps):
@@ -288,16 +318,9 @@ async def execute_playbook(
     current_user: User = Depends(get_current_user)
 ) -> PlaybookExecuteResponse:
     """
-    Execute a playbook by initializing agents and creating tasks.
+    Executes a playbook by initializing agents, creating tasks for each step, and returning execution details.
     
-    Args:
-        request: Playbook execution request
-        background_tasks: FastAPI background tasks
-        db: Database session
-        current_user: Current authenticated user
-        
-    Returns:
-        Execution response with playbook ID
+    Initializes agents for the current user, assigns playbook steps to agents as tasks, and compiles execution metadata. Returns a response containing the playbook ID and execution status.
     """
     try:
         # Generate playbook ID

@@ -17,7 +17,12 @@ from core.tools.code_generation import (
 
 @pytest.fixture
 def sample_spec() -> CodeSpec:
-    """Fixture that provides a sample code specification."""
+    """
+    Provides a sample CodeSpec fixture for testing code generation.
+    
+    Returns:
+        A CodeSpec instance describing a recursive factorial function, including requirements and usage examples.
+    """
     return CodeSpec(
         description="Create a function to calculate factorial",
         requirements=[
@@ -33,7 +38,12 @@ def sample_spec() -> CodeSpec:
 
 @pytest.fixture
 def sample_context() -> GenerationContext:
-    """Fixture that provides a sample generation context."""
+    """
+    Provides a sample GenerationContext fixture for testing code generation.
+    
+    Returns:
+        A GenerationContext configured for a library project using PEP8, pytest, and Google doc format, with additional context for package name and author.
+    """
     return GenerationContext(
         project_type="library",
         style_guide="pep8",
@@ -101,7 +111,9 @@ async def test_generate_docs_only(sample_spec: CodeSpec, sample_context: Generat
 
 @pytest.mark.asyncio
 async def test_invalid_language():
-    """Test handling of invalid language."""
+    """
+    Tests that an exception is raised when an unsupported language is specified during code generation.
+    """
     spec = CodeSpec(description="Test invalid language")
     
     with pytest.raises(Exception):
@@ -125,7 +137,11 @@ async def test_invalid_framework():
 
 @pytest.mark.asyncio
 async def test_complex_spec(sample_context: GenerationContext):
-    """Test generating code from a complex specification."""
+    """
+    Tests code generation for a complex REST API specification with multiple dependencies.
+    
+    Verifies that the generated code, tests, and documentation include references to FastAPI, SQLAlchemy, and Pydantic, and that the output matches the requirements and examples specified in the complex spec.
+    """
     spec = CodeSpec(
         description="Create a REST API endpoint",
         requirements=[
@@ -181,7 +197,11 @@ async def test_minimal_spec():
 
 @pytest.mark.asyncio
 async def test_custom_context():
-    """Test generating code with custom context."""
+    """
+    Tests code generation with a custom context, verifying that style guide, test framework, and documentation format influence the generated output as expected.
+    
+    Asserts that the generated code includes references to JSON formatting and debug logging, tests mention the unittest framework, and documentation follows the numpy doc format.
+    """
     spec = CodeSpec(description="Create a logging utility")
     context = GenerationContext(
         project_type="application",

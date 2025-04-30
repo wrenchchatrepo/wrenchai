@@ -20,7 +20,13 @@ from core.tools.data_analysis import (
 
 @pytest.fixture
 def sample_numeric_data():
-    """Create sample numeric data for testing."""
+    """
+    Generates a sample DataFrame with three numeric columns for testing purposes.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with columns 'A', 'B', and 'C' containing normally
+        and exponentially distributed random values.
+    """
     np.random.seed(42)
     return pd.DataFrame({
         'A': np.random.normal(0, 1, 100),
@@ -30,7 +36,13 @@ def sample_numeric_data():
 
 @pytest.fixture
 def sample_categorical_data():
-    """Create sample categorical data for testing."""
+    """
+    Generates a sample DataFrame with categorical and numeric columns for testing.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with a 'category' column containing repeated categories
+        and a 'value' column of normally distributed random numbers.
+    """
     return pd.DataFrame({
         'category': ['A', 'B', 'A', 'C', 'B'] * 20,
         'value': np.random.normal(0, 1, 100)
@@ -38,7 +50,12 @@ def sample_categorical_data():
 
 @pytest.fixture
 def sample_time_series_data():
-    """Create sample time series data for testing."""
+    """
+    Generates a sample time series DataFrame with dates and noisy sine wave values.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with 'date' and 'value' columns, where 'date' is a daily range and 'value' is a sine wave with added noise.
+    """
     dates = pd.date_range(start='2023-01-01', periods=100, freq='D')
     return pd.DataFrame({
         'date': dates,
@@ -196,21 +213,29 @@ def test_analyze_data_unsupported_analysis():
     assert 'Unsupported analysis type' in result['error']
 
 def test_descriptive_analysis_empty_data():
-    """Test descriptive analysis with empty data."""
+    """
+    Tests that descriptive analysis correctly handles an empty DataFrame by returning zero for both row and column counts.
+    """
     empty_df = pd.DataFrame()
     result = _descriptive_analysis(empty_df, {})
     assert result['row_count'] == 0
     assert result['column_count'] == 0
 
 def test_correlation_analysis_single_column():
-    """Test correlation analysis with single column."""
+    """
+    Tests that correlation analysis with a single-column DataFrame returns a valid correlation matrix containing the column.
+    """
     single_col_df = pd.DataFrame({'A': [1, 2, 3]})
     result = _correlation_analysis(single_col_df, {'method': 'pearson'})
     assert result['correlation_matrix'] is not None
     assert 'A' in result['correlation_matrix']
 
 def test_hypothesis_test_invalid_groups():
-    """Test hypothesis test with invalid groups."""
+    """
+    Tests that the hypothesis test function returns an error when only one group is provided for a t-test.
+    
+    Verifies that the error message indicates the requirement for exactly two groups.
+    """
     df = pd.DataFrame({
         'group': ['A'] * 10,  # Only one group
         'value': range(10)
@@ -224,7 +249,9 @@ def test_hypothesis_test_invalid_groups():
     assert 'T-test requires exactly two groups' in result['error']
 
 def test_time_series_analysis_invalid_date():
-    """Test time series analysis with invalid date."""
+    """
+    Tests that time series analysis returns an error when provided with invalid date strings.
+    """
     df = pd.DataFrame({
         'date': ['invalid_date'] * 10,
         'value': range(10)
@@ -236,7 +263,9 @@ def test_time_series_analysis_invalid_date():
     assert 'error' in result
 
 def test_clustering_analysis_invalid_method():
-    """Test clustering analysis with invalid method."""
+    """
+    Tests that _clustering_analysis returns an error when given an unsupported clustering method.
+    """
     df = pd.DataFrame({'A': range(10)})
     result = _clustering_analysis(df, {'method': 'invalid_method'})
     assert 'error' in result
@@ -250,7 +279,12 @@ def test_feature_importance_no_target():
     assert 'target_column must be specified' in result['error']
 
 def test_distribution_analysis_insufficient_data():
-    """Test distribution analysis with insufficient data."""
+    """
+    Tests that distribution analysis skips the normality test when data points are insufficient.
+    
+    Creates a DataFrame with too few values for a normality test and verifies that the
+    resulting distribution analysis omits the 'normality_test' key for the specified column.
+    """
     df = pd.DataFrame({'A': [1, 2]})  # Too few points for normality test
     result = _distribution_analysis(df, {'columns': ['A']})
     assert 'distributions' in result
@@ -258,7 +292,9 @@ def test_distribution_analysis_insufficient_data():
     assert 'normality_test' not in result['distributions']['A']
 
 def test_outlier_analysis_invalid_method():
-    """Test outlier analysis with invalid method."""
+    """
+    Tests that _outlier_analysis returns an error when given an unsupported outlier detection method.
+    """
     df = pd.DataFrame({'A': range(10)})
     result = _outlier_analysis(df, {
         'method': 'invalid_method',

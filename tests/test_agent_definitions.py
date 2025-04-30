@@ -14,14 +14,18 @@ from core.agents.agent_definitions import (
 )
 
 def test_agent_types():
-    """Test that all agent types are properly defined."""
+    """
+    Verifies that the AgentType enum includes ORCHESTRATOR, SPECIALIST, and REVIEWER.
+    """
     assert len(AgentType) == 3
     assert AgentType.ORCHESTRATOR in AgentType
     assert AgentType.SPECIALIST in AgentType
     assert AgentType.REVIEWER in AgentType
 
 def test_agent_capabilities():
-    """Test that all agent capabilities are properly defined."""
+    """
+    Verifies that all expected agent capabilities are present in the AgentCapability enum.
+    """
     # Test orchestrator capabilities
     assert AgentCapability.PROJECT_PLANNING in AgentCapability
     assert AgentCapability.TASK_COORDINATION in AgentCapability
@@ -42,7 +46,11 @@ def test_llm_providers():
     assert LLMProvider.GEMINI.value == "gemini-2.5-flash"
 
 def test_agent_validation():
-    """Test that agent validation works correctly."""
+    """
+    Tests that agent validation enforces correct capability assignments for orchestrator agents.
+    
+    Verifies that a valid orchestrator agent with appropriate capabilities is active, and that creating an orchestrator agent with invalid capabilities raises a ValueError.
+    """
     # Test valid orchestrator
     valid_orchestrator = Agent(
         name="TestOrchestrator",
@@ -75,7 +83,9 @@ def test_get_agent():
         get_agent("NonexistentAgent")
 
 def test_get_agents_by_type():
-    """Test retrieving agents by type."""
+    """
+    Tests that agents can be retrieved by type and that all returned agents match the requested type.
+    """
     specialists = get_agents_by_type(AgentType.SPECIALIST)
     assert len(specialists) > 0
     assert all(agent.type == AgentType.SPECIALIST for agent in specialists)
@@ -85,7 +95,11 @@ def test_get_agents_by_type():
     assert all(agent.type == AgentType.REVIEWER for agent in reviewers)
 
 def test_get_agents_by_capability():
-    """Test retrieving agents by capability."""
+    """
+    Tests that agents with a specific capability can be retrieved.
+    
+    Retrieves agents with the CODE_REVIEW capability and asserts that the returned list is non-empty and all agents include this capability.
+    """
     code_reviewers = get_agents_by_capability(AgentCapability.CODE_REVIEW)
     assert len(code_reviewers) > 0
     assert all(AgentCapability.CODE_REVIEW in agent.capabilities for agent in code_reviewers)
@@ -97,7 +111,9 @@ def test_get_active_agents():
     assert all(agent.is_active for agent in active_agents)
 
 def test_predefined_agents():
-    """Test that all predefined agents are properly configured."""
+    """
+    Verifies that all predefined agents in the AGENTS dictionary have correct types, capabilities, and LLM providers assigned.
+    """
     # Test SuperAgent
     super_agent = AGENTS["SuperAgent"]
     assert super_agent.type == AgentType.ORCHESTRATOR

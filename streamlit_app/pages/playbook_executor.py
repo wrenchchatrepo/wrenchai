@@ -13,12 +13,27 @@ class DocusaurusPlaybookExecutor:
     """Executes Docusaurus portfolio playbook via FastAPI."""
     
     def __init__(self, api_url: str = "http://localhost:8000"):
-        """Initialize executor with API URL."""
+        """
+        Initializes the executor with the specified FastAPI backend URL.
+        
+        Args:
+            api_url: The base URL of the FastAPI service to use for playbook execution.
+        """
         self.api_url = api_url
         self.session = httpx.AsyncClient()
         
     async def execute_playbook(self, playbook_path: str) -> Dict[str, Any]:
-        """Execute playbook with proper error handling and progress tracking."""
+        """
+        Executes a Docusaurus playbook by validating the YAML file and submitting it to the FastAPI backend.
+        
+        Validates the playbook file, converts it to the required API format, and sends it to the backend for execution. Handles validation errors, HTTP errors, timeouts, and unexpected exceptions, returning a dictionary indicating success or failure along with relevant details.
+        
+        Args:
+            playbook_path: Path to the playbook YAML file.
+        
+        Returns:
+            A dictionary containing the execution result, including a success flag and any error messages or response data from the backend.
+        """
         try:
             # Use the new playbook validator
             from core.playbook_validator import perform_full_validation
@@ -69,7 +84,11 @@ class DocusaurusPlaybookExecutor:
             await self.session.aclose()
             
 def main():
-    """Main Streamlit app."""
+    """
+    Launches the Streamlit app for uploading and executing a Docusaurus portfolio playbook.
+    
+    Provides a user interface to configure the FastAPI backend URL, upload a playbook YAML file, and trigger its execution. Displays progress, success or error messages, and execution details. Also shows an example playbook format for user reference.
+    """
     st.title("Docusaurus Portfolio Playbook Executor")
     
     # Sidebar configuration

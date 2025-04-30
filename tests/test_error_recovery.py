@@ -10,7 +10,11 @@ from app.models.task import Task
 
 @pytest.mark.anyio
 async def test_recover_stuck_tasks(test_db: AsyncSession):
-    """Test recovery of stuck tasks."""
+    """
+    Tests that stuck tasks in the "running" state are recovered based on their age and retry count.
+    
+    Creates tasks stuck in the "running" state for over an hour with varying retry counts, invokes the recovery logic, and asserts that tasks below the maximum retry limit are reset for retry while those exceeding the limit are marked as failed.
+    """
     # Create stuck tasks
     stuck_tasks = []
     for i in range(3):
@@ -45,7 +49,13 @@ async def test_recover_stuck_tasks(test_db: AsyncSession):
 
 @pytest.mark.anyio
 async def test_cleanup_incomplete_tasks(test_db: AsyncSession):
-    """Test cleanup of incomplete tasks after system crash."""
+    """
+    Tests that incomplete tasks are marked as failed after a system crash.
+    
+    Creates tasks in "pending" and "running" states, invokes cleanup for a specific
+    agent and for all agents, and verifies that affected tasks are marked as failed
+    with an error type of "system_crash".
+    """
     # Create incomplete tasks
     agent_id = str(uuid4())
     incomplete_tasks = []
@@ -88,7 +98,11 @@ async def test_cleanup_incomplete_tasks(test_db: AsyncSession):
 
 @pytest.mark.anyio
 async def test_retry_failed_task(test_db: AsyncSession):
-    """Test retrying a failed task."""
+    """
+    Tests that a failed task can be retried, resetting its state and incrementing its retry count.
+    
+    Verifies that retrying a failed task resets its status to "pending", clears the error, sets progress to 0.0, increments the retry count, and adds a retry message. Also checks that retrying a non-failed or non-existent task returns None.
+    """
     # Create failed task
     task = Task(
         id=str(uuid4()),

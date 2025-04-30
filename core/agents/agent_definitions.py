@@ -71,11 +71,20 @@ class Agent:
     is_active: bool = True
     
     def __post_init__(self):
-        """Validate agent configuration after initialization."""
+        """
+        Validates the agent's configuration immediately after initialization.
+        
+        Ensures that the agent's capabilities align with its type-specific requirements.
+        """
         self.validate_capabilities()
     
     def validate_capabilities(self):
-        """Ensure agent has appropriate capabilities for its type."""
+        """
+        Validates that the agent's capabilities meet the requirements for its type.
+        
+        Raises:
+            ValueError: If an orchestrator or reviewer agent lacks any required capabilities.
+        """
         if self.type == AgentType.ORCHESTRATOR:
             required = {
                 AgentCapability.PROJECT_PLANNING,
@@ -206,19 +215,51 @@ AGENTS = {
 }
 
 def get_agent(name: str) -> Agent:
-    """Retrieve an agent by name."""
+    """
+    Retrieves an agent instance by its name.
+    
+    Args:
+        name: The unique name of the agent to retrieve.
+    
+    Returns:
+        The Agent instance corresponding to the given name.
+    
+    Raises:
+        ValueError: If no agent with the specified name exists.
+    """
     if name not in AGENTS:
         raise ValueError(f"Agent {name} not found")
     return AGENTS[name]
 
 def get_agents_by_type(agent_type: AgentType) -> List[Agent]:
-    """Get all agents of a specific type."""
+    """
+    Returns a list of agents matching the specified agent type.
+    
+    Args:
+        agent_type: The type of agent to filter by.
+    
+    Returns:
+        A list of Agent instances whose type matches the given agent_type.
+    """
     return [agent for agent in AGENTS.values() if agent.type == agent_type]
 
 def get_agents_by_capability(capability: AgentCapability) -> List[Agent]:
-    """Get all agents with a specific capability."""
+    """
+    Returns a list of agents that possess the specified capability.
+    
+    Args:
+        capability: The capability to filter agents by.
+    
+    Returns:
+        A list of Agent instances that include the given capability.
+    """
     return [agent for agent in AGENTS.values() if capability in agent.capabilities]
 
 def get_active_agents() -> List[Agent]:
-    """Get all currently active agents."""
+    """
+    Returns a list of all agents that are currently marked as active.
+    
+    Returns:
+        List[Agent]: Agents with is_active set to True.
+    """
     return [agent for agent in AGENTS.values() if agent.is_active] 

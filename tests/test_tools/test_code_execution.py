@@ -20,7 +20,12 @@ from core.tools.code_execution import (
 
 @pytest.fixture
 def sample_python_code():
-    """Sample Python code for testing."""
+    """
+    Provides a sample Python code snippet that prints a greeting for testing purposes.
+    
+    Returns:
+        A multi-line string containing Python code that defines and calls a greeting function.
+    """
     return """
 def greet(name):
     return f"Hello, {name}!"
@@ -30,7 +35,12 @@ print(greet("World"))
 
 @pytest.fixture
 def sample_javascript_code():
-    """Sample JavaScript code for testing."""
+    """
+    Provides a sample JavaScript code snippet that prints a greeting message.
+    
+    Returns:
+        A string containing JavaScript code for testing purposes.
+    """
     return """
 function greet(name) {
     return `Hello, ${name}!`;
@@ -41,7 +51,12 @@ console.log(greet("World"));
 
 @pytest.fixture
 def sample_typescript_code():
-    """Sample TypeScript code for testing."""
+    """
+    Provides a sample TypeScript code snippet that prints a greeting message.
+    
+    Returns:
+        A string containing TypeScript code for testing purposes.
+    """
     return """
 function greet(name: string): string {
     return `Hello, ${name}!`;
@@ -52,7 +67,9 @@ console.log(greet("World"));
 
 @pytest.fixture
 def sample_shell_code():
-    """Sample shell script for testing."""
+    """
+    Provides a sample shell script that prints "Hello, World!" for testing purposes.
+    """
     return """
 #!/bin/bash
 echo "Hello, World!"
@@ -60,7 +77,12 @@ echo "Hello, World!"
 
 @pytest.fixture
 def resource_limits():
-    """Sample resource limits."""
+    """
+    Provides a sample ResourceLimits instance with predefined constraints for testing.
+    
+    Returns:
+        A ResourceLimits object with set limits on time, memory, processes, and access permissions.
+    """
     return ResourceLimits(
         max_time=5,
         max_memory=256,
@@ -71,14 +93,23 @@ def resource_limits():
 
 @pytest.fixture
 async def executor():
-    """Create a CodeExecutor instance."""
+    """
+    Asynchronous pytest fixture that provides a CodeExecutor instance for test cases.
+    
+    Yields:
+        A CodeExecutor instance for use within a test. Ensures cleanup after the test completes.
+    """
     exec = CodeExecutor()
     yield exec
     exec.cleanup()
 
 @pytest.mark.asyncio
 async def test_python_execution(executor, sample_python_code):
-    """Test Python code execution."""
+    """
+    Tests that Python code executes successfully and produces the expected output.
+    
+    Asserts that execution is successful, the output contains "Hello, World!", no error is present, and execution time is positive.
+    """
     context = ExecutionContext(
         language=Language.PYTHON,
         mode=ExecutionMode.SCRIPT
@@ -93,7 +124,11 @@ async def test_python_execution(executor, sample_python_code):
 
 @pytest.mark.asyncio
 async def test_javascript_execution(executor, sample_javascript_code):
-    """Test JavaScript code execution."""
+    """
+    Tests execution of JavaScript code using the executor and verifies successful output.
+    
+    Asserts that the execution succeeds, the output contains "Hello, World!", and no error is present.
+    """
     context = ExecutionContext(
         language=Language.JAVASCRIPT,
         mode=ExecutionMode.SCRIPT
@@ -107,7 +142,11 @@ async def test_javascript_execution(executor, sample_javascript_code):
 
 @pytest.mark.asyncio
 async def test_typescript_execution(executor, sample_typescript_code):
-    """Test TypeScript code execution."""
+    """
+    Tests execution of TypeScript code in script mode and verifies successful output.
+    
+    Asserts that the execution succeeds, the output contains "Hello, World!", and no error is present.
+    """
     context = ExecutionContext(
         language=Language.TYPESCRIPT,
         mode=ExecutionMode.SCRIPT
@@ -121,7 +160,11 @@ async def test_typescript_execution(executor, sample_typescript_code):
 
 @pytest.mark.asyncio
 async def test_shell_execution(executor, sample_shell_code):
-    """Test shell script execution."""
+    """
+    Tests execution of a shell script and verifies successful output.
+    
+    Asserts that the shell script runs successfully, produces the expected output, and does not return an error.
+    """
     context = ExecutionContext(
         language=Language.SHELL,
         mode=ExecutionMode.SCRIPT
@@ -135,7 +178,12 @@ async def test_shell_execution(executor, sample_shell_code):
 
 @pytest.mark.asyncio
 async def test_execution_with_dependencies(executor):
-    """Test code execution with dependencies."""
+    """
+    Tests that Python code requiring external dependencies executes successfully.
+    
+    Verifies that code importing and using the 'numpy' library runs correctly when
+    the dependency is specified, and that the expected output is produced.
+    """
     code = """
 import numpy as np
 print(np.array([1, 2, 3]).mean())
@@ -153,7 +201,9 @@ print(np.array([1, 2, 3]).mean())
 
 @pytest.mark.asyncio
 async def test_execution_timeout(executor):
-    """Test execution timeout."""
+    """
+    Tests that code execution fails with an appropriate error message when exceeding the maximum allowed execution time.
+    """
     code = """
 import time
 time.sleep(10)
@@ -171,7 +221,11 @@ time.sleep(10)
 
 @pytest.mark.asyncio
 async def test_execution_with_environment_vars(executor):
-    """Test execution with environment variables."""
+    """
+    Tests that code execution correctly accesses and outputs environment variables.
+    
+    Executes Python code that prints the value of an environment variable set in the execution context, and verifies that the output contains the expected value.
+    """
     code = """
 import os
 print(os.environ.get('TEST_VAR'))
@@ -189,7 +243,11 @@ print(os.environ.get('TEST_VAR'))
 
 @pytest.mark.asyncio
 async def test_execution_with_working_directory(executor, tmp_path):
-    """Test execution with custom working directory."""
+    """
+    Tests that code execution in a custom working directory can access files present in that directory.
+    
+    Creates a test file in a temporary directory, executes Python code listing directory contents, and asserts that the file is visible in the output.
+    """
     # Create a test file in the temp directory
     test_file = tmp_path / "test.txt"
     test_file.write_text("test content")
@@ -211,7 +269,11 @@ print(os.listdir('.'))
 
 @pytest.mark.asyncio
 async def test_invalid_code_execution(executor):
-    """Test execution of invalid code."""
+    """
+    Tests that executing invalid Python code results in failure and returns a NameError.
+    
+    Verifies that the execution fails, an error message is present, and the error contains 'NameError' when running code referencing an undefined variable.
+    """
     code = """
 print(undefined_variable)
 """
@@ -228,7 +290,11 @@ print(undefined_variable)
 
 @pytest.mark.asyncio
 async def test_cancel_execution(executor):
-    """Test cancelling execution."""
+    """
+    Tests that a running code execution can be cancelled and reports failure upon cancellation.
+    
+    Starts a long-running Python code execution, cancels it using the executor's cancellation method, and asserts that the cancellation succeeds and the final result indicates unsuccessful execution.
+    """
     code = """
 import time
 time.sleep(30)
@@ -256,7 +322,11 @@ time.sleep(30)
 
 @pytest.mark.asyncio
 async def test_execute_code_helper():
-    """Test the execute_code helper function."""
+    """
+    Tests the execute_code helper function for successful Python code execution.
+    
+    Verifies that the helper correctly executes Python code with specified environment variables and resource limits, and that the output contains the expected string.
+    """
     code = """
 print("Hello from helper!")
 """
@@ -274,7 +344,11 @@ print("Hello from helper!")
 
 @pytest.mark.asyncio
 async def test_cancel_execution_helper():
-    """Test the cancel_execution helper function."""
+    """
+    Tests that the cancel_execution helper function successfully cancels a running code execution.
+    
+    Starts a long-running Python code execution, cancels it using the execution ID, and asserts that cancellation is successful and the final result indicates failure.
+    """
     # Start a long-running execution
     code = """
 import time
@@ -303,7 +377,9 @@ time.sleep(30)
     assert not final_result["success"]
 
 def test_cleanup(executor):
-    """Test cleanup of temporary files and processes."""
+    """
+    Tests that the executor's temporary directory is removed after calling cleanup.
+    """
     temp_dir = executor.temp_dir
     assert temp_dir.exists()
     
@@ -311,7 +387,9 @@ def test_cleanup(executor):
     assert not temp_dir.exists()
 
 def test_resource_limits_validation():
-    """Test resource limits validation."""
+    """
+    Tests that ResourceLimits accepts valid parameters and raises ValueError for invalid max_time or max_memory values.
+    """
     # Valid limits
     limits = ResourceLimits(
         max_time=30,

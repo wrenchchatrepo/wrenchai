@@ -114,35 +114,60 @@ class PlaybookStep(BaseModel):
     
     @validator('agent')
     def validate_agent_for_standard(cls, v, values):
-        """Validate that agent is provided for standard steps."""
+        """
+        Ensures that the 'agent' field is present for steps of type 'standard'.
+        
+        Raises:
+            ValueError: If the step type is 'standard' and 'agent' is not provided.
+        """
         if values.get('type') == StepType.STANDARD and not v:
             raise ValueError("agent is required for standard steps")
         return v
     
     @validator('agents')
     def validate_agents_for_partner_loop(cls, v, values):
-        """Validate that agents are provided for partner_feedback_loop steps."""
+        """
+        Validates that the 'agents' field is provided for partner_feedback_loop steps.
+        
+        Raises:
+            ValueError: If 'agents' is missing when the step type is partner_feedback_loop.
+        """
         if values.get('type') == StepType.PARTNER_FEEDBACK_LOOP and not v:
             raise ValueError("agents is required for partner_feedback_loop steps")
         return v
     
     @validator('operations')
     def validate_operations_for_partner_loop(cls, v, values):
-        """Validate that operations are provided for partner_feedback_loop steps."""
+        """
+        Validates that operations are specified for partner_feedback_loop steps.
+        
+        Raises:
+            ValueError: If the step type is partner_feedback_loop and no operations are provided.
+        """
         if values.get('type') == StepType.PARTNER_FEEDBACK_LOOP and not v:
             raise ValueError("operations is required for partner_feedback_loop steps")
         return v
     
     @validator('process')
     def validate_process_for_process_step(cls, v, values):
-        """Validate that process is provided for process steps."""
+        """
+        Validates that the 'process' field is present for steps of type PROCESS.
+        
+        Raises:
+            ValueError: If the step type is PROCESS and the 'process' field is missing or empty.
+        """
         if values.get('type') == StepType.PROCESS and not v:
             raise ValueError("process is required for process steps")
         return v
     
     @validator('primary_agent')
     def validate_primary_agent_for_handoff(cls, v, values):
-        """Validate that primary_agent is provided for handoff steps."""
+        """
+        Validates that a primary agent is specified for handoff steps.
+        
+        Raises:
+            ValueError: If the step type is 'handoff' and no primary_agent is provided.
+        """
         if values.get('type') == StepType.HANDOFF and not v:
             raise ValueError("primary_agent is required for handoff steps")
         return v
@@ -190,7 +215,13 @@ class Playbook(BaseModel):
     
     @root_validator(pre=True)
     def extract_metadata(cls, values):
-        """Extract metadata from steps if present."""
+        """
+        Extracts top-level metadata fields from a step with step_id 'metadata' if present.
+        
+        If a metadata step exists within the steps list and contains a 'metadata' field,
+        updates the values dictionary with name, description, tools, agents, agent_llms,
+        and sections from the metadata.
+        """
         steps = values.get('steps', [])
         if isinstance(steps, list) and steps:
             # Handle list-based playbook format (from YAML)
@@ -206,7 +237,12 @@ class Playbook(BaseModel):
         return values
 
     def to_api_format(self) -> Dict[str, Any]:
-        """Convert playbook to API format for execution."""
+        """
+        Converts the playbook instance into a dictionary formatted for API execution.
+        
+        Returns:
+            A dictionary containing the playbook name, input details (description, tools, agents, agent_llms, sections, steps), and metadata with the current UTC timestamp and source.
+        """
         return {
             "playbook": self.name,
             "input": {
@@ -225,7 +261,11 @@ class Playbook(BaseModel):
 
     @classmethod
     def from_yaml(cls, yaml_content: str) -> 'Playbook':
-        """Create a Playbook instance from YAML content."""
+        """
+        Creates a Playbook instance from a YAML string.
+        
+        Parses the provided YAML content, supporting both list-based and dictionary-based playbook formats.
+        """
         data = yaml.safe_load(yaml_content)
         if isinstance(data, list):
             # Handle list-based playbook format
@@ -234,16 +274,39 @@ class Playbook(BaseModel):
     
     @classmethod
     def from_yaml_file(cls, file_path: str) -> 'Playbook':
-        """Create a Playbook instance from a YAML file."""
+        """
+        Creates a Playbook instance by loading and parsing a YAML file.
+        
+        Args:
+            file_path: Path to the YAML file containing the playbook definition.
+        
+        Returns:
+            A Playbook instance constructed from the YAML file content.
+        """
         with open(file_path, 'r') as f:
             return cls.from_yaml(f.read())
     
     def to_yaml(self) -> str:
-        """Convert playbook to YAML format."""
+        """
+        Converts the playbook instance to a YAML-formatted string.
+        
+        Returns:
+            A YAML string representation of the playbook, excluding fields with None values.
+        """
         return yaml.dump(self.dict(exclude_none=True))
 
     def merge_user_config(self, user_config: Dict[str, Any]) -> 'Playbook':
-        """Merge user configuration into the playbook."""
+        """
+        Merges a user configuration dictionary into the playbook, updating top-level fields and step parameters as needed.
+        
+        The method updates the playbook's name, description, tools, agents, and sections if provided in the user configuration. If "projects" is specified, it is added to the parameters of the "generate_content" step. Any additional fields in the user configuration are also merged into the playbook.
+        
+        Args:
+            user_config: A dictionary containing user-specified configuration values.
+        
+        Returns:
+            A new Playbook instance with the merged configuration.
+        """
         # Create a copy of the current playbook
         playbook_dict = self.dict(exclude_none=True)
         

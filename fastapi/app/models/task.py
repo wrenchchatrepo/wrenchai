@@ -34,5 +34,7 @@ class Task(Base):
     playbook = relationship("Playbook", back_populates="tasks")
 
     def __repr__(self) -> str:
-        """String representation of the task."""
+        """
+        Returns a concise string representation of the Task instance, including its id, type, and status.
+        """
         return f"<Task(id={self.id}, type={self.type}, status={self.status})>" 

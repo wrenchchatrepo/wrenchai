@@ -76,7 +76,18 @@ def _is_best_response(
     strategy_profile: List[int],
     payoff_matrices: List[List[List[float]]]
 ) -> bool:
-    """Check if a strategy is a best response."""
+    """
+    Determines whether a given strategy is a best response for a player in a specified strategy profile.
+    
+    Args:
+        strategy_index: Index of the strategy being evaluated for the player.
+        player_index: Index of the player whose strategy is being evaluated.
+        strategy_profile: List of strategy indices representing the current strategy choices of all players.
+        payoff_matrices: Payoff matrices for all players, where each matrix specifies payoffs for every strategy combination.
+    
+    Returns:
+        True if the specified strategy yields the highest payoff for the player given the other players' strategies; False otherwise.
+    """
     current_payoff = payoff_matrices[player_index][strategy_profile[0]][strategy_profile[1]]
     
     for alt_strategy in range(len(payoff_matrices[player_index])):
@@ -90,13 +101,21 @@ def _is_best_response(
     return True
 
 async def find_nash_equilibria(game: GameSpec) -> Dict[str, Any]:
-    """Find Nash equilibria in the game.
+    """
+    Finds Nash equilibria for a normal form game.
+    
+    Identifies all pure strategy Nash equilibria by evaluating best responses for each strategy profile. For 2x2 games, also attempts to compute a mixed strategy equilibrium. Returns a dictionary containing lists of pure and mixed equilibria, analysis of equilibrium counts, and game type classification. If an error occurs, returns a failure response with error details.
     
     Args:
-        game: Game specification
-        
+        game: The game specification to analyze.
+    
     Returns:
-        Dictionary containing Nash equilibria and analysis
+        A dictionary with keys:
+            - "success": Whether the computation succeeded.
+            - "pure_equilibria": List of pure strategy Nash equilibria.
+            - "mixed_equilibria": List of mixed strategy Nash equilibria (if found).
+            - "analysis": Summary including counts and game type.
+            - "error": Error message if computation failed.
     """
     try:
         if game.type != GameType.NORMAL_FORM:
@@ -161,7 +180,17 @@ async def find_nash_equilibria(game: GameSpec) -> Dict[str, Any]:
 def _find_2x2_mixed_equilibrium(
     payoff_matrices: List[np.ndarray]
 ) -> Optional[Dict[str, Any]]:
-    """Find mixed strategy equilibrium for 2x2 games."""
+    """
+    Computes the mixed strategy Nash equilibrium for a 2x2 normal form game.
+    
+    Given two players' 2x2 payoff matrices, solves for the equilibrium probabilities and expected payoffs if a valid mixed strategy equilibrium exists. Returns None if the solution is invalid or an error occurs.
+    
+    Args:
+        payoff_matrices: A list containing two 2x2 numpy arrays representing the payoff matrices for each player.
+    
+    Returns:
+        A dictionary with equilibrium probabilities for both players and their expected payoffs, or None if no valid mixed strategy equilibrium exists.
+    """
     # Extract payoffs
     a11, a12, a21, a22 = payoff_matrices[0].flatten()
     b11, b12, b21, b22 = payoff_matrices[1].flatten()
@@ -193,21 +222,30 @@ def _find_2x2_mixed_equilibrium(
         return None
 
 def _is_zero_sum(payoff_matrices: List[np.ndarray]) -> bool:
-    """Check if the game is zero-sum."""
+    """
+    Determines whether the game is zero-sum based on the provided payoff matrices.
+    
+    Args:
+        payoff_matrices: A list containing the payoff matrices for each player.
+    
+    Returns:
+        True if the sum of the first two players' payoff matrices is approximately zero, indicating a zero-sum game; otherwise, False.
+    """
     return np.allclose(payoff_matrices[0] + payoff_matrices[1], 0)
 
 async def analyze_strategies(
     game: GameSpec,
     player_name: str
 ) -> Dict[str, Any]:
-    """Analyze strategies for a specific player.
+    """
+    Analyzes the strategies of a specified player, computing payoff statistics and identifying dominant pure strategies.
     
     Args:
-        game: Game specification
-        player_name: Name of the player to analyze
-        
+        game: The game specification containing players and payoff matrices.
+        player_name: The name of the player whose strategies are to be analyzed.
+    
     Returns:
-        Dictionary containing strategy analysis
+        A dictionary with success status, player name, overall payoff metrics, dominant pure strategies, and detailed analysis for each strategy.
     """
     try:
         # Find player
@@ -269,14 +307,10 @@ async def evaluate_coalition(
     game: GameSpec,
     coalition: List[str]
 ) -> Dict[str, Any]:
-    """Evaluate a coalition in a cooperative game.
+    """
+    Evaluates the value and relative strength of a coalition in a cooperative game.
     
-    Args:
-        game: Game specification
-        coalition: List of player names in the coalition
-        
-    Returns:
-        Dictionary containing coalition analysis
+    Raises an error if the game is not cooperative or if any coalition member is not found. Calculates the coalition's total value as the sum of payoffs for its members and computes its relative strength compared to the total value of all players. Returns a dictionary with analysis results, including coalition value, relative strength, size, and proportion of players.
     """
     try:
         if not game.cooperative:
@@ -319,13 +353,13 @@ async def evaluate_coalition(
         }
 
 async def compute_shapley_values(game: GameSpec) -> Dict[str, Any]:
-    """Compute Shapley values for a cooperative game.
+    """
+    Computes Shapley values for each player in a cooperative game.
     
-    Args:
-        game: Game specification
-        
+    Calculates the marginal contribution of each player to all possible coalitions and returns a dictionary with Shapley values, total value, and the most valuable player. Only applicable to cooperative games.
+    
     Returns:
-        Dictionary containing Shapley values
+        A dictionary with success status, Shapley values per player, total value, and most valuable player. On failure, returns an error message.
     """
     try:
         if not game.cooperative:

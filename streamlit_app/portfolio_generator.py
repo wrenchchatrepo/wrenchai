@@ -36,7 +36,19 @@ class DocusaurusPlaybookExecutor:
         self.client = AsyncClient(base_url=self.api_base_url)
     
     async def load_playbook(self, playbook_path: str) -> Dict[str, Any]:
-        """Load and validate the Docusaurus portfolio playbook."""
+        """
+        Loads and validates a Docusaurus portfolio playbook from the specified file path.
+        
+        Args:
+            playbook_path: Path to the playbook YAML file.
+        
+        Returns:
+            The validated Playbook object.
+        
+        Raises:
+            ValueError: If the playbook fails validation.
+            Exception: If an unexpected error occurs during loading or validation.
+        """
         try:
             from core.playbook_validator import perform_full_validation
             from core.playbook_schema import Playbook
@@ -52,7 +64,20 @@ class DocusaurusPlaybookExecutor:
             raise
 
     async def execute_playbook(self, playbook: 'Playbook') -> Dict[str, Any]:
-        """Execute the Docusaurus portfolio playbook."""
+        """
+        Executes a Docusaurus portfolio playbook asynchronously via the API.
+        
+        Sends the provided playbook to the API for execution and returns the standardized response, including success status and task ID if execution starts successfully.
+        
+        Args:
+            playbook: The Playbook object to be executed.
+        
+        Returns:
+            A dictionary containing the API response, with added 'success' and 'task_id' fields when applicable.
+        
+        Raises:
+            Exception: If the API request fails or returns an error.
+        """
         try:
             # Convert to API format
             api_payload = playbook.to_api_format()
@@ -191,7 +216,11 @@ async def execute_portfolio_generation(
     executor: DocusaurusPlaybookExecutor,
     config: Dict[str, Any]
 ) -> None:
-    """Execute the portfolio generation process."""
+    """
+    Asynchronously loads, configures, and executes a Docusaurus portfolio playbook based on user input.
+    
+    Loads the base playbook, merges user-provided configuration, executes the playbook via the API, and updates the Streamlit session state with the task ID and execution status. Displays progress and error messages in the Streamlit UI.
+    """
     try:
         with st.spinner("Loading playbook..."):
             playbook = await executor.load_playbook(

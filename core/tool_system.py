@@ -18,7 +18,11 @@ class ToolRegistry:
     """Registry for all available tools"""
     
     def __init__(self, config_path: str = "core/configs/tools.yaml"):
-        """Initialize the tool registry with configuration"""
+        """
+        Initializes the ToolRegistry with tool configurations, authorization, and dependency management.
+        
+        Loads tool definitions from the specified YAML configuration file, sets up internal registries, and integrates authorization and dependency management systems.
+        """
         self.config_path = config_path
         self.tools = {}
         self.configs = load_config(config_path)
@@ -27,7 +31,11 @@ class ToolRegistry:
         self._load_tools()
         
     def _load_tools(self):
-        """Load all tools from configuration"""
+        """
+        Dynamically loads and registers tool implementations from the configuration.
+        
+        Attempts to import each tool's implementation as specified in the configuration. On success, registers the tool with its function and configuration. If import fails, registers a placeholder function that returns an error response indicating the tool is unavailable.
+        """
         for tool_config in self.configs.get('tools', []):
             try:
                 # Dynamic import of tool implementation
@@ -86,7 +94,15 @@ class ToolRegistry:
                 if capability.lower() in tool['config']['description'].lower()]
     
     def get_tool_dependencies(self, tool_name: str) -> List[str]:
-        """Get dependencies for a tool"""
+        """
+        Returns a list of tool names that the specified tool depends on.
+        
+        Args:
+            tool_name: The name of the tool whose dependencies are to be retrieved.
+        
+        Returns:
+            A list of tool names that are required by the specified tool.
+        """
         dependencies = []
         for dependency in self.configs.get('tool_dependencies', []):
             if dependency['primary'] == tool_name:
@@ -94,16 +110,19 @@ class ToolRegistry:
         return dependencies
         
     async def execute_tool(self, tool_name: str, agent_role: str, agent_id: str, **kwargs) -> Dict[str, Any]:
-        """Execute a tool with authorization checking and standardized response.
+        """
+        Executes a tool with authorization and dependency checks, returning a standardized response.
+        
+        Checks if the tool exists, verifies agent authorization, and ensures all dependencies are met before execution. Supports both synchronous and asynchronous tool functions. Records usage statistics and appends warnings if the tool operates with limited functionality due to missing dependencies.
         
         Args:
-            tool_name: Name of the tool to execute
-            agent_role: Role of the agent requesting tool execution
-            agent_id: ID of the agent requesting tool execution
-            **kwargs: Tool-specific parameters
-            
+            tool_name: The name of the tool to execute.
+            agent_role: The role of the agent requesting execution.
+            agent_id: The identifier of the agent requesting execution.
+            **kwargs: Additional parameters specific to the tool.
+        
         Returns:
-            Standardized tool response dictionary
+            A standardized dictionary containing the tool's response, including success status, data or error details, and metadata.
         """
         # Check if tool exists
         if tool_name not in self.tools:
@@ -158,14 +177,16 @@ class ToolRegistry:
         return result
     
     def verify_tools_for_agent(self, agent_role: str, required_tools: List[str]) -> Tuple[bool, Dict[str, Any]]:
-        """Verify that an agent has access to all required tools and they can run.
+        """
+        Checks whether an agent with the specified role is authorized and able to use all required tools.
         
         Args:
-            agent_role: Role of the agent
-            required_tools: List of required tool names
-            
+            agent_role: The role of the agent requesting tool access.
+            required_tools: A list of tool names that the agent needs access to.
+        
         Returns:
-            Tuple of (all_available, details)
+            A tuple where the first element is True if all tools are authorized and can run, False otherwise.
+            The second element is a dictionary with authorization status, missing tools, and dependency check results for each tool.
         """
         # Check authorization
         auth_status, missing_tools = self.authorization_system.verify_tools_for_agent(

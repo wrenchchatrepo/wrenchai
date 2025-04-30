@@ -182,15 +182,16 @@ exists = await secrets.secret_exists('openai_api_key')
 """
 
 async def manage_secrets(action: str, key: str, value: str = None) -> Dict[str, Any]:
-    """Manage secure credentials and secrets.
+    """
+    Performs secret management actions such as retrieving, storing, deleting, or listing secrets.
     
     Args:
-        action: Action to perform ('get', 'set', 'delete', 'list')
-        key: Secret key name
-        value: Optional secret value for 'set' action
-        
+        action: The operation to perform. Must be one of "get", "set", "delete", or "list".
+        key: The name of the secret to operate on. Not required for "list".
+        value: The secret value to store, required only for the "set" action.
+    
     Returns:
-        Dict containing operation result
+        A dictionary containing the result of the operation, including success status and data or error details.
     """
     try:
         if action == "get":
@@ -212,7 +213,22 @@ async def manage_secrets(action: str, key: str, value: str = None) -> Dict[str, 
         }
 
 async def _get_secret(key: str) -> Dict[str, Any]:
-    """Get a secret value."""
+    """
+    Retrieves the value of a secret from the keyring by key.
+    
+    Attempts to fetch the secret associated with the given key from the system keyring.
+    Returns a dictionary indicating success and the secret value if found, or an error message if not found or if an exception occurs.
+    
+    Args:
+        key: The identifier of the secret to retrieve.
+    
+    Returns:
+        A dictionary with keys:
+            - "success": True if the secret was found, False otherwise.
+            - "key": The key of the secret (present only on success).
+            - "value": The secret value (present only on success).
+            - "error": Error message (present only on failure).
+    """
     try:
         value = keyring.get_password(SERVICE_NAME, key)
         if value is None:
@@ -234,7 +250,18 @@ async def _get_secret(key: str) -> Dict[str, Any]:
         }
 
 async def _set_secret(key: str, value: str) -> Dict[str, Any]:
-    """Set a secret value."""
+    """
+    Stores a secret value in the keyring for the specified key.
+    
+    If the value is empty, returns an error. On success, returns a dictionary with success status and a confirmation message; on failure, returns an error message.
+    
+    Args:
+        key: The identifier for the secret.
+        value: The secret value to store.
+    
+    Returns:
+        A dictionary containing the operation's success status, the key, and a message or error details.
+    """
     try:
         if not value:
             return {
@@ -256,7 +283,21 @@ async def _set_secret(key: str, value: str) -> Dict[str, Any]:
         }
 
 async def _delete_secret(key: str) -> Dict[str, Any]:
-    """Delete a secret."""
+    """
+    Deletes a secret from the keyring by key.
+    
+    Attempts to remove the specified secret from the system keyring. Returns a dictionary indicating success or failure, including an error message if the secret does not exist or deletion fails.
+    
+    Args:
+        key: The identifier of the secret to delete.
+    
+    Returns:
+        A dictionary with keys:
+            - "success": True if deletion succeeded, False otherwise.
+            - "key": The key of the deleted secret (on success).
+            - "message": Success message (on success).
+            - "error": Error message (on failure).
+    """
     try:
         # Check if secret exists
         if not keyring.get_password(SERVICE_NAME, key):
@@ -279,7 +320,13 @@ async def _delete_secret(key: str) -> Dict[str, Any]:
         }
 
 async def _list_secrets() -> Dict[str, Any]:
-    """List all secret keys (not values)."""
+    """
+    Lists all stored secret keys by reading the local secrets index file.
+    
+    Returns:
+        A dictionary with a success status and a list of secret keys under 'keys' if successful,
+        or an error message under 'error' if listing fails.
+    """
     try:
         # Note: This is a basic implementation. In production,
         # you would want a more secure way to track secret keys.
@@ -307,11 +354,24 @@ async def _list_secrets() -> Dict[str, Any]:
 
 # Helper functions for external use
 async def get_secret(key: str) -> Optional[str]:
-    """Helper function to get a secret value directly."""
+    """
+    Retrieves the value of a secret by key.
+    
+    Returns the secret value if found, or None if the secret does not exist or retrieval fails.
+    """
     result = await _get_secret(key)
     return result.get("value") if result.get("success") else None
 
 async def set_secret(key: str, value: str) -> bool:
-    """Helper function to set a secret value directly."""
+    """
+    Stores a secret value for the given key.
+    
+    Args:
+        key: The identifier for the secret.
+        value: The secret value to store.
+    
+    Returns:
+        True if the secret was stored successfully, False otherwise.
+    """
     result = await _set_secret(key, value)
     return result.get("success", False) 

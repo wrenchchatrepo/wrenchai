@@ -12,6 +12,14 @@ from datetime import datetime
 class APIError(Exception):
     """Custom API error."""
     def __init__(self, message: str, status_code: int = None, details: Dict = None):
+        """
+        Initializes an APIError with a message, optional status code, and additional details.
+        
+        Args:
+            message: Description of the API error.
+            status_code: Optional HTTP status code associated with the error.
+            details: Optional dictionary with additional error information.
+        """
         self.message = message
         self.status_code = status_code
         self.details = details or {}
@@ -21,19 +29,32 @@ class ErrorHandler:
     """Handles API and WebSocket errors in Streamlit."""
     
     def __init__(self):
-        """Initialize error handler."""
+        """
+        Initializes the error handler state.
+        
+        Sets the error count to zero, clears the last error timestamp, and sets the initial backoff time to one second.
+        """
         self.error_count = 0
         self.last_error_time = None
         self.backoff_time = 1  # Initial backoff time in seconds
         
     def reset(self):
-        """Reset error tracking."""
+        """
+        Resets the error tracking state for the error handler.
+        
+        Sets the error count, last error time, and backoff time to their initial values.
+        """
         self.error_count = 0
         self.last_error_time = None
         self.backoff_time = 1
         
     def should_retry(self) -> bool:
-        """Check if operation should be retried based on error count."""
+        """
+        Determines whether an operation should be retried based on error count and backoff timing.
+        
+        Returns:
+            True if the operation is eligible for retry; False if the maximum retries have been reached or the backoff period has not elapsed.
+        """
         if self.error_count >= 3:  # Max retries
             return False
         
@@ -47,7 +68,15 @@ class ErrorHandler:
         return True
         
     def handle_api_error(self, error: Exception) -> None:
-        """Handle API errors with appropriate UI feedback."""
+        """
+        Handles API errors by updating error state and displaying user-friendly messages.
+        
+        Increments the error count and updates the last error timestamp. Displays
+        appropriate Streamlit error messages based on the type of exception and HTTP
+        status code, including authentication failures, permission issues, missing
+        resources, rate limiting, server errors, timeouts, and WebSocket errors. Applies
+        a backoff delay when rate limits are encountered.
+        """
         self.error_count += 1
         self.last_error_time = datetime.now()
         
@@ -74,7 +103,11 @@ class ErrorHandler:
             st.error(f"Unexpected error: {str(error)}")
             
     def handle_websocket_error(self, error: Exception) -> None:
-        """Handle WebSocket specific errors."""
+        """
+        Handles errors encountered during WebSocket communication.
+        
+        Increments the error count and updates the last error timestamp. Displays a Streamlit error message for WebSocket disconnections and applies a backoff delay before attempting to reconnect. For other exceptions, shows a generic WebSocket error message.
+        """
         self.error_count += 1
         self.last_error_time = datetime.now()
         
@@ -85,10 +118,21 @@ class ErrorHandler:
             st.error(f"WebSocket error: {str(error)}")
             
 def with_error_handling(error_handler: ErrorHandler = None):
-    """Decorator for functions that need error handling."""
+    """
+    Creates a decorator that adds automatic error handling and retry logic to async functions.
+    
+    The decorated function will be retried on exceptions up to a maximum number of attempts,
+    with exponential backoff between retries. If the maximum is reached, a Streamlit error
+    message is displayed and the exception is re-raised.
+    """
     error_handler = error_handler or ErrorHandler()
     
     def decorator(func: Callable):
+        """
+        Wraps an asynchronous function with error handling and retry logic.
+        
+        The decorated function will automatically retry on exceptions, invoking the error handler for each error. Retries continue until the error handler determines no further attempts should be made, after which a user-facing error message is displayed and the exception is re-raised.
+        """
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             while True:

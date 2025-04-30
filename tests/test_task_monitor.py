@@ -12,7 +12,11 @@ from app.core.exceptions import TaskMonitorError
 
 @pytest.mark.anyio
 async def test_monitor_task_progress(test_db: AsyncSession):
-    """Test monitoring of task progress."""
+    """
+    Tests that task progress can be updated and completed using TaskMonitor.
+    
+    Creates an agent and a running task, updates the task's progress and message, and verifies that the task transitions to completed status with the correct result data.
+    """
     # Create agent and task
     agent = Agent(
         id=str(uuid4()),
@@ -60,7 +64,11 @@ async def test_monitor_task_progress(test_db: AsyncSession):
 
 @pytest.mark.anyio
 async def test_monitor_task_failure(test_db: AsyncSession):
-    """Test monitoring of task failures."""
+    """
+    Verifies that reporting a task failure updates the task status and error information.
+    
+    Creates a running task, reports a failure using TaskMonitor, and asserts that the task's status is set to "failed", the error data is stored, and the progress value remains unchanged.
+    """
     # Create task
     task = Task(
         id=str(uuid4()),
@@ -92,7 +100,12 @@ async def test_monitor_task_failure(test_db: AsyncSession):
 
 @pytest.mark.anyio
 async def test_monitor_agent_tasks(test_db: AsyncSession):
-    """Test monitoring of agent's tasks."""
+    """
+    Tests retrieval of all tasks associated with a specific agent.
+    
+    Creates an agent with multiple running tasks, then verifies that the task monitor
+    returns all tasks for the agent with correct progress values.
+    """
     # Create agent and tasks
     agent = Agent(
         id=str(uuid4()),
@@ -126,7 +139,11 @@ async def test_monitor_agent_tasks(test_db: AsyncSession):
 
 @pytest.mark.anyio
 async def test_monitor_task_timeout(test_db: AsyncSession):
-    """Test monitoring of task timeouts."""
+    """
+    Tests that tasks exceeding the specified timeout threshold are marked as failed with a timeout error, while recent tasks remain unaffected.
+    
+    Creates two running tasks with different last update times, invokes the timeout check, and asserts correct state transitions for each task.
+    """
     # Create old task
     old_task = Task(
         id=str(uuid4()),
@@ -165,7 +182,10 @@ async def test_monitor_task_timeout(test_db: AsyncSession):
 
 @pytest.mark.anyio
 async def test_monitor_error_handling(test_db: AsyncSession):
-    """Test error handling in task monitor."""
+    """
+    Tests error scenarios in the TaskMonitor, including updating a non-existent task,
+    providing an invalid progress value, and attempting to update a completed task.
+    """
     monitor = TaskMonitor(test_db)
     
     # Test invalid task ID

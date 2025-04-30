@@ -31,12 +31,26 @@ class TaskRequest(BaseModel):
 
 class SuperAgent:
     def __init__(self):
+        """
+        Initializes the SuperAgent with active task tracking, memory management, and tool registry.
+        """
         self.active_tasks: Dict[str, Any] = {}
         self.memory_manager = MemoryManager()
         self.tool_registry = ToolRegistry()
         
     async def analyze_task_requirements(self, task: TaskRequest) -> Dict[str, Any]:
-        """Analyze task requirements and determine needed capabilities"""
+        """
+        Performs a comprehensive analysis of a task's requirements to assess complexity, identify required tools and dependencies, estimate duration, and determine risk factors.
+        
+        Args:
+            task: The task request to be analyzed.
+        
+        Returns:
+            A dictionary containing the task's complexity, required tools, dependencies, estimated duration, and risk factors.
+        
+        Raises:
+            HTTPException: If task analysis fails due to an internal error.
+        """
         try:
             analysis = {
                 "complexity": self._assess_complexity(task),
@@ -54,7 +68,12 @@ class SuperAgent:
             )
 
     async def assign_roles(self, task: TaskRequest) -> Dict[str, List[str]]:
-        """Enhanced role assignment with dynamic capability matching"""
+        """
+        Assigns agent roles to a task based on dynamically analyzed requirements.
+        
+        Analyzes the task to determine which specialized agents are needed for primary roles (such as documentation, testing, or UI design) and always assigns a monitoring agent.
+        Returns a dictionary mapping role categories to lists of assigned agent identifiers.
+        """
         try:
             analysis = await self.analyze_task_requirements(task)
             roles = {
@@ -83,7 +102,15 @@ class SuperAgent:
             )
 
     async def allocate_tools(self, roles: Dict[str, List[str]]) -> Dict[str, List[str]]:
-        """Allocate tools to assigned roles."""
+        """
+        Allocates a predefined set of tools to each assigned agent role.
+        
+        Args:
+            roles: A mapping of role names to lists of agent identifiers.
+        
+        Returns:
+            A dictionary mapping agent identifiers to lists of allocated tools.
+        """
         try:
             # Implement tool allocation logic
             tool_allocation = {
@@ -103,7 +130,21 @@ class SuperAgent:
         task: TaskRequest,
         roles: Dict[str, List[str]]
     ) -> Dict[str, Any]:
-        """Create detailed execution plan with parallel processing capabilities"""
+        """
+        Creates a comprehensive, multi-phase execution plan for a given task, supporting both sequential and parallel processing.
+        
+        The plan includes initialization, planning, execution, validation, and deployment phases, with actions and agent assignments determined by task analysis and assigned roles. Error handling strategies are incorporated, and the plan is stored for tracking.
+        
+        Args:
+            task: The task request for which to generate the execution plan.
+            roles: A mapping of role names to lists of assigned agent identifiers.
+        
+        Returns:
+            A dictionary representing the structured execution plan, including phases, actions, agent assignments, and error handling configuration.
+        
+        Raises:
+            HTTPException: If plan creation fails due to an internal error.
+        """
         try:
             analysis = await self.analyze_task_requirements(task)
             
@@ -180,7 +221,15 @@ class SuperAgent:
             )
 
     def _generate_execution_actions(self, analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Generate execution actions based on task analysis"""
+        """
+        Generates a list of execution actions based on the required tools identified in the task analysis.
+        
+        Args:
+            analysis: The result of task analysis containing required tools.
+        
+        Returns:
+            A list of action dictionaries specifying the action name, assigned agent, and dependencies.
+        """
         actions = []
         
         if "documentation" in analysis["required_tools"]:
@@ -200,7 +249,17 @@ class SuperAgent:
         return actions
 
     async def execute_plan(self, plan: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute plan with enhanced error handling and parallel processing"""
+        """
+        Executes an execution plan phase by phase, supporting both sequential and parallel processing.
+        
+        Each phase is executed according to its type, with parallel phases handled concurrently. Execution metrics are updated after each phase. Raises an HTTP 500 exception if execution fails.
+        
+        Args:
+            plan: The execution plan containing phases and task metadata.
+        
+        Returns:
+            A dictionary with the task ID, results for each phase, and execution metrics.
+        """
         try:
             results = {
                 "task_id": plan["task_id"],
@@ -227,7 +286,18 @@ class SuperAgent:
             )
 
     async def _execute_parallel_phase(self, phase: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute multiple actions in parallel"""
+        """
+        Executes all actions within a phase concurrently and aggregates their results.
+        
+        Args:
+            phase: A dictionary representing the phase, containing its name and a list of actions to execute in parallel.
+        
+        Returns:
+            A dictionary with the phase name, type, and a list of results for each executed action.
+        
+        Raises:
+            HTTPException: If any error occurs during parallel execution.
+        """
         try:
             results = {
                 "name": phase["name"],
@@ -251,7 +321,18 @@ class SuperAgent:
             )
 
     async def execute_phase(self, phase: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a single phase of the plan."""
+        """
+        Executes all actions within a single sequential phase of the execution plan.
+        
+        Args:
+            phase: A dictionary containing the phase name, assigned agent, and a list of actions to execute.
+        
+        Returns:
+            A dictionary with the phase name, agent, and the results of each executed action.
+        
+        Raises:
+            HTTPException: If execution of any action within the phase fails.
+        """
         try:
             results = {
                 "name": phase["name"],

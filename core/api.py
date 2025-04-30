@@ -179,7 +179,21 @@ async def process_with_agent(agent_id: str, data: Dict[str, Any]):
 
 @app.post("/api/playbooks/run")
 async def run_playbook(data: Dict[str, Any], background_tasks: BackgroundTasks):
-    """Run a playbook with input data"""
+    """
+    Executes a specified playbook asynchronously with provided input data.
+    
+    Validates the presence of required fields and the existence of the playbook file before scheduling execution as a background task. Returns a unique run ID for tracking the playbook run.
+    
+    Args:
+        data: Dictionary containing 'playbook' (name of the playbook) and 'input' (input data for the playbook).
+        background_tasks: FastAPI BackgroundTasks instance for scheduling asynchronous execution.
+    
+    Returns:
+        A dictionary with the status of the request and a unique run ID.
+    
+    Raises:
+        HTTPException: If required fields are missing, the playbook does not exist, or an error occurs during processing.
+    """
     try:
         if 'playbook' not in data:
             raise HTTPException(status_code=400, detail="Missing 'playbook' field")

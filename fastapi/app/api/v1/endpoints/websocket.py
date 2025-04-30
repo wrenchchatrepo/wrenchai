@@ -21,7 +21,11 @@ async def websocket_task_endpoint(
     task_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
-    """WebSocket endpoint for real-time task updates."""
+    """
+    Handles a WebSocket connection for real-time updates on a specific task.
+    
+    Upon connection, registers the client to receive updates for the given task ID, sends the current task state if available, and maintains the connection for bidirectional communication. Responds to "ping" messages with "pong" and manages client disconnection and error reporting.
+    """
     try:
         # Connect client
         await manager.connect(websocket, str(task_id))
@@ -61,7 +65,14 @@ async def websocket_agent_tasks_endpoint(
     agent_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)]
 ):
-    """WebSocket endpoint for agent's tasks updates."""
+    """
+    Handles a WebSocket connection to provide real-time updates for all tasks associated with a specific agent.
+    
+    Upon connection, sends the current state of each task belonging to the agent and maintains the connection for ongoing updates and client messages. Responds to "ping" messages to keep the connection alive and manages client disconnections and error reporting.
+    
+    Args:
+        agent_id: The UUID of the agent whose tasks are being monitored.
+    """
     try:
         # Connect client
         await manager.connect(websocket, str(agent_id))

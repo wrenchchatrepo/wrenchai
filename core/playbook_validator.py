@@ -16,13 +16,10 @@ from core.playbook_schema import Playbook, PlaybookStep, StepType
 logger = logging.getLogger(__name__)
 
 def validate_playbook(playbook_dict: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
-    """Validate a playbook dictionary against the schema.
+    """
+    Validates a playbook dictionary against the Playbook schema.
     
-    Args:
-        playbook_dict: The playbook as a dictionary
-        
-    Returns:
-        Tuple of (is_valid, error_message)
+    Attempts to instantiate a Playbook object using the provided dictionary. Returns (True, None) if the dictionary is valid; otherwise, returns (False, error_message) with details about the validation failure.
     """
     try:
         Playbook(**playbook_dict)
@@ -33,13 +30,10 @@ def validate_playbook(playbook_dict: Dict[str, Any]) -> Tuple[bool, Optional[str
         return False, error_message
 
 def validate_playbook_from_yaml(yaml_content: str) -> Tuple[bool, Optional[str]]:
-    """Validate a playbook from YAML content.
+    """
+    Validates a playbook provided as a YAML string.
     
-    Args:
-        yaml_content: The playbook content as YAML string
-        
-    Returns:
-        Tuple of (is_valid, error_message)
+    Parses the YAML content and validates it against the playbook schema. Handles both dictionary and list-based YAML formats. Returns a tuple indicating validity and an error message if invalid.
     """
     try:
         data = yaml.safe_load(yaml_content)
@@ -60,13 +54,16 @@ def validate_playbook_from_yaml(yaml_content: str) -> Tuple[bool, Optional[str]]
         return False, error_message
 
 def validate_playbook_file(file_path: str) -> Tuple[bool, Optional[str]]:
-    """Validate a playbook from a YAML file.
+    """
+    Validates a playbook YAML file against the schema and reports errors.
+    
+    Attempts to read the specified YAML file, parse its contents, and validate it as a playbook. Returns a tuple indicating whether the playbook is valid and an error message if validation fails.
     
     Args:
-        file_path: Path to the playbook YAML file
-        
+        file_path: Path to the playbook YAML file.
+    
     Returns:
-        Tuple of (is_valid, error_message)
+        A tuple (is_valid, error_message), where is_valid is True if the playbook is valid, otherwise False. error_message contains details if validation fails, or None if successful.
     """
     try:
         with open(file_path, 'r') as f:
@@ -81,13 +78,11 @@ def validate_playbook_file(file_path: str) -> Tuple[bool, Optional[str]]:
         return False, error_message
 
 def check_step_dependencies(playbook: Playbook) -> Tuple[bool, Optional[str]]:
-    """Check that all step dependencies (next) refer to valid step IDs.
+    """
+    Checks that all 'next' step references in the playbook point to valid step IDs.
     
-    Args:
-        playbook: The validated Playbook object
-        
     Returns:
-        Tuple of (is_valid, error_message)
+        A tuple (is_valid, error_message), where is_valid is True if all step dependencies are valid, and error_message contains details if an invalid reference is found.
     """
     step_ids = {step.step_id for step in playbook.steps}
     for step in playbook.steps:
@@ -99,13 +94,13 @@ def check_step_dependencies(playbook: Playbook) -> Tuple[bool, Optional[str]]:
     return True, None
 
 def check_agent_references(playbook: Playbook) -> Tuple[bool, Optional[str]]:
-    """Check that all agent references are valid.
+    """
+    Validates that all agent references in the playbook steps exist in the declared agent list.
     
-    Args:
-        playbook: The validated Playbook object
-        
+    Checks agent references in standard steps, partner feedback loop steps, and handoff steps. Returns a tuple indicating validity and an error message if an invalid agent reference is found.
+    
     Returns:
-        Tuple of (is_valid, error_message)
+        A tuple (is_valid, error_message), where is_valid is True if all agent references are valid, otherwise False with an error message.
     """
     agents = set(playbook.agents or [])
     
@@ -141,13 +136,11 @@ def check_agent_references(playbook: Playbook) -> Tuple[bool, Optional[str]]:
     return True, None
 
 def check_tool_references(playbook: Playbook) -> Tuple[bool, Optional[str]]:
-    """Check that all tool references are valid.
+    """
+    Validates that all tools referenced in playbook steps exist in the playbook's tool list.
     
-    Args:
-        playbook: The validated Playbook object
-        
     Returns:
-        Tuple of (is_valid, error_message)
+        A tuple containing a boolean indicating validity and an error message if an invalid tool reference is found; otherwise, (True, None).
     """
     tools = set(playbook.tools or [])
     
@@ -162,13 +155,13 @@ def check_tool_references(playbook: Playbook) -> Tuple[bool, Optional[str]]:
     return True, None
 
 def validate_playbook_consistency(playbook: Playbook) -> Tuple[bool, Optional[str]]:
-    """Validate the internal consistency of a playbook.
+    """
+    Checks that a playbook's steps, agent references, and tool references are internally consistent.
     
-    Args:
-        playbook: The validated Playbook object
-        
+    Performs dependency checks to ensure all referenced steps, agents, and tools exist within the playbook. Returns a tuple indicating validity and an error message if any inconsistency is found.
+    
     Returns:
-        Tuple of (is_valid, error_message)
+        A tuple (is_valid, error_message), where is_valid is True if the playbook is consistent, otherwise False with a descriptive error message.
     """
     # Check step dependencies
     valid, error = check_step_dependencies(playbook)
@@ -188,13 +181,16 @@ def validate_playbook_consistency(playbook: Playbook) -> Tuple[bool, Optional[st
     return True, None
 
 def perform_full_validation(playbook_path: str) -> Tuple[bool, Optional[str], Optional[Playbook]]:
-    """Perform full validation of a playbook file.
+    """
+    Performs comprehensive validation of a playbook YAML file.
+    
+    Validates the file format, loads the playbook as a Playbook object, and checks internal consistency. Returns a tuple indicating validity, an error message if invalid, and the loaded Playbook object if successful.
     
     Args:
-        playbook_path: Path to the playbook YAML file
-        
+        playbook_path: Path to the playbook YAML file.
+    
     Returns:
-        Tuple of (is_valid, error_message, playbook_object)
+        A tuple (is_valid, error_message, playbook_object), where is_valid is True if the playbook is valid, error_message contains details if invalid, and playbook_object is the loaded Playbook instance or None.
     """
     # Validate file format
     valid, error = validate_playbook_file(playbook_path)

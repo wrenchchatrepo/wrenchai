@@ -45,20 +45,22 @@ class GitHubMCPServer:
     """Manages MCP GitHub server operations."""
     
     def __init__(self, config: Optional[MCPServerConfig] = None):
-        """Initialize the MCP GitHub server manager.
+        """
+        Initializes the MCP GitHub server manager with the specified configuration.
         
-        Args:
-            config: Server configuration
+        If no configuration is provided, a default configuration is used.
         """
         self.config = config or MCPServerConfig()
         self._process = None
         self._metrics = MCPServerMetrics()
         
     async def start_server(self) -> Dict[str, Any]:
-        """Start the MCP GitHub server.
+        """
+        Asynchronously starts the MCP GitHub server process if it is not already running.
         
         Returns:
-            Dict containing operation status
+            A dictionary indicating success status, process ID if started or already running,
+            or error details if startup fails.
         """
         try:
             import psutil
@@ -109,10 +111,11 @@ class GitHubMCPServer:
             }
     
     async def stop_server(self) -> Dict[str, Any]:
-        """Stop the MCP GitHub server.
+        """
+        Stops the running MCP GitHub server process if it is active.
         
         Returns:
-            Dict containing operation status
+            A dictionary indicating whether the server was stopped successfully or if it was not found or an error occurred.
         """
         try:
             import psutil
@@ -140,10 +143,12 @@ class GitHubMCPServer:
             }
     
     async def get_status(self) -> Dict[str, Any]:
-        """Get current server status.
+        """
+        Retrieves the current status of the MCP GitHub server.
         
         Returns:
-            Dict containing server status
+            A dictionary indicating whether the server is running, including process ID,
+            port, and uptime if active, or an error message if not running or on failure.
         """
         try:
             import psutil
@@ -178,10 +183,10 @@ class GitHubMCPServer:
             }
     
     async def get_metrics(self) -> Dict[str, Any]:
-        """Get server metrics.
+        """
+        Retrieves current metrics for the MCP GitHub server.
         
-        Returns:
-            Dict containing server metrics
+        If the server process is running, updates memory usage in the metrics. Returns a dictionary with success status and metrics data, or error details if retrieval fails.
         """
         try:
             import psutil
@@ -206,13 +211,16 @@ class GitHubMCPServer:
             }
     
     async def update_config(self, config: MCPServerConfig) -> Dict[str, Any]:
-        """Update server configuration.
+        """
+        Updates the server configuration and restarts the MCP GitHub server.
+        
+        Stops the server if it is running, applies the new configuration, and attempts to restart the server with the updated settings.
         
         Args:
-            config: New server configuration
-            
+            config: The new configuration to apply to the server.
+        
         Returns:
-            Dict containing operation status
+            A dictionary indicating success or failure, with an error message if the update fails.
         """
         try:
             # Stop server if running
@@ -239,13 +247,14 @@ class GitHubMCPServer:
             }
     
     async def save_config(self, path: str) -> Dict[str, Any]:
-        """Save current configuration to file.
+        """
+        Saves the current server configuration to a specified file in JSON format.
         
         Args:
-            path: Path to save config file
-            
+            path: The file path where the configuration will be saved.
+        
         Returns:
-            Dict containing operation status
+            A dictionary indicating success or failure, with a message or error details.
         """
         try:
             config_path = Path(path)
@@ -267,13 +276,14 @@ class GitHubMCPServer:
             }
     
     async def load_config(self, path: str) -> Dict[str, Any]:
-        """Load configuration from file.
+        """
+        Loads the server configuration from a JSON file and updates the internal state.
         
         Args:
-            path: Path to config file
-            
+            path: The file path to load the configuration from.
+        
         Returns:
-            Dict containing operation status
+            A dictionary indicating success or failure, with details and the loaded configuration on success.
         """
         try:
             with open(path, 'r') as f:
@@ -295,10 +305,13 @@ class GitHubMCPServer:
             }
     
     async def health_check(self) -> Dict[str, Any]:
-        """Check server health.
+        """
+        Performs an asynchronous health check on the MCP GitHub server.
+        
+        Sends an HTTP GET request to the server's `/health` endpoint and returns the health status, including details if the server is healthy or error information if the check fails or times out.
         
         Returns:
-            Dict containing health status
+            A dictionary with keys indicating success, status, and either health details or error information.
         """
         try:
             import aiohttp
@@ -343,11 +356,10 @@ class GitHubMCPServer:
             }
     
     def update_metrics(self, success: bool, response_time: float):
-        """Update server metrics.
+        """
+        Updates internal server metrics based on the outcome and response time of a request.
         
-        Args:
-            success: Whether request was successful
-            response_time: Request response time
+        Increments total, success, or failure counters and recalculates the average response time.
         """
         self._metrics.requests_total += 1
         if success:

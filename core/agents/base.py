@@ -22,7 +22,19 @@ class BaseAgent(Agent):
         agent_type: AgentType = AgentType.SPECIALIST,
         llm: LLMProvider = LLMProvider.CLAUDE,
     ):
-        """Initialize base agent."""
+        """
+        Initializes a BaseAgent with core attributes and resources.
+        
+        Args:
+            agent_id: Unique identifier for the agent.
+            name: The agent's display name.
+            description: A brief description of the agent's purpose or role.
+            capabilities: List of capabilities assigned to the agent.
+            agent_type: The type of agent, defaults to AgentType.SPECIALIST.
+            llm: The LLM provider used by the agent, defaults to LLMProvider.CLAUDE.
+        
+        The agent is initialized with a message queue, tool registry, and asynchronous database session for managing communication, tool usage, and persistent resources.
+        """
         super().__init__(
             name=name,
             type=agent_type,
@@ -36,13 +48,22 @@ class BaseAgent(Agent):
         self.session = session
     
     async def cleanup(self):
-        """Clean up agent resources."""
+        """
+        Asynchronously releases agent resources by clearing the message queue, tool registry, and closing the database session.
+        """
         await self.message_queue.clear()
         await self.tool_registry.clear()
         await self.session.close()
     
     async def send_message(self, recipient: str, content: str, message_type: str = "text"):
-        """Send a message to another agent."""
+        """
+        Asynchronously sends a message to a specified recipient agent.
+        
+        Args:
+            recipient: The name or identifier of the recipient agent.
+            content: The message content to send.
+            message_type: The type of the message (default is "text").
+        """
         await self.message_queue.put({
             "sender": self.name,
             "recipient": recipient,
@@ -51,15 +72,38 @@ class BaseAgent(Agent):
         })
     
     async def receive_message(self) -> Optional[dict]:
-        """Receive a message from the queue."""
+        """
+        Retrieves the next available message from the message queue.
+        
+        Returns:
+            A dictionary representing the message if available, or None if the queue is empty.
+        """
         return await self.message_queue.get()
     
     async def register_tool(self, tool_name: str, tool_function: callable):
-        """Register a tool with the tool registry."""
+        """
+        Registers a tool with the agent's tool registry.
+        
+        Args:
+            tool_name: The name to associate with the tool.
+            tool_function: The callable implementing the tool's functionality.
+        """
         await self.tool_registry.register(tool_name, tool_function)
     
     async def use_tool(self, tool_name: str, **kwargs):
-        """Use a registered tool."""
+        """
+        Invokes a registered tool asynchronously by name with the provided arguments.
+        
+        Args:
+            tool_name: The name of the tool to invoke.
+            **kwargs: Arguments to pass to the tool function.
+        
+        Returns:
+            The result returned by the tool function.
+        
+        Raises:
+            ValueError: If the specified tool is not found in the registry.
+        """
         tool = await self.tool_registry.get(tool_name)
         if tool:
             return await tool(**kwargs)

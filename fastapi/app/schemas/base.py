@@ -40,7 +40,11 @@ class BaseAISchema(AIModel):
     
     @classmethod
     def validate_semantic_content(cls, value: str) -> bool:
-        """Validate semantic meaning of text content."""
+        """
+        Validates the semantic meaning and content safety of a string using AI-powered validation.
+        
+        Returns True if the content passes semantic validation or if validation fails due to an exception, ensuring backward compatibility.
+        """
         try:
             return cls.semantic_validator.validate(value)
         except Exception:
@@ -49,7 +53,11 @@ class BaseAISchema(AIModel):
 
     @classmethod
     def model_validate(cls, obj, *args, **kwargs):
-        """Override model_validate to handle both AI and basic validation."""
+        """
+        Validates an object using AI-powered validation, falling back to basic Pydantic validation on failure.
+        
+        Attempts to validate the input object with AI-enhanced validation. If AI validation fails due to an exception, performs standard Pydantic validation instead.
+        """
         try:
             # Try AI-powered validation first
             return super().model_validate(obj, *args, **kwargs)
@@ -103,7 +111,16 @@ class BaseResponse(BaseAISchema, Generic[ModelType]):
     
     @classmethod
     def create_success(cls, data: ModelType, message: str = "Success") -> "BaseResponse[ModelType]":
-        """Create a success response with AI-validated data."""
+        """
+        Constructs a successful API response with AI-validated data and message.
+        
+        Args:
+            data: The data payload to include in the response.
+            message: Optional success message. Defaults to "Success".
+        
+        Returns:
+            A BaseResponse instance indicating success, containing the provided data and message.
+        """
         return cls(
             success=True,
             message=message,
@@ -112,7 +129,16 @@ class BaseResponse(BaseAISchema, Generic[ModelType]):
     
     @classmethod
     def create_error(cls, message: str, details: Optional[dict] = None) -> "BaseResponse[ModelType]":
-        """Create an error response with AI-validated message."""
+        """
+        Creates an error response with an AI-validated message and optional error details.
+        
+        Args:
+            message: The error message to include in the response.
+            details: Optional dictionary containing additional error information.
+        
+        Returns:
+            An instance of BaseResponse with success set to False, the provided message, and optional error details.
+        """
         return cls(
             success=False,
             message=message,

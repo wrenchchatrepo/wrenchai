@@ -72,14 +72,15 @@ async def create_repository(
     repo_data: RepositoryCreate,
     owner: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Create a new GitHub repository.
+    """
+    Creates a new GitHub repository with the specified settings.
     
     Args:
-        repo_data: Repository creation data
-        owner: Repository owner (optional)
-        
+        repo_data: Repository creation parameters including name, description, privacy, and initialization options.
+        owner: Optional repository owner.
+    
     Returns:
-        Dict containing repository information
+        A dictionary indicating success and containing repository information on success, or an error message on failure.
     """
     try:
         result = await mcp_github_create_repository(
@@ -104,15 +105,10 @@ async def create_or_update_file(
     repo: str,
     file_content: FileContent
 ) -> Dict[str, Any]:
-    """Create or update a file in a repository.
+    """
+    Creates or updates a file in the specified GitHub repository.
     
-    Args:
-        owner: Repository owner
-        repo: Repository name
-        file_content: File content and metadata
-        
-    Returns:
-        Dict containing operation status
+    Attempts to create a new file or update an existing file at the given path using the provided content and metadata. Returns a dictionary indicating success and the resulting file information, or an error message on failure.
     """
     try:
         result = await mcp_github_create_or_update_file(
@@ -141,16 +137,18 @@ async def get_file_contents(
     path: str,
     branch: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Get contents of a file or directory.
+    """
+    Retrieves the contents of a file or directory from a GitHub repository.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        path: Path to file or directory
-        branch: Branch name (optional)
-        
+        owner: The username or organization that owns the repository.
+        repo: The name of the repository.
+        path: The path to the file or directory within the repository.
+        branch: The branch name to retrieve contents from (optional).
+    
     Returns:
-        Dict containing file contents
+        A dictionary with "success": True and the contents if retrieval is successful,
+        or "success": False and an error message if retrieval fails.
     """
     try:
         result = await mcp_github_get_file_contents(
@@ -175,15 +173,10 @@ async def create_issue(
     repo: str,
     issue_data: IssueCreate
 ) -> Dict[str, Any]:
-    """Create a new issue.
+    """
+    Creates a new issue in the specified repository.
     
-    Args:
-        owner: Repository owner
-        repo: Repository name
-        issue_data: Issue creation data
-        
-    Returns:
-        Dict containing issue information
+    Attempts to create an issue using the provided data. Returns a dictionary indicating success and the created issue information, or an error message if the operation fails.
     """
     try:
         result = await mcp_github_create_issue(
@@ -211,15 +204,16 @@ async def create_pull_request(
     repo: str,
     pr_data: PullRequestCreate
 ) -> Dict[str, Any]:
-    """Create a new pull request.
+    """
+    Creates a new pull request in the specified repository.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        pr_data: Pull request creation data
-        
+        owner: The username or organization that owns the repository.
+        repo: The name of the repository.
+        pr_data: Data specifying the pull request's title, body, source branch, target branch, draft status, and maintainer modification permission.
+    
     Returns:
-        Dict containing pull request information
+        A dictionary with "success": True and pull request information if successful, or "success": False and an error message if creation fails.
     """
     try:
         result = await mcp_github_create_pull_request(
@@ -248,15 +242,17 @@ async def search_repositories(
     page: Optional[int] = None,
     per_page: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Search GitHub repositories.
+    """
+    Searches for GitHub repositories matching the specified query.
     
     Args:
-        query: Search query
-        page: Page number
-        per_page: Results per page
-        
+        query: The search keywords and qualifiers.
+        page: Optional page number for pagination.
+        per_page: Optional number of results per page.
+    
     Returns:
-        Dict containing search results
+        A dictionary with "success": True and a list of repositories if the search is successful,
+        or "success": False and an error message if the search fails.
     """
     try:
         result = await mcp_github_search_repositories(
@@ -280,15 +276,17 @@ async def search_code(
     page: Optional[int] = None,
     per_page: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Search code across GitHub.
+    """
+    Searches code across GitHub using the specified query and optional pagination.
     
     Args:
-        query: Search query
-        page: Page number
-        per_page: Results per page
-        
+        query: The search query string.
+        page: Optional page number for paginated results.
+        per_page: Optional number of results per page.
+    
     Returns:
-        Dict containing search results
+        A dictionary with "success": True and the search results under "code" on success,
+        or "success": False and an error message under "error" on failure.
     """
     try:
         result = await mcp_github_search_code(
@@ -315,18 +313,17 @@ async def list_issues(
     page: Optional[int] = None,
     per_page: Optional[int] = None
 ) -> Dict[str, Any]:
-    """List repository issues.
+    """
+    Retrieves a list of issues from a GitHub repository with optional filtering.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        state: Issue state filter
-        labels: Label filters
-        page: Page number
-        per_page: Results per page
-        
+        state: Filter issues by their state (e.g., open, closed, all).
+        labels: Filter issues by one or more labels.
+        page: Page number for pagination.
+        per_page: Number of results per page.
+    
     Returns:
-        Dict containing issues list
+        A dictionary with a success flag and either the list of issues or an error message.
     """
     try:
         result = await mcp_github_list_issues(
@@ -357,19 +354,18 @@ async def list_pull_requests(
     page: Optional[int] = None,
     per_page: Optional[int] = None
 ) -> Dict[str, Any]:
-    """List repository pull requests.
+    """
+    Retrieves a list of pull requests for a repository, with optional filtering by state, head branch, base branch, and pagination.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        state: PR state filter
-        head: Head branch filter
-        base: Base branch filter
-        page: Page number
-        per_page: Results per page
-        
+        state: Filter pull requests by their state (e.g., open, closed, all).
+        head: Filter by the name of the branch where changes are implemented.
+        base: Filter by the name of the branch you want the changes pulled into.
+        page: Page number for pagination.
+        per_page: Number of results per page.
+    
     Returns:
-        Dict containing pull requests list
+        A dictionary with "success" indicating the operation result, and either a "pull_requests" list on success or an "error" message on failure.
     """
     try:
         result = await mcp_github_list_pull_requests(
@@ -398,16 +394,15 @@ async def create_branch(
     branch: str,
     from_branch: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Create a new branch.
+    """
+    Creates a new branch in the specified repository, optionally from a given source branch.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        branch: New branch name
-        from_branch: Source branch
-        
+        branch: Name of the new branch to create.
+        from_branch: Name of the branch to branch from. If not provided, defaults to the repository's default branch.
+    
     Returns:
-        Dict containing branch information
+        A dictionary with success status and branch information or error details.
     """
     try:
         result = await mcp_github_create_branch(
@@ -432,15 +427,16 @@ async def fork_repository(
     repo: str,
     organization: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Fork a repository.
+    """
+    Forks a GitHub repository, optionally into a specified organization.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        organization: Target organization
-        
+        owner: The owner of the repository to fork.
+        repo: The name of the repository to fork.
+        organization: The organization to fork the repository into, if applicable.
+    
     Returns:
-        Dict containing fork information
+        A dictionary with the result of the fork operation, including success status and fork details or error information.
     """
     try:
         result = await mcp_github_fork_repository(
@@ -467,18 +463,19 @@ async def merge_pull_request(
     commit_message: Optional[str] = None,
     merge_method: str = "merge"
 ) -> Dict[str, Any]:
-    """Merge a pull request.
+    """
+    Merges a pull request into the specified repository.
     
     Args:
-        owner: Repository owner
-        repo: Repository name
-        pull_number: Pull request number
-        commit_title: Title for merge commit
-        commit_message: Message for merge commit
-        merge_method: Merge method to use
-        
+        owner: The username or organization that owns the repository.
+        repo: The name of the repository.
+        pull_number: The number identifying the pull request to merge.
+        commit_title: Optional custom title for the merge commit.
+        commit_message: Optional custom message for the merge commit.
+        merge_method: The merge strategy to use ("merge", "squash", or "rebase").
+    
     Returns:
-        Dict containing merge status
+        A dictionary with "success": True and merge details if successful, or "success": False and an error message if the merge fails.
     """
     try:
         result = await mcp_github_merge_pull_request(

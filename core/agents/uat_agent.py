@@ -57,16 +57,17 @@ class UAT(JourneyAgent):
                 playbook_path: str,
                 acceptance_criteria_template: Optional[Dict[str, Any]] = None,
                 stakeholders: Optional[List[Dict[str, Any]]] = None):
-        """Initialize the UAT agent.
-        
-        Args:
-            name: Agent name
-            llm: Language model to use
-            tools: List of tool names
-            playbook_path: Path to the playbook file
-            acceptance_criteria_template: Optional template for acceptance criteria
-            stakeholders: Optional list of stakeholders
         """
+                Initializes the UAT agent with configuration, acceptance criteria, stakeholders, and required tools.
+                
+                Args:
+                    name: The name of the agent.
+                    llm: The language model used for generating plans, scenarios, and reports.
+                    tools: List of tool names available to the agent.
+                    playbook_path: Path to the playbook file for orchestrating UAT steps.
+                    acceptance_criteria_template: Optional custom template for acceptance criteria; defaults to a standard set if not provided.
+                    stakeholders: Optional list of stakeholder information relevant to the UAT process.
+                """
         super().__init__(name, llm, tools, playbook_path)
         
         self.acceptance_criteria_template = acceptance_criteria_template or {
@@ -107,15 +108,18 @@ class UAT(JourneyAgent):
     async def create_uat_plan(self, 
                           project: Dict[str, Any], 
                           features: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Create a UAT plan.
-        
-        Args:
-            project: Project information
-            features: List of features to test
-            
-        Returns:
-            UAT plan
         """
+                          Generates a comprehensive User Acceptance Testing (UAT) plan for a project and its features.
+                          
+                          The plan includes an overview, objectives, stakeholders, test scenarios, schedule, and acceptance criteria. Prompts a language model to produce the plan and parses the structured JSON response. If parsing fails, returns an error message in the result.
+                          
+                          Args:
+                              project: Dictionary containing project information.
+                              features: List of dictionaries describing features to be tested.
+                          
+                          Returns:
+                              A dictionary representing the UAT plan, including overview, objectives, stakeholders, test scenarios, schedule, and acceptance criteria. If parsing fails, includes an "error" key with details.
+                          """
         uat_plan = {
             "project_name": project.get("name", "Unknown Project"),
             "overview": "",
@@ -390,14 +394,17 @@ class UAT(JourneyAgent):
         return {"error": "Failed to generate UAT report"}
     
     async def run_playbook_step(self, step: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute a specific playbook step.
+        """
+        Executes a single playbook step based on its action and updates the execution context.
+        
+        Depending on the action specified in the step, this method delegates to the appropriate UAT agent method to generate plans, scenarios, feedback forms, analyses, reports, or test suites. For unrecognized actions, it defers execution to the superclass implementation.
         
         Args:
-            step: Playbook step definition
-            context: Execution context
-            
+            step: The playbook step definition containing the action and relevant parameters.
+            context: The current execution context with accumulated data.
+        
         Returns:
-            Step execution results
+            A dictionary containing the result of the executed step, keyed by the artifact type (e.g., "uat_plan", "test_scenarios", "feedback_form", "feedback_analysis", "uat_report", or "test_suite").
         """
         action = step.get("action", "")
         
@@ -444,13 +451,14 @@ class UAT(JourneyAgent):
             return await super().run_playbook_step(step, context)
     
     async def run(self, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Run the UAT agent with the specified playbook.
+        """
+        Executes the UAT agent's playbook, running each step sequentially and aggregating results.
         
         Args:
-            context: Optional execution context
-            
+            context: Optional dictionary providing initial execution context.
+        
         Returns:
-            Execution results
+            A dictionary containing the agent name, playbook name, step results, and any generated UAT artifacts such as the plan, test scenarios, feedback form, feedback analysis, and report.
         """
         context = context or {}
         
@@ -492,7 +500,20 @@ class UAT(JourneyAgent):
         return results
     
     async def create_test_suite(self, features: List[str]) -> Dict[str, Any]:
-        """Create a test suite based on features"""
+        """
+        Asynchronously creates and stores a test suite for the specified features.
+        
+        Generates test cases for each feature, aggregates them into a test suite with metadata, and stores the suite in memory. Returns the created test suite dictionary.
+        
+        Args:
+            features: A list of feature names to generate test cases for.
+        
+        Returns:
+            A dictionary representing the created test suite, including its ID, features, test cases, and creation timestamp.
+        
+        Raises:
+            HTTPException: If test suite creation fails due to an error.
+        """
         try:
             test_cases = []
             
@@ -519,7 +540,15 @@ class UAT(JourneyAgent):
             )
             
     async def _generate_test_cases(self, feature: str) -> List[TestCase]:
-        """Generate test cases for a feature"""
+        """
+        Generates a list of test cases for a specified feature.
+        
+        Args:
+            feature: The feature name for which to generate test cases (e.g., "documentation", "navigation", "search", "responsive").
+        
+        Returns:
+            A list of TestCase objects relevant to the given feature.
+        """
         test_cases = []
         
         if feature == "documentation":
@@ -534,7 +563,12 @@ class UAT(JourneyAgent):
         return test_cases
         
     def _generate_documentation_tests(self) -> List[TestCase]:
-        """Generate documentation-specific test cases"""
+        """
+        Creates test cases to validate documentation structure and code example formatting.
+        
+        Returns:
+            A list of TestCase objects covering documentation hierarchy and code example usability.
+        """
         return [
             TestCase(
                 id="DOC_001",
@@ -565,7 +599,12 @@ class UAT(JourneyAgent):
         ]
         
     def _generate_navigation_tests(self) -> List[TestCase]:
-        """Generate navigation-specific test cases"""
+        """
+        Creates a list of navigation-related test cases for verifying main and breadcrumb navigation functionality.
+        
+        Returns:
+            A list of TestCase objects covering main navigation and breadcrumb navigation scenarios.
+        """
         return [
             TestCase(
                 id="NAV_001",
@@ -596,7 +635,12 @@ class UAT(JourneyAgent):
         ]
         
     def _generate_search_tests(self) -> List[TestCase]:
-        """Generate search-specific test cases"""
+        """
+        Creates predefined test cases for verifying search functionality and performance.
+        
+        Returns:
+            A list of TestCase objects covering search correctness and response time.
+        """
         return [
             TestCase(
                 id="SEARCH_001",
@@ -627,7 +671,12 @@ class UAT(JourneyAgent):
         ]
         
     def _generate_responsive_tests(self) -> List[TestCase]:
-        """Generate responsive design test cases"""
+        """
+        Creates test cases to verify the application's responsiveness on mobile and tablet devices.
+        
+        Returns:
+            A list of TestCase objects covering mobile and tablet compatibility, including viewport adaptation and touch interaction checks.
+        """
         return [
             TestCase(
                 id="RESP_001",
@@ -658,7 +707,11 @@ class UAT(JourneyAgent):
         ]
         
     async def execute_test_case(self, test_case: TestCase) -> TestResult:
-        """Execute a single test case"""
+        """
+        Executes a single test case by running each step and recording the outcome.
+        
+        If any step fails, returns a failed TestResult immediately with collected logs and screenshots. On success, returns a passed TestResult and stores it in the agent's test results.
+        """
         try:
             start_time = datetime.now()
             
@@ -705,7 +758,12 @@ class UAT(JourneyAgent):
             )
             
     async def _execute_test_step(self, step: Dict[str, str]) -> Dict[str, Any]:
-        """Execute a single test step"""
+        """
+        Executes a single test step by interpreting its action and interacting with the browser.
+        
+        Supports navigation, clicking elements, checking element existence, and setting viewport size.
+        Returns a dictionary with the step's status, message, logs, and screenshots.
+        """
         try:
             action = step["action"]
             logs = []
@@ -755,7 +813,20 @@ class UAT(JourneyAgent):
             }
             
     async def generate_test_report(self, test_results: List[TestResult]) -> Dict[str, Any]:
-        """Generate a comprehensive test report"""
+        """
+        Generates a summary report from a list of test results.
+        
+        The report includes total, passed, and failed test counts, pass rate, detailed results, total execution time, and a generation timestamp. The report is stored in memory and returned as a dictionary.
+        
+        Args:
+            test_results: List of TestResult objects to summarize.
+        
+        Returns:
+            A dictionary containing the test report summary, detailed results, execution time, and timestamp.
+        
+        Raises:
+            HTTPException: If report generation or storage fails.
+        """
         try:
             total_tests = len(test_results)
             passed_tests = len([r for r in test_results if r.status == "passed"])

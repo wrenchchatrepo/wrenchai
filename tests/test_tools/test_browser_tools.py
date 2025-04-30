@@ -34,7 +34,12 @@ from core.tools.puppeteer import PuppeteerResult
 
 @pytest.fixture
 def mock_puppeteer():
-    """Mock PuppeteerTool."""
+    """
+    Yields a mocked instance of the PuppeteerTool for use in tests.
+    
+    This fixture patches the PuppeteerTool class and provides a MagicMock instance
+    to simulate browser interactions during testing.
+    """
     with patch('core.tools.browser_tools.PuppeteerTool') as mock:
         mock_tool = MagicMock()
         mock.return_value = mock_tool
@@ -42,21 +47,38 @@ def mock_puppeteer():
 
 @pytest.fixture
 async def browser_tools(mock_puppeteer):
-    """Create a BrowserTools instance with mocked Puppeteer."""
+    """
+    Creates and initializes a BrowserTools instance using a mocked Puppeteer.
+    
+    Args:
+        mock_puppeteer: The mocked PuppeteerTool instance to be used for browser interactions.
+    
+    Returns:
+        An initialized BrowserTools instance ready for testing with the mocked Puppeteer.
+    """
     tools = BrowserTools()
     await tools.setup()
     return tools
 
 @pytest.fixture
 def clean_browser_state():
-    """Provide a clean browser state for each test."""
+    """
+    Yields a cleared browser state before and after each test.
+    
+    This fixture ensures that the browser state is reset to an empty state for test isolation.
+    """
     browser_state.clear_logs()
     yield browser_state
     browser_state.clear_logs()
 
 @pytest.fixture
 def sample_console_log():
-    """Create a sample console log."""
+    """
+    Creates a sample console log entry with predefined values.
+    
+    Returns:
+        ConsoleLog: A console log with INFO level, test message, source file, and line number.
+    """
     return ConsoleLog(
         level=LogLevel.INFO,
         message="Test message",
@@ -66,7 +88,12 @@ def sample_console_log():
 
 @pytest.fixture
 def sample_error_log():
-    """Create a sample error log."""
+    """
+    Creates a sample console log entry with error level for testing purposes.
+    
+    Returns:
+        A ConsoleLog instance representing an error log.
+    """
     return ConsoleLog(
         level=LogLevel.ERROR,
         message="Test error",
@@ -77,7 +104,12 @@ def sample_error_log():
 
 @pytest.fixture
 def sample_network_request():
-    """Create a sample network request."""
+    """
+    Creates and returns a sample NetworkRequest instance for testing.
+    
+    Returns:
+        NetworkRequest: A sample network request with preset attributes.
+    """
     return NetworkRequest(
         request_id="test_request",
         type=NetworkRequestType.XHR,
@@ -92,7 +124,12 @@ def sample_network_request():
 
 @pytest.fixture
 def sample_failed_request():
-    """Create a sample failed network request."""
+    """
+    Creates a sample failed network request for testing purposes.
+    
+    Returns:
+        NetworkRequest: A network request instance representing a failed XHR with a 500 status.
+    """
     return NetworkRequest(
         request_id="failed_request",
         type=NetworkRequestType.XHR,
@@ -106,7 +143,12 @@ def sample_failed_request():
 
 @pytest.fixture
 def sample_network_log():
-    """Create a sample network log."""
+    """
+    Creates a sample NetworkLog instance with preset values for testing.
+    
+    Returns:
+        NetworkLog: A sample network log with predefined method, URL, status, duration, and headers.
+    """
     return NetworkLog(
         timestamp=datetime.utcnow(),
         method="GET",
@@ -131,7 +173,11 @@ async def test_setup(mock_puppeteer):
 
 @pytest.mark.asyncio
 async def test_get_console_logs(clean_browser_state, sample_console_log):
-    """Test getting console logs."""
+    """
+    Tests that retrieving console logs returns the correct log entries and success status.
+    
+    Adds a sample console log to the browser state, retrieves the logs using `get_console_logs()`, and verifies that the returned logs contain the expected message and log level.
+    """
     # Add some logs
     clean_browser_state.add_console_log(sample_console_log)
     
@@ -145,7 +191,11 @@ async def test_get_console_logs(clean_browser_state, sample_console_log):
 
 @pytest.mark.asyncio
 async def test_get_console_errors(clean_browser_state, sample_error_log):
-    """Test getting console errors."""
+    """
+    Tests that get_console_errors() returns only error-level console logs from the browser state.
+    
+    Adds a sample error log to the browser state, retrieves console errors, and verifies the result contains the correct error message and log level.
+    """
     # Add some errors
     clean_browser_state.add_console_log(sample_error_log)
     
@@ -159,7 +209,10 @@ async def test_get_console_errors(clean_browser_state, sample_error_log):
 
 @pytest.mark.asyncio
 async def test_get_network_logs(mock_puppeteer, browser_tools):
-    """Test getting network logs."""
+    """
+    Tests that get_network_logs() retrieves and returns a list of NetworkLog instances
+    with correct attributes from the mocked Puppeteer evaluate call.
+    """
     mock_logs = [
         {
             "method": "GET",
@@ -187,7 +240,12 @@ async def test_get_network_logs(mock_puppeteer, browser_tools):
 
 @pytest.mark.asyncio
 async def test_get_network_errors(mock_puppeteer, browser_tools):
-    """Test getting network errors."""
+    """
+    Tests that get_network_errors() returns only network logs representing errors.
+    
+    Verifies that logs with error status codes or error messages are correctly identified
+    and returned as NetworkLog instances.
+    """
     mock_logs = [
         {
             "method": "GET",
@@ -229,7 +287,11 @@ async def test_get_network_errors(mock_puppeteer, browser_tools):
 
 @pytest.mark.asyncio
 async def test_get_element_info(mock_puppeteer, browser_tools):
-    """Test getting element information."""
+    """
+    Tests that get_element_info retrieves and returns correct element information from the browser.
+    
+    Verifies that the returned object is an ElementInfo instance with expected tag name, attributes, text content, and bounding box.
+    """
     mock_info = {
         "tag_name": "div",
         "attributes": {"class": "test-class", "id": "test-id"},
@@ -279,7 +341,9 @@ async def test_take_screenshot(mock_puppeteer, browser_tools):
 
 @pytest.mark.asyncio
 async def test_clear_logs(mock_puppeteer, browser_tools):
-    """Test clearing logs."""
+    """
+    Tests that calling clear_logs on BrowserTools clears console and network logs in the browser state.
+    """
     await browser_tools.clear_logs()
     
     mock_puppeteer.evaluate.assert_called_with("""
@@ -312,7 +376,9 @@ async def test_browser_action_get_console_logs():
 
 @pytest.mark.asyncio
 async def test_browser_action_get_element_info():
-    """Test browser_action with getElementInfo."""
+    """
+    Tests that the browser_action function retrieves element information when called with 'getElementInfo', returning the correct element data and ensuring setup is invoked.
+    """
     with patch('core.tools.browser_tools.BrowserTools') as MockTools:
         mock_tools = MagicMock()
         mock_tools.get_element_info.return_value = ElementInfo(
@@ -335,7 +401,9 @@ async def test_browser_action_get_element_info():
 
 @pytest.mark.asyncio
 async def test_browser_action_invalid():
-    """Test browser_action with invalid action."""
+    """
+    Tests that calling browser_action with an invalid action returns an error message.
+    """
     result = await browser_action("invalidAction")
     
     assert "error" in result
@@ -343,7 +411,9 @@ async def test_browser_action_invalid():
 
 @pytest.mark.asyncio
 async def test_browser_action_error():
-    """Test browser_action error handling."""
+    """
+    Tests that browser_action returns an error message when a BrowserTools method raises an exception.
+    """
     with patch('core.tools.browser_tools.BrowserTools') as MockTools:
         mock_tools = MagicMock()
         mock_tools.get_console_logs.side_effect = Exception("Test error")
@@ -358,7 +428,12 @@ async def test_browser_action_error():
 
 @pytest.mark.asyncio
 async def test_get_network_success_logs(clean_browser_state, sample_network_request):
-    """Test getting successful network requests."""
+    """
+    Tests that successful network requests are retrieved correctly from the browser state.
+    
+    Adds a sample successful network request, invokes the retrieval function, and asserts
+    that the returned result contains the expected request with correct status and URL.
+    """
     # Add some requests
     clean_browser_state.add_network_request(sample_network_request)
     
@@ -372,7 +447,12 @@ async def test_get_network_success_logs(clean_browser_state, sample_network_requ
 
 @pytest.mark.asyncio
 async def test_get_network_error_logs(clean_browser_state, sample_failed_request):
-    """Test getting failed network requests."""
+    """
+    Tests that failed network requests are correctly retrieved by get_network_error_logs.
+    
+    Adds a failed network request to the browser state and verifies that get_network_error_logs()
+    returns a successful result containing the expected error details.
+    """
     # Add some failed requests
     clean_browser_state.add_network_request(sample_failed_request)
     
@@ -396,7 +476,12 @@ async def test_take_screenshot_success():
 
 @pytest.mark.asyncio
 async def test_get_selected_element_none(clean_browser_state):
-    """Test getting selected element when none is selected."""
+    """
+    Tests that get_selected_element() returns a failure result when no element is selected.
+    
+    Ensures the function responds with an appropriate error message if the browser state
+    does not contain a selected element.
+    """
     result = await get_selected_element()
     
     assert not result["success"]
@@ -404,7 +489,12 @@ async def test_get_selected_element_none(clean_browser_state):
 
 @pytest.mark.asyncio
 async def test_get_selected_element(clean_browser_state):
-    """Test getting selected element."""
+    """
+    Tests that the selected element can be retrieved from the browser state.
+    
+    Sets a selected element in the browser state and verifies that
+    `get_selected_element()` returns it with the correct attributes and a success flag.
+    """
     # Set selected element
     element = {
         "tag": "button",
@@ -428,7 +518,12 @@ async def test_wipe_logs(
     sample_network_request,
     sample_failed_request
 ):
-    """Test wiping all logs."""
+    """
+    Tests that all console and network logs are removed after calling wipe_logs.
+    
+    Adds sample logs to the browser state, verifies their presence, calls wipe_logs,
+    and asserts that all log lists are empty and the operation reports success.
+    """
     # Add various logs
     clean_browser_state.add_console_log(sample_console_log)
     clean_browser_state.add_console_log(sample_error_log)
@@ -451,7 +546,9 @@ async def test_wipe_logs(
     assert len(clean_browser_state.network_error_logs) == 0
 
 def test_browser_state_log_limits():
-    """Test that browser state enforces log limits."""
+    """
+    Tests that BrowserState enforces the maximum number of stored console logs by trimming excess entries.
+    """
     state = BrowserState()
     
     # Add more logs than the limit
@@ -505,7 +602,9 @@ def test_log_level_validation():
         )
 
 def test_handle_console_log():
-    """Test console log handling."""
+    """
+    Tests that handle_console_log correctly adds info and error logs to the browser state.
+    """
     browser_state.clear()
     
     handle_console_log("info", "Test message", "test.js", 42)
@@ -517,7 +616,12 @@ def test_handle_console_log():
     assert browser_state.error_logs[0].message == "Error message"
 
 def test_handle_network_request():
-    """Test network request handling."""
+    """
+    Tests that a network request is correctly handled and added to the browser state.
+    
+    Clears the browser state, invokes `handle_network_request()` with sample data, and asserts
+    that the network log is recorded with the correct HTTP method and URL.
+    """
     browser_state.clear()
     
     handle_network_request(
@@ -531,7 +635,9 @@ def test_handle_network_request():
     assert browser_state.network_logs[0].url == "https://api.test.com/data"
 
 def test_handle_network_response():
-    """Test network response handling."""
+    """
+    Tests that handling a network response updates the corresponding network log with status and duration.
+    """
     browser_state.clear()
     
     handle_network_request("GET", "https://api.test.com/data")
@@ -547,7 +653,11 @@ def test_handle_network_response():
     assert browser_state.network_logs[0].duration == 150.5
 
 def test_handle_network_error():
-    """Test network error handling."""
+    """
+    Tests that network errors are correctly recorded in the browser state.
+    
+    Verifies that after handling a network request and a subsequent error, the error message is stored in the corresponding network log entry.
+    """
     browser_state.clear()
     
     handle_network_request("GET", "https://api.test.com/error")

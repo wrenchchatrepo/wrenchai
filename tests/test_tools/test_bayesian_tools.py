@@ -20,7 +20,12 @@ from core.tools.bayesian_tools import (
 
 @pytest.fixture
 def mock_trace():
-    """Create a mock InferenceData object."""
+    """
+    Creates a mock ArviZ InferenceData object with a posterior containing a 'theta' parameter.
+    
+    Returns:
+        A MagicMock instance simulating an InferenceData object with 'theta' posterior mean 0.5 and std 0.1.
+    """
     mock = MagicMock(spec=az.InferenceData)
     mock.posterior = {
         'theta': MagicMock(
@@ -32,7 +37,12 @@ def mock_trace():
 
 @pytest.fixture
 def sample_prior():
-    """Create a sample prior specification."""
+    """
+    Creates a sample prior specification with a normal distribution (mu=0.0, sigma=1.0).
+    
+    Returns:
+        PriorSpec: A prior specification using a normal distribution.
+    """
     return PriorSpec(
         distribution='normal',
         parameters={'mu': 0.0, 'sigma': 1.0}
@@ -40,7 +50,12 @@ def sample_prior():
 
 @pytest.fixture
 def sample_likelihood():
-    """Create a sample likelihood specification."""
+    """
+    Provides a sample likelihood specification using a normal distribution with example data.
+    
+    Returns:
+        A LikelihoodSpec with a normal distribution (mu=0.0, sigma=1.0) and data [1.0, 2.0, 3.0].
+    """
     return LikelihoodSpec(
         distribution='normal',
         parameters={'mu': 0.0, 'sigma': 1.0},
@@ -49,7 +64,12 @@ def sample_likelihood():
 
 @pytest.fixture
 def sample_inference():
-    """Create a sample inference specification."""
+    """
+    Provides a sample inference specification with 100 draws, 100 tuning steps, and 2 chains.
+    
+    Returns:
+        An InferenceSpec object configured for typical test scenarios.
+    """
     return InferenceSpec(
         draws=100,
         tune=100,
@@ -58,7 +78,9 @@ def sample_inference():
 
 @pytest.mark.asyncio
 async def test_update_beliefs_success(sample_prior, sample_likelihood, sample_inference, mock_trace):
-    """Test successful belief updating."""
+    """
+    Tests that the update_beliefs function successfully updates beliefs and returns correct posterior statistics and diagnostics when dependencies are properly mocked.
+    """
     with patch('pymc.Model'), \
          patch('pymc.sample', return_value=mock_trace), \
          patch('arviz.waic', return_value=MagicMock(waic=1.0)), \
@@ -94,7 +116,11 @@ async def test_update_beliefs_error(sample_prior, sample_likelihood):
         assert "Test error" in result["error"]
 
 def test_create_distribution_valid():
-    """Test creating valid distributions."""
+    """
+    Tests that a valid prior specification creates the correct PyMC distribution.
+    
+    Asserts that providing a normal distribution spec returns the pm.Normal class.
+    """
     spec = PriorSpec(
         distribution='normal',
         parameters={'mu': 0.0, 'sigma': 1.0}
@@ -104,7 +130,9 @@ def test_create_distribution_valid():
     assert dist == pm.Normal
 
 def test_create_distribution_invalid():
-    """Test creating invalid distribution."""
+    """
+    Tests that creating a distribution with an invalid name raises a ValueError.
+    """
     spec = PriorSpec(
         distribution='invalid',
         parameters={}
@@ -131,7 +159,11 @@ def test_extract_posterior_stats(mock_trace):
 
 @pytest.mark.asyncio
 async def test_compute_bayes_factor_success():
-    """Test successful Bayes factor computation."""
+    """
+    Tests that Bayes factor computation between two models returns expected results.
+    
+    Verifies that the compute_bayes_factor function successfully calculates the Bayes factor and log Bayes factor when provided with valid model specifications and data.
+    """
     model1 = {
         "prior": {
             "distribution": "normal",
@@ -178,7 +210,12 @@ async def test_compute_bayes_factor_error():
 
 @pytest.mark.asyncio
 async def test_predict_success():
-    """Test successful prediction."""
+    """
+    Tests that the predict function returns predictions, standard deviations, and intervals
+    when given valid model, posterior, and new input data.
+    
+    Verifies that the result indicates success and contains outputs of expected length.
+    """
     model = {
         "posterior": {
             "distribution": "normal",
@@ -215,7 +252,9 @@ async def test_predict_success():
 
 @pytest.mark.asyncio
 async def test_predict_error():
-    """Test error handling in prediction."""
+    """
+    Tests that the predict function correctly handles exceptions and returns an error result.
+    """
     with patch('pymc.Model', side_effect=Exception("Test error")):
         result = await predict({}, {}, [])
         

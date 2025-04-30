@@ -13,12 +13,22 @@ class AgentManager:
     """Manages agents and tasks via FastAPI backend."""
     
     def __init__(self, api_url: str = "http://localhost:8000"):
-        """Initialize manager with API URL."""
+        """
+        Initializes the AgentManager with the specified FastAPI backend URL.
+        
+        Args:
+            api_url: The base URL of the FastAPI backend to connect to. Defaults to "http://localhost:8000".
+        """
         self.api_url = api_url
         self.session = httpx.AsyncClient()
         
     async def list_agents(self) -> Dict[str, Any]:
-        """Get list of all agents."""
+        """
+        Asynchronously retrieves the list of all agents from the backend API.
+        
+        Returns:
+            A dictionary containing the agents data on success, or an error message on failure.
+        """
         try:
             response = await self.session.get(
                 f"{self.api_url}/api/v1/agents",
@@ -31,7 +41,16 @@ class AgentManager:
             return {"success": False, "error": str(e)}
             
     async def create_agent(self, agent_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new agent."""
+        """
+        Asynchronously creates a new agent by sending agent data to the backend API.
+        
+        Args:
+            agent_data: A dictionary containing the agent's configuration and type.
+        
+        Returns:
+            The JSON response from the backend if successful, or a dictionary with
+            error details if the request fails.
+        """
         try:
             response = await self.session.post(
                 f"{self.api_url}/api/v1/agents",
@@ -45,7 +64,15 @@ class AgentManager:
             return {"success": False, "error": str(e)}
             
     async def get_agent_tasks(self, agent_id: UUID) -> Dict[str, Any]:
-        """Get tasks for a specific agent."""
+        """
+        Retrieves the list of tasks assigned to a specific agent.
+        
+        Args:
+            agent_id: The unique identifier of the agent whose tasks are to be fetched.
+        
+        Returns:
+            A dictionary containing the agent's tasks if successful, or an error message on failure.
+        """
         try:
             response = await self.session.get(
                 f"{self.api_url}/api/v1/agents/{agent_id}/tasks",
@@ -58,7 +85,16 @@ class AgentManager:
             return {"success": False, "error": str(e)}
             
     async def create_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new task."""
+        """
+        Creates a new task by sending task data to the backend API.
+        
+        Args:
+            task_data: A dictionary containing the task details to be created.
+        
+        Returns:
+            The JSON response from the backend if successful, or a dictionary with
+            error information if the request fails.
+        """
         try:
             response = await self.session.post(
                 f"{self.api_url}/api/v1/tasks",
@@ -72,7 +108,12 @@ class AgentManager:
             return {"success": False, "error": str(e)}
 
 def render_agent_card(agent: Dict[str, Any]):
-    """Render an agent card with status and actions."""
+    """
+    Displays an agent's information and status in a Streamlit card with action controls.
+    
+    Args:
+        agent: Dictionary containing agent details, including type, ID, status, and configuration.
+    """
     with st.container():
         col1, col2, col3 = st.columns([2, 1, 1])
         
@@ -96,7 +137,12 @@ def render_agent_card(agent: Dict[str, Any]):
         st.divider()
 
 def render_task_list(tasks: List[Dict[str, Any]]):
-    """Render a list of tasks with status and progress."""
+    """
+    Displays a list of tasks with their type, ID, progress, status, and optional result or error details.
+    
+    Args:
+        tasks: A list of task dictionaries, each containing task information such as type, ID, progress, status, and optionally result or error data.
+    """
     for task in tasks:
         with st.container():
             col1, col2, col3 = st.columns([2, 1, 1])
@@ -122,7 +168,11 @@ def render_task_list(tasks: List[Dict[str, Any]]):
             st.divider()
 
 def main():
-    """Main Streamlit app."""
+    """
+    Runs the Streamlit application for managing agents and their tasks.
+    
+    This function sets up the user interface for creating agents, listing active agents, viewing and creating tasks for a selected agent, and configuring the FastAPI backend URL. It integrates asynchronous API calls with Streamlit UI components, handles user input validation, and displays feedback and error messages.
+    """
     st.title("Agent & Task Manager")
     
     # Initialize session state

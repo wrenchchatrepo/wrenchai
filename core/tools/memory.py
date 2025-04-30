@@ -33,38 +33,48 @@ class MemoryManager:
     
     def __init__(self, storage_dir: str = None):
         """
-        Initialize MemoryManager.
+        Initializes a MemoryManager with a specified or default storage directory.
         
-        Args:
-            storage_dir: Directory for persistent storage.
-                       Defaults to './memory_store'
+        If no directory is provided, uses './memory_store' relative to the module location.
         """
         self.storage_dir = storage_dir or os.path.join(os.path.dirname(__file__), 'memory_store')
         self.cache: Dict[str, MemoryEntry] = {}
         self._setup_storage()
         
     def _setup_storage(self) -> None:
-        """Create storage directory if it doesn't exist."""
+        """
+        Ensures the storage directory exists, creating it if necessary.
+        """
         os.makedirs(self.storage_dir, exist_ok=True)
         
     def _get_storage_path(self, key: str) -> str:
-        """Get storage path for a memory key."""
+        """
+        Returns the file path for storing the memory entry associated with the given key.
+        
+        Args:
+            key: The unique identifier for the memory entry.
+        
+        Returns:
+            The full file path where the memory entry is stored as a JSON file.
+        """
         return os.path.join(self.storage_dir, f"{key}.json")
         
     async def store(self, key: str, data: Any, metadata: Dict[str, Any] = None) -> bool:
         """
-        Store data in memory.
+        Asynchronously stores a memory entry with the given key, data, and optional metadata.
+        
+        Validates the key, updates the in-memory cache, and persists the entry as a JSON file. Returns True if the operation succeeds, or False if an error occurs.
         
         Args:
-            key: Unique identifier for the memory entry
-            data: Data to store
-            metadata: Optional metadata about the memory entry
-            
+            key: Unique identifier for the memory entry.
+            data: Data to store.
+            metadata: Optional metadata dictionary.
+        
         Returns:
-            bool: True if successful, False otherwise
-            
+            True if the entry was stored successfully, False otherwise.
+        
         Raises:
-            ValueError: If key is None or empty
+            ValueError: If the key is None or empty.
         """
         if not key:
             raise ValueError("Key cannot be None or empty")
@@ -94,16 +104,18 @@ class MemoryManager:
             
     async def retrieve(self, key: str) -> Optional[Any]:
         """
-        Retrieve data from memory.
+        Asynchronously retrieves stored data for a given key from memory.
+        
+        Checks the in-memory cache first; if not found, attempts to load the entry from persistent storage. Returns the stored data if found, or None if the key does not exist or an error occurs.
         
         Args:
-            key: Unique identifier for the memory entry
-            
+            key: Unique identifier for the memory entry.
+        
         Returns:
-            The stored data if found, None otherwise
-            
+            The stored data if found, or None if not found.
+        
         Raises:
-            ValueError: If key is None or empty
+            ValueError: If key is None or empty.
         """
         if not key:
             raise ValueError("Key cannot be None or empty")
@@ -130,16 +142,16 @@ class MemoryManager:
             
     async def delete(self, key: str) -> bool:
         """
-        Delete data from memory.
+        Asynchronously deletes a memory entry by key from both cache and persistent storage.
         
         Args:
-            key: Unique identifier for the memory entry
-            
+            key: The unique identifier for the memory entry to delete.
+        
         Returns:
-            bool: True if successful, False otherwise
-            
+            True if the entry was successfully deleted or did not exist; False on error.
+        
         Raises:
-            ValueError: If key is None or empty
+            ValueError: If the key is None or empty.
         """
         if not key:
             raise ValueError("Key cannot be None or empty")
@@ -163,10 +175,9 @@ class MemoryManager:
             
     async def list_entries(self) -> List[str]:
         """
-        List all memory entry keys.
+        Returns a list of all stored memory entry keys.
         
-        Returns:
-            List of memory entry keys
+        Scans the storage directory for JSON files and extracts their stem names as keys. Returns an empty list if an error occurs.
         """
         try:
             # Get all JSON files in storage directory
@@ -179,10 +190,10 @@ class MemoryManager:
             
     async def clear(self) -> bool:
         """
-        Clear all memory entries.
+        Removes all memory entries from both the in-memory cache and persistent storage.
         
         Returns:
-            bool: True if successful, False otherwise
+            True if all entries were successfully cleared, False otherwise.
         """
         try:
             # Clear cache
@@ -205,15 +216,15 @@ memory_manager = MemoryManager()
 
 async def manage_memory(action: str, key: str = None, data: Any = None) -> Dict[str, Any]:
     """
-    Manage persistent memory for agents.
+    Performs asynchronous memory operations such as store, retrieve, delete, list, and clear.
     
     Args:
-        action: Action to perform ('store', 'retrieve', 'delete', 'list', 'clear')
-        key: Memory entry key (required for store/retrieve/delete)
-        data: Data to store (required for store action)
-        
+        action: The memory operation to perform ('store', 'retrieve', 'delete', 'list', or 'clear').
+        key: The unique identifier for the memory entry (required for 'store', 'retrieve', and 'delete').
+        data: The data to store (required for 'store').
+    
     Returns:
-        Dict containing operation result
+        A dictionary containing the result of the operation, including success status, messages, data, or error details.
     """
     try:
         if action == "store":

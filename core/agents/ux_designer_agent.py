@@ -338,13 +338,16 @@ class UXDesigner(JourneyAgent):
             return await super().run_playbook_step(step, context)
     
     async def run(self, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Run the UXDesigner agent with the specified playbook.
+        """
+        Executes the UXDesigner agent's playbook steps sequentially and aggregates results.
+        
+        Runs each step defined in the playbook, updating the execution context and collecting results for each step. Includes the final wireframe design and responsive variations in the output if available.
         
         Args:
-            context: Optional execution context
-            
+            context: Optional dictionary providing initial execution context.
+        
         Returns:
-            Execution results
+            A dictionary containing the agent name, playbook name, step results, and any generated design artifacts.
         """
         context = context or {}
         
@@ -378,6 +381,11 @@ class UXDesigner(JourneyAgent):
 
 class UXDesignerAgent:
     def __init__(self):
+        """
+        Initializes the UXDesignerAgent with a memory manager and predefined design system templates.
+        
+        The agent is set up with a MemoryManager instance for storing design systems and two default design system configurations: "modern" and "minimal", each specifying color schemes, typography, and spacing.
+        """
         self.memory_manager = MemoryManager()
         self.design_systems = {
             "modern": {
@@ -421,7 +429,20 @@ class UXDesignerAgent:
         }
         
     async def create_design_system(self, spec: DesignSpec) -> Dict[str, Any]:
-        """Create a comprehensive design system based on specifications"""
+        """
+        Asynchronously creates a comprehensive design system from the provided specification.
+        
+        The design system includes theme, color scheme, typography, spacing, component library, and responsive rules, all generated based on the given `DesignSpec`. The resulting system is stored in memory and returned as a dictionary.
+        
+        Args:
+            spec: The design specification detailing theme, colors, typography, spacing, components, and breakpoints.
+        
+        Returns:
+            A dictionary representing the complete design system.
+        
+        Raises:
+            HTTPException: If design system creation fails due to an internal error.
+        """
         try:
             design_system = {
                 "theme": spec.theme,
@@ -444,7 +465,15 @@ class UXDesignerAgent:
             )
             
     def _generate_color_scheme(self, spec: DesignSpec) -> Dict[str, str]:
-        """Generate a complete color scheme with variations"""
+        """
+        Generates a color scheme with light and dark variations for primary, secondary, and accent colors.
+        
+        Args:
+            spec: The design specification containing the base color scheme.
+        
+        Returns:
+            A dictionary mapping color names to their corresponding color values, including light and dark variants.
+        """
         base_colors = spec.color_scheme
         return {
             **base_colors,
@@ -457,7 +486,15 @@ class UXDesignerAgent:
         }
         
     def _generate_typography(self, spec: DesignSpec) -> Dict[str, Any]:
-        """Generate typography system with scale and variants"""
+        """
+        Generates a typography system including fonts, scale, weights, and line heights.
+        
+        Args:
+            spec: The design specification containing typography preferences.
+        
+        Returns:
+            A dictionary defining font families, size scale for headings and body text, font weights, and line height options.
+        """
         return {
             "fonts": spec.typography,
             "scale": {
@@ -482,7 +519,15 @@ class UXDesignerAgent:
         }
         
     def _generate_spacing_system(self, spec: DesignSpec) -> Dict[str, Any]:
-        """Generate comprehensive spacing system"""
+        """
+        Generates a spacing system with predefined size scales and layout container widths.
+        
+        Args:
+            spec: The design specification containing base spacing information.
+        
+        Returns:
+            A dictionary with spacing size keys mapped to rem values and layout container widths.
+        """
         base = int(spec.spacing["base"].replace("rem", ""))
         return {
             "space": {
@@ -501,7 +546,17 @@ class UXDesignerAgent:
         }
         
     async def _generate_component_library(self, spec: DesignSpec) -> Dict[str, Any]:
-        """Generate component library specifications"""
+        """
+        Generates a component library specification based on the provided design specification.
+        
+        Creates default styles for common UI components such as buttons, cards, and navigation, and adds custom component specifications as defined in the design spec.
+        
+        Args:
+            spec: The design specification containing color scheme and component requirements.
+        
+        Returns:
+            A dictionary mapping component names to their style specifications.
+        """
         components = {
             "buttons": {
                 "primary": {
@@ -544,7 +599,12 @@ class UXDesignerAgent:
         return components
         
     def _generate_responsive_rules(self, spec: DesignSpec) -> Dict[str, Any]:
-        """Generate responsive design rules"""
+        """
+        Generates responsive design rules based on the provided design specification.
+        
+        Returns:
+            A dictionary containing breakpoints, container widths for each breakpoint, and grid settings.
+        """
         return {
             "breakpoints": spec.responsive_breakpoints,
             "containers": {
@@ -560,7 +620,16 @@ class UXDesignerAgent:
         }
         
     async def _generate_component_spec(self, component: str, spec: DesignSpec) -> Dict[str, Any]:
-        """Generate specification for a custom component"""
+        """
+        Generates a generic specification for a custom UI component based on the provided design specification.
+        
+        Args:
+            component: The name of the custom component.
+            spec: The design specification containing color scheme and spacing details.
+        
+        Returns:
+            A dictionary with default style properties for the component, including background, text color, padding, and border radius.
+        """
         # Implementation would depend on specific component requirements
         return {
             "background": spec.color_scheme["background"],
@@ -570,17 +639,40 @@ class UXDesignerAgent:
         }
         
     def _lighten_color(self, color: str, amount: float = 0.2) -> str:
-        """Lighten a hex color"""
+        """
+        Returns a lighter variant of the given hex color.
+        
+        Currently a placeholder that returns the input color unchanged.
+        """
         # Implementation of color lightening logic
         return color  # Placeholder
         
     def _darken_color(self, color: str, amount: float = 0.2) -> str:
-        """Darken a hex color"""
+        """
+        Returns a darker variant of the given hex color.
+        
+        Args:
+            color: The base color in hex format (e.g., "#RRGGBB").
+            amount: The proportion to darken the color, between 0 and 1.
+        
+        Returns:
+            A hex color string representing the darkened color.
+        """
         # Implementation of color darkening logic
         return color  # Placeholder
         
     async def generate_design_tokens(self, spec: DesignSpec) -> Dict[str, Any]:
-        """Generate design tokens for the design system"""
+        """
+        Generates a set of design tokens from a given design specification.
+        
+        The tokens include colors, typography, spacing, shadows, and animations, derived from the generated design system. Raises an HTTP 500 error if token generation fails.
+        
+        Args:
+            spec: The design specification to generate tokens from.
+        
+        Returns:
+            A dictionary containing design tokens for colors, typography, spacing, shadows, and animations.
+        """
         try:
             design_system = await self.create_design_system(spec)
             
@@ -601,7 +693,15 @@ class UXDesignerAgent:
             )
             
     def _generate_color_tokens(self, design_system: Dict[str, Any]) -> Dict[str, str]:
-        """Generate color design tokens"""
+        """
+        Generates CSS variable tokens for the color scheme in the design system.
+        
+        Args:
+            design_system: A dictionary containing the design system, including a color_scheme key.
+        
+        Returns:
+            A dictionary mapping CSS variable names to their corresponding color values.
+        """
         colors = design_system["color_scheme"]
         return {
             "--color-primary": colors["primary"],
@@ -618,7 +718,15 @@ class UXDesignerAgent:
         }
         
     def _generate_typography_tokens(self, design_system: Dict[str, Any]) -> Dict[str, str]:
-        """Generate typography design tokens"""
+        """
+        Generates CSS variable tokens for typography based on the provided design system.
+        
+        Args:
+            design_system: A dictionary containing typography definitions.
+        
+        Returns:
+            A dictionary mapping CSS variable names to typography values for fonts, sizes, and weights.
+        """
         typography = design_system["typography"]
         return {
             "--font-family-heading": typography["fonts"]["heading"],
@@ -634,7 +742,15 @@ class UXDesignerAgent:
         }
         
     def _generate_spacing_tokens(self, design_system: Dict[str, Any]) -> Dict[str, str]:
-        """Generate spacing design tokens"""
+        """
+        Generates CSS variable tokens for spacing values from the design system.
+        
+        Args:
+            design_system: The design system dictionary containing spacing definitions.
+        
+        Returns:
+            A dictionary mapping CSS variable names to their corresponding spacing values.
+        """
         spacing = design_system["spacing"]
         return {
             "--space-xxs": spacing["space"]["xxs"],
@@ -647,7 +763,12 @@ class UXDesignerAgent:
         }
         
     def _generate_shadow_tokens(self) -> Dict[str, str]:
-        """Generate shadow design tokens"""
+        """
+        Returns a dictionary of predefined CSS shadow tokens for use in design systems.
+        
+        Returns:
+            A mapping of CSS variable names to shadow values for different elevation levels.
+        """
         return {
             "--shadow-sm": "0 1px 2px rgba(0, 0, 0, 0.05)",
             "--shadow-md": "0 4px 6px rgba(0, 0, 0, 0.1)",
@@ -656,7 +777,12 @@ class UXDesignerAgent:
         }
         
     def _generate_animation_tokens(self) -> Dict[str, str]:
-        """Generate animation design tokens"""
+        """
+        Generates a set of predefined animation and transition design tokens.
+        
+        Returns:
+            A dictionary mapping CSS variable names to animation and transition values.
+        """
         return {
             "--transition-fast": "150ms ease-in-out",
             "--transition-normal": "300ms ease-in-out",

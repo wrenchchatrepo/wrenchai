@@ -28,7 +28,12 @@ def set_bayesian_engine(engine):
     logging.info("Bayesian engine set for bayesian_tools")
 
 def get_bayesian_engine():
-    """Get the Bayesian engine instance"""
+    """
+    Returns the current Bayesian engine instance.
+    
+    Raises:
+        RuntimeError: If the Bayesian engine has not been initialized.
+    """
     global _bayesian_engine
     if _bayesian_engine is None:
         raise RuntimeError("Bayesian engine not initialized")
@@ -63,7 +68,18 @@ class BayesianResult(BaseModel):
     r_hat: float = Field(..., description="R-hat convergence statistic")
 
 def _create_distribution(spec: Union[PriorSpec, LikelihoodSpec]) -> Any:
-    """Create a PyMC distribution from specification."""
+    """
+    Maps a prior or likelihood specification to the corresponding PyMC distribution class.
+    
+    Args:
+        spec: A prior or likelihood specification containing the distribution name.
+    
+    Returns:
+        The PyMC distribution class corresponding to the specified distribution.
+    
+    Raises:
+        ValueError: If the specified distribution is not supported.
+    """
     dist_map = {
         'normal': pm.Normal,
         'beta': pm.Beta,
@@ -81,7 +97,17 @@ def _create_distribution(spec: Union[PriorSpec, LikelihoodSpec]) -> Any:
     return dist_map[spec.distribution]
 
 def _extract_posterior_stats(trace: az.InferenceData, var_name: str) -> BayesianResult:
-    """Extract posterior statistics from trace."""
+    """
+    Extracts summary statistics for a posterior variable from an ArviZ InferenceData trace.
+    
+    Args:
+        trace: The ArviZ InferenceData object containing posterior samples.
+        var_name: The name of the posterior variable to summarize.
+    
+    Returns:
+        A BayesianResult containing the posterior mean, standard deviation, HDI bounds,
+        effective sample size, and R-hat statistic for the specified variable.
+    """
     posterior = trace.posterior[var_name]
     hdi = az.hdi(trace, var_names=[var_name])
     ess = az.ess(trace, var_names=[var_name])
@@ -101,15 +127,10 @@ async def update_beliefs(
     likelihood: LikelihoodSpec,
     inference: Optional[InferenceSpec] = None
 ) -> Dict[str, Any]:
-    """Update beliefs using Bayesian inference.
+    """
+    Performs Bayesian inference to update beliefs given prior and likelihood specifications.
     
-    Args:
-        prior: Prior distribution specification
-        likelihood: Likelihood specification with data
-        inference: Optional inference settings
-        
-    Returns:
-        Dictionary containing inference results
+    Builds a probabilistic model using the provided prior and likelihood, runs MCMC sampling with optional inference settings, and returns posterior summary statistics along with model diagnostics such as WAIC and LOO. Returns a dictionary indicating success or failure, with results or error details.
     """
     try:
         inference = inference or InferenceSpec()
@@ -162,15 +183,10 @@ async def compute_bayes_factor(
     model2: Dict[str, Any],
     data: List[float]
 ) -> Dict[str, Any]:
-    """Compute Bayes factor for model comparison.
+    """
+    Computes the Bayes factor for comparing two probabilistic models given observed data.
     
-    Args:
-        model1: First model specification
-        model2: Second model specification
-        data: Observed data
-        
-    Returns:
-        Dictionary containing Bayes factor results
+    The function builds and samples from two PyMC models specified by their priors and likelihoods, computes the log marginal likelihood for each, and returns the Bayes factor as the exponentiated difference. Returns a dictionary with the Bayes factor, its logarithm, and success status. If an error occurs, returns an error message and failure status.
     """
     try:
         # Create and sample from both models
@@ -210,15 +226,17 @@ async def predict(
     posterior: Dict[str, Any],
     x_new: List[float]
 ) -> Dict[str, Any]:
-    """Make predictions using posterior distribution.
+    """
+    Generates predictions for new input values using a given model and posterior distribution.
     
     Args:
-        model: Model specification
-        posterior: Posterior distribution parameters
-        x_new: New input values for prediction
-        
+        model: Dictionary specifying the model's posterior and likelihood structure.
+        posterior: Dictionary of posterior parameter values.
+        x_new: List of new input values for which predictions are made.
+    
     Returns:
-        Dictionary containing predictions
+        A dictionary with prediction results, including mean predictions, standard deviations,
+        and highest density intervals for each input value. On failure, returns an error message.
     """
     try:
         with pm.Model() as pred_model:

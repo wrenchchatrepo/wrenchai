@@ -26,14 +26,15 @@ class ToolResponse(BaseModel, Generic[T]):
         }
 
 def format_success_response(data: Any = None, meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Format a successful tool response.
+    """
+    Creates a standardized success response dictionary for tool outputs.
     
     Args:
-        data: The operation result data
-        meta: Additional metadata to include
-        
+        data: Optional result data to include in the response.
+        meta: Optional metadata dictionary to attach to the response.
+    
     Returns:
-        Standardized success response dictionary
+        A dictionary representing a successful tool response, including data, metadata, and a UTC timestamp.
     """
     response = ToolResponse[
         type(data) if data is not None else None  # Use the actual data type if available
@@ -46,14 +47,16 @@ def format_success_response(data: Any = None, meta: Optional[Dict[str, Any]] = N
     return response.dict(exclude_unset=True)
 
 def format_error_response(error_message: str, meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Format an error tool response.
+    """
+    Creates a standardized error response dictionary for tool outputs.
     
     Args:
-        error_message: Error message describing what went wrong
-        meta: Additional metadata to include
-        
+        error_message: Description of the error.
+        meta: Optional metadata to include in the response.
+    
     Returns:
-        Standardized error response dictionary
+        A dictionary representing the error response, including the error message,
+        metadata, and a UTC timestamp.
     """
     response = ToolResponse[
         None  # No data for error responses
@@ -66,13 +69,18 @@ def format_error_response(error_message: str, meta: Optional[Dict[str, Any]] = N
     return response.dict(exclude_unset=True)
 
 def standardize_legacy_response(response: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert a legacy tool response to the standardized format.
+    """
+    Converts a legacy tool response dictionary to the standardized response format.
     
+    If the input is already standardized, ensures a timestamp is present. Otherwise,
+    wraps legacy success or error responses into the standard format, preserving the
+    original response in metadata and marking the conversion.
+    	
     Args:
-        response: Legacy tool response dictionary
-        
+    	response: A legacy tool response dictionary.
+    
     Returns:
-        Standardized response dictionary
+    	A standardized response dictionary compatible with the ToolResponse format.
     """
     # Check if response is already in the standardized format
     if all(k in response for k in ["success", "data"]) or \

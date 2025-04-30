@@ -66,7 +66,11 @@ class BrowserState:
     """Manages browser state and logs."""
     
     def __init__(self):
-        """Initialize browser state."""
+        """
+        Initializes a new BrowserState instance with empty logs and no selected element.
+        
+        Sets up lists for console logs, console errors, successful and failed network requests, and initializes the selected element to None. Limits the maximum number of stored logs to 1000.
+        """
         self.console_logs: List[ConsoleLog] = []
         self.console_errors: List[ConsoleLog] = []
         self.network_success_logs: List[NetworkRequest] = []
@@ -75,10 +79,10 @@ class BrowserState:
         self._max_logs = 1000  # Maximum number of logs to keep
         
     def add_console_log(self, log: ConsoleLog):
-        """Add a console log entry.
+        """
+        Adds a console log entry to the browser state.
         
-        Args:
-            log: Console log entry to add
+        If the log entry has an error level, it is also added to the error logs. Maintains a maximum number of stored logs by trimming the oldest entries when necessary.
         """
         self.console_logs.append(log)
         if log.level == LogLevel.ERROR:
@@ -91,10 +95,10 @@ class BrowserState:
             self.console_errors = self.console_errors[-self._max_logs:]
             
     def add_network_request(self, request: NetworkRequest):
-        """Add a network request log.
+        """
+        Adds a network request to the appropriate log based on its success status.
         
-        Args:
-            request: Network request to add
+        If the number of stored logs exceeds the maximum allowed, only the most recent entries are kept.
         """
         if request.success:
             self.network_success_logs.append(request)
@@ -106,57 +110,60 @@ class BrowserState:
                 self.network_error_logs = self.network_error_logs[-self._max_logs:]
                 
     def set_selected_element(self, element: Dict[str, Any]):
-        """Set the currently selected element.
+        """
+        Sets the currently selected element in the browser state.
         
         Args:
-            element: Element information
+            element: A dictionary containing information about the selected element.
         """
         self.selected_element = element
         
     def clear_logs(self):
-        """Clear all logs."""
+        """
+        Removes all stored console and network logs from the browser state.
+        """
         self.console_logs.clear()
         self.console_errors.clear()
         self.network_success_logs.clear()
         self.network_error_logs.clear()
         
     def get_console_logs(self) -> List[Dict[str, Any]]:
-        """Get all console logs.
+        """
+        Returns all stored console log entries as dictionaries.
         
         Returns:
-            List of console logs
+            A list of dictionaries representing each console log entry.
         """
         return [log.dict() for log in self.console_logs]
         
     def get_console_errors(self) -> List[Dict[str, Any]]:
-        """Get console error logs.
-        
-        Returns:
-            List of console error logs
+        """
+        Returns a list of all console error logs as dictionaries.
         """
         return [log.dict() for log in self.console_errors]
         
     def get_network_success_logs(self) -> List[Dict[str, Any]]:
-        """Get successful network request logs.
+        """
+        Returns a list of successful network request logs as dictionaries.
         
-        Returns:
-            List of successful network requests
+        Each dictionary represents a network request that completed successfully.
         """
         return [req.dict() for req in self.network_success_logs]
         
     def get_network_error_logs(self) -> List[Dict[str, Any]]:
-        """Get failed network request logs.
+        """
+        Returns a list of failed network request logs as dictionaries.
         
-        Returns:
-            List of failed network requests
+        Each dictionary contains details of a network request that did not succeed.
         """
         return [req.dict() for req in self.network_error_logs]
         
     def get_selected_element(self) -> Optional[Dict[str, Any]]:
-        """Get the currently selected element.
+        """
+        Returns the currently selected element in the browser state.
         
         Returns:
-            Selected element information or None
+            A dictionary containing information about the selected element, or None if no element is selected.
         """
         return self.selected_element
 
@@ -164,10 +171,11 @@ class BrowserState:
 browser_state = BrowserState()
 
 async def get_console_logs() -> Dict[str, Any]:
-    """Get all console logs.
+    """
+    Retrieves all stored browser console logs.
     
     Returns:
-        Dictionary containing console logs
+        A dictionary with a success flag and a list of console log entries, or an error message if retrieval fails.
     """
     try:
         return {
@@ -182,10 +190,11 @@ async def get_console_logs() -> Dict[str, Any]:
         }
 
 async def get_console_errors() -> Dict[str, Any]:
-    """Get console error logs.
+    """
+    Retrieves all captured browser console error logs.
     
     Returns:
-        Dictionary containing console error logs
+        A dictionary with a success flag and a list of console error logs, or an error message if retrieval fails.
     """
     try:
         return {
@@ -200,10 +209,11 @@ async def get_console_errors() -> Dict[str, Any]:
         }
 
 async def get_network_error_logs() -> Dict[str, Any]:
-    """Get failed network request logs.
+    """
+    Retrieves the list of failed network request logs.
     
     Returns:
-        Dictionary containing failed network requests
+        A dictionary with a success flag and a list of failed network requests, or an error message if retrieval fails.
     """
     try:
         return {
@@ -218,10 +228,11 @@ async def get_network_error_logs() -> Dict[str, Any]:
         }
 
 async def get_network_success_logs() -> Dict[str, Any]:
-    """Get successful network request logs.
+    """
+    Retrieves logs of successful network requests.
     
     Returns:
-        Dictionary containing successful network requests
+        A dictionary with a success flag and a list of successful network request logs, or an error message if retrieval fails.
     """
     try:
         return {
@@ -236,10 +247,11 @@ async def get_network_success_logs() -> Dict[str, Any]:
         }
 
 async def take_screenshot() -> Dict[str, Any]:
-    """Take a screenshot of the current browser tab.
+    """
+    Captures a screenshot of the current browser tab.
     
     Returns:
-        Dictionary containing screenshot information
+        A dictionary indicating success or failure, with a message and timestamp on success, or an error message on failure.
     """
     try:
         # This would be implemented by the MCP server
@@ -257,10 +269,12 @@ async def take_screenshot() -> Dict[str, Any]:
         }
 
 async def get_selected_element() -> Dict[str, Any]:
-    """Get the currently selected element.
+    """
+    Retrieves the currently selected element from the browser state.
     
     Returns:
-        Dictionary containing element information
+        A dictionary with a success flag and the selected element's information if available,
+        or an error message if no element is selected or an exception occurs.
     """
     try:
         element = browser_state.get_selected_element()
@@ -281,10 +295,11 @@ async def get_selected_element() -> Dict[str, Any]:
         }
 
 async def wipe_logs() -> Dict[str, Any]:
-    """Clear all browser logs.
+    """
+    Clears all stored browser logs and returns the operation status.
     
     Returns:
-        Dictionary containing operation status
+        A dictionary indicating whether the logs were cleared successfully. On failure, includes an error message.
     """
     try:
         browser_state.clear_logs()
@@ -301,7 +316,15 @@ async def wipe_logs() -> Dict[str, Any]:
 
 # Event handlers for browser events
 def handle_console_log(level: str, message: str, source: str, line_number: Optional[int] = None):
-    """Handle incoming console log."""
+    """
+    Processes an incoming console log entry and adds it to the browser state.
+    
+    Args:
+        level: The log level (e.g., 'INFO', 'ERROR').
+        message: The log message content.
+        source: The source file or context of the log.
+        line_number: The line number in the source, if available.
+    """
     log = ConsoleLog(
         timestamp=datetime.utcnow(),
         level=level,
@@ -316,7 +339,11 @@ def handle_network_request(
     url: str,
     request_headers: Optional[Dict[str, str]] = None
 ):
-    """Handle outgoing network request."""
+    """
+    Records an outgoing network request in the browser state.
+    
+    Creates a new network request entry with the provided method, URL, and optional request headers, and adds it to the browser state logs.
+    """
     request = NetworkRequest(
         timestamp=datetime.utcnow(),
         request_id=f"{method}_{url}",
@@ -333,7 +360,11 @@ def handle_network_response(
     duration: float,
     response_headers: Optional[Dict[str, str]] = None
 ):
-    """Handle incoming network response."""
+    """
+    Updates the first pending successful network request log with response details.
+    
+    Finds the first network request in the success log matching the given URL and without a status, then sets its status, duration, and response headers.
+    """
     # Find matching request log
     for log in browser_state.network_success_logs:
         if log.url == url and log.status is None:
@@ -343,7 +374,13 @@ def handle_network_response(
             break
 
 def handle_network_error(url: str, error: str):
-    """Handle network request error."""
+    """
+    Updates the first failed network request log matching the given URL with the provided error message.
+    
+    Args:
+        url: The URL of the network request that encountered an error.
+        error: The error message to associate with the failed request.
+    """
     # Find matching request log
     for log in browser_state.network_error_logs:
         if log.url == url and log.status is None:
@@ -351,5 +388,10 @@ def handle_network_error(url: str, error: str):
             break
 
 def handle_element_selected(element_info: Dict[str, Any]):
-    """Handle element selection."""
+    """
+    Updates the browser state with the newly selected element.
+    
+    Args:
+        element_info: A dictionary containing information about the selected element.
+    """
     browser_state.set_selected_element(element_info) 

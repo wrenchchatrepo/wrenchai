@@ -21,7 +21,12 @@ from core.tools.game_theory import (
 
 @pytest.fixture
 def sample_strategy():
-    """Create a sample strategy."""
+    """
+    Creates a sample Strategy instance with predefined name, description, and probability.
+    
+    Returns:
+        A Strategy object with name "strategy1", description "Test strategy", and probability 1.0.
+    """
     return Strategy(
         name="strategy1",
         description="Test strategy",
@@ -30,7 +35,12 @@ def sample_strategy():
 
 @pytest.fixture
 def sample_player():
-    """Create a sample player."""
+    """
+    Creates a sample Player instance with two strategies and a 2x2 payoff matrix.
+    
+    Returns:
+        Player: A player named "player1" with strategies "strategy1" and "strategy2", and a payoff matrix for use in tests.
+    """
     return Player(
         name="player1",
         strategies=[
@@ -45,7 +55,12 @@ def sample_player():
 
 @pytest.fixture
 def sample_game():
-    """Create a sample game."""
+    """
+    Creates a sample normal form game with two players, each having two strategies and a 2x2 payoff matrix.
+    
+    Returns:
+        GameSpec: A normal form game specification for testing purposes.
+    """
     return GameSpec(
         type=GameType.NORMAL_FORM,
         players=[
@@ -76,7 +91,12 @@ def sample_game():
 
 @pytest.fixture
 def cooperative_game():
-    """Create a sample cooperative game."""
+    """
+    Creates a sample cooperative game specification with two players, each having one strategy and a single payoff value.
+    
+    Returns:
+        GameSpec: A cooperative game with two players for use in tests.
+    """
     return GameSpec(
         type=GameType.COOPERATIVE,
         cooperative=True,
@@ -189,7 +209,11 @@ async def test_evaluate_coalition_success(cooperative_game):
 
 @pytest.mark.asyncio
 async def test_evaluate_coalition_error(sample_game):
-    """Test error handling in coalition evaluation."""
+    """
+    Tests that evaluate_coalition returns an error when called with an invalid coalition.
+    
+    Asserts that the result indicates failure and contains an error message.
+    """
     result = await evaluate_coalition(sample_game, ["player1"])
     
     assert not result["success"]
@@ -236,7 +260,11 @@ def test_player_model():
     assert len(player.payoff_matrix) == 2
 
 def test_game_spec_model():
-    """Test GameSpec model validation."""
+    """
+    Validates the creation and attributes of a GameSpec model.
+    
+    Asserts that a normal form GameSpec with one player is correctly initialized with the expected type, player count, and cooperative flag.
+    """
     game = GameSpec(
         type=GameType.NORMAL_FORM,
         players=[

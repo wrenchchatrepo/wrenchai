@@ -53,19 +53,28 @@ class StreamlitTestRunner:
     """Test runner for Streamlit applications."""
     
     def __init__(self, config: TestConfig):
+        """
+        Initializes the StreamlitTestRunner with the given test configuration.
+        
+        Sets up the test environment and prepares to collect test results.
+        """
         self.config = config
         self.results: List[TestResult] = []
         self._setup_test_environment()
 
     def _setup_test_environment(self):
-        """Set up the test environment based on configuration."""
+        """
+        Initializes the test environment by clearing Streamlit state and configuring logging if enabled in the configuration.
+        """
         streamlit_state.clear_all()
         if self.config.capture_logs:
             # Configure logging capture
             self._setup_logging()
 
     def _setup_logging(self):
-        """Configure logging for test execution."""
+        """
+        Configures a stream handler to capture log output at the INFO level during test execution.
+        """
         self.log_handler = logging.StreamHandler()
         self.log_handler.setLevel(logging.INFO)
         logger.addHandler(self.log_handler)
@@ -76,15 +85,10 @@ class StreamlitTestRunner:
         value: Any,
         wait_for_update: bool = True
     ) -> TestResult:
-        """Simulate user interaction with a component.
+        """
+        Simulates a user interaction by updating the value of a specified component.
         
-        Args:
-            component_key: Key of the component to interact with
-            value: Value to set
-            wait_for_update: Whether to wait for component update
-            
-        Returns:
-            TestResult containing the operation result
+        Attempts to set the given value for the component identified by `component_key`. If the component is found, its value is updated and the previous and new values are returned in the result. If `wait_for_update` is True, the method optionally waits for the component to reflect the change. Returns a TestResult indicating success or failure, including error details if the component is not found or an exception occurs.
         """
         try:
             # Get current component state
@@ -127,15 +131,10 @@ class StreamlitTestRunner:
         expected_value: Any,
         check_type: bool = True
     ) -> TestResult:
-        """Verify the state of a component.
+        """
+        Verifies that a component's state matches the expected value and type.
         
-        Args:
-            component_key: Key of the component to verify
-            expected_value: Expected component value
-            check_type: Whether to check value type match
-            
-        Returns:
-            TestResult containing the verification result
+        Checks if the specified component exists and whether its value and, optionally, its type match the expected value. Returns a TestResult indicating success or failure with relevant details.
         """
         try:
             state = streamlit_state.get_component(component_key)
@@ -185,14 +184,15 @@ class StreamlitTestRunner:
         key: str,
         expected_value: Any
     ) -> TestResult:
-        """Verify session state value.
+        """
+        Verifies that a session state value matches the expected value.
         
         Args:
-            key: Session state key to verify
-            expected_value: Expected value
-            
+            key: The session state key to check.
+            expected_value: The value expected for the given key.
+        
         Returns:
-            TestResult containing the verification result
+            A TestResult indicating whether the actual session state value matches the expected value.
         """
         try:
             actual_value = streamlit_state.get_session_state(key)
@@ -226,10 +226,15 @@ class StreamlitTestRunner:
 
     @contextmanager
     def simulate_page_context(self, page_path: Optional[str] = None):
-        """Context manager for simulating a page context in multipage apps.
+        """
+        Temporarily sets the page context for simulating navigation in multipage Streamlit apps.
+        
+        When used as a context manager, this sets the current page path in the test configuration
+        to the specified value for the duration of the context, then restores the previous page path
+        on exit.
         
         Args:
-            page_path: Path to the page script
+            page_path: The path to the page script to simulate as the active page.
         """
         try:
             # Store current state
@@ -247,13 +252,16 @@ class StreamlitTestRunner:
         self,
         steps: List[Callable[[], Any]]
     ) -> List[TestResult]:
-        """Run a sequence of test steps.
+        """
+        Executes a sequence of asynchronous test steps and collects their results.
+        
+        Each step is awaited in order. If a step fails and the test mode is UNIT, execution stops early. Exceptions during steps are caught and recorded as failed TestResults.
         
         Args:
-            steps: List of test step functions to execute
-            
+            steps: A list of asynchronous test step callables to execute.
+        
         Returns:
-            List of TestResults from each step
+            A list of TestResult objects representing the outcome of each step.
         """
         results = []
         for step in steps:
@@ -278,7 +286,9 @@ class StreamlitTestRunner:
         return results
 
     def cleanup(self):
-        """Clean up test environment."""
+        """
+        Cleans up the test environment by clearing Streamlit state and removing the log handler if log capture is enabled.
+        """
         streamlit_state.clear_all()
         if self.config.capture_logs:
             logger.removeHandler(self.log_handler)
@@ -287,28 +297,54 @@ class StreamlitTestCase:
     """Base class for Streamlit test cases."""
     
     def __init__(self, config: Optional[TestConfig] = None):
+        """
+        Initializes a StreamlitTestCase with an optional test configuration.
+        
+        If no configuration is provided, a default TestConfig is used. Sets up a StreamlitTestRunner for executing test operations.
+        """
         self.config = config or TestConfig()
         self.runner = StreamlitTestRunner(self.config)
         
     async def setUp(self):
-        """Set up test case."""
+        """
+        Clears all Streamlit state before running a test case.
+        """
         streamlit_state.clear_all()
         
     async def tearDown(self):
-        """Clean up after test case."""
+        """
+        Cleans up the test environment after a test case by resetting Streamlit state and logging.
+        """
         self.runner.cleanup()
         
     async def assertComponentValue(self, key: str, expected_value: Any):
-        """Assert that a component has the expected value."""
+        """
+        Asserts that a Streamlit component has the expected value.
+        
+        Raises an AssertionError if the component's value does not match the expected value.
+        """
         result = await self.runner.verify_component_state(key, expected_value)
         assert result.success, result.error or "Component value assertion failed"
         
     async def assertSessionState(self, key: str, expected_value: Any):
-        """Assert that session state has the expected value."""
+        """
+        Asserts that the session state value for the given key matches the expected value.
+        
+        Raises an AssertionError if the actual value does not equal the expected value.
+        """
         result = await self.runner.verify_session_state(key, expected_value)
         assert result.success, result.error or "Session state assertion failed"
         
     async def simulateInteraction(self, key: str, value: Any):
-        """Simulate user interaction with a component."""
+        """
+        Simulates a user interaction by updating the value of a Streamlit component.
+        
+        Args:
+            key: The unique key identifying the component.
+            value: The value to set for the component.
+        
+        Raises:
+            AssertionError: If the interaction simulation fails.
+        """
         result = await self.runner.simulate_component_interaction(key, value)
         assert result.success, result.error or "Interaction simulation failed" 

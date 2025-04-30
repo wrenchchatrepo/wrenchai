@@ -18,7 +18,12 @@ from core.tools.github_mcp import (
 
 @pytest.fixture
 def mock_psutil():
-    """Mock psutil functions."""
+    """
+    Mocks psutil's process iteration and process memory info for testing.
+    
+    Yields:
+        A dictionary containing mocked 'process_iter' and 'Process' objects for use in tests.
+    """
     with patch('psutil.process_iter') as process_iter, \
          patch('psutil.Process') as Process:
         
@@ -44,7 +49,12 @@ def mock_psutil():
 
 @pytest.fixture
 def mock_subprocess():
-    """Mock subprocess functions."""
+    """
+    Pytest fixture that mocks subprocess.Popen to simulate a server process.
+    
+    Yields:
+        The mocked Popen class with a process instance having fixed PID and mocked stdout/stderr.
+    """
     with patch('subprocess.Popen') as Popen:
         mock_process = MagicMock()
         mock_process.pid = 12345
@@ -55,23 +65,68 @@ def mock_subprocess():
 
 @pytest.fixture
 def mock_aiohttp():
-    """Mock aiohttp client."""
+    """
+    Pytest fixture that mocks aiohttp.ClientSession to simulate HTTP responses.
+    
+    Yields:
+        None. All aiohttp client requests within the fixture context return a
+        successful JSON response with status "ok".
+    """
     class MockResponse:
         def __init__(self, status):
+            """
+            Initializes the instance with the given status.
+            
+            Args:
+                status: The status value to assign to the instance.
+            """
             self.status = status
         async def json(self):
+            """
+            Returns a JSON response indicating a successful status.
+            
+            Returns:
+                A dictionary with a single key "status" set to "ok".
+            """
             return {"status": "ok"}
         async def __aenter__(self):
+            """
+            Enables use of the async context manager protocol for the server instance.
+            
+            Returns:
+                The server instance itself for use within an async with block.
+            """
             return self
         async def __aexit__(self, exc_type, exc_val, exc_tb):
+            """
+            Exits the asynchronous context manager for the server instance.
+            """
             pass
     
     class MockClientSession:
         async def __aenter__(self):
+            """
+            Enables use of the server instance as an asynchronous context manager.
+            
+            Returns:
+                The server instance itself for use within an async with block.
+            """
             return self
         async def __aexit__(self, exc_type, exc_val, exc_tb):
+            """
+            Exits the asynchronous context manager for the server instance.
+            """
             pass
         async def get(self, url, **kwargs):
+            """
+            Simulates an asynchronous HTTP GET request and returns a mock response.
+            
+            Args:
+                url: The URL to request.
+            
+            Returns:
+                A MockResponse object with a status code of 200.
+            """
             return MockResponse(200)
     
     with patch('aiohttp.ClientSession', return_value=MockClientSession()):
@@ -79,7 +134,15 @@ def mock_aiohttp():
 
 @pytest.fixture
 def temp_config_file(tmp_path):
-    """Create a temporary config file."""
+    """
+    Creates a temporary JSON configuration file for the MCP server.
+    
+    Args:
+        tmp_path: Temporary directory provided by pytest for file creation.
+    
+    Returns:
+        Path to the created configuration file containing default server settings.
+    """
     config_file = tmp_path / "mcp_config.json"
     config_data = {
         "host": "localhost",
@@ -93,7 +156,13 @@ def temp_config_file(tmp_path):
 
 @pytest.fixture
 async def server():
-    """Create a GitHubMCPServer instance."""
+    """
+    Creates and yields a GitHubMCPServer instance with default test configuration for use in tests.
+    
+    Yields:
+        A GitHubMCPServer instance configured with localhost, port 8000, and a test auth token.
+        Ensures the server is stopped after test execution.
+    """
     server = GitHubMCPServer(MCPServerConfig(
         host="localhost",
         port=8000,
@@ -119,7 +188,11 @@ async def test_start_server(server, mock_subprocess, mock_psutil):
 
 @pytest.mark.asyncio
 async def test_stop_server(server, mock_psutil):
-    """Test stopping the server."""
+    """
+    Tests that the server can be stopped successfully.
+    
+    Asserts that the stop_server method returns a success status and the expected message.
+    """
     result = await server.stop_server()
     
     assert result["success"]
@@ -138,7 +211,11 @@ async def test_get_status(server, mock_psutil):
 
 @pytest.mark.asyncio
 async def test_get_metrics(server, mock_psutil):
-    """Test getting server metrics."""
+    """
+    Tests that the server's metrics are correctly reported after updating them with both successful and failed requests.
+    
+    This test updates the server's metrics with one successful and one failed request, then retrieves the metrics and asserts that the counts and memory usage are as expected.
+    """
     # Update some metrics
     server.update_metrics(True, 0.1)
     server.update_metrics(False, 0.2)
@@ -153,7 +230,9 @@ async def test_get_metrics(server, mock_psutil):
 
 @pytest.mark.asyncio
 async def test_update_config(server, mock_subprocess):
-    """Test updating server configuration."""
+    """
+    Tests that updating the server configuration applies new settings and returns a success message.
+    """
     new_config = MCPServerConfig(
         host="127.0.0.1",
         port=8001,
@@ -169,7 +248,13 @@ async def test_update_config(server, mock_subprocess):
 
 @pytest.mark.asyncio
 async def test_save_config(server, tmp_path):
-    """Test saving configuration to file."""
+    """
+    Tests that the server's configuration can be saved to a file and verifies the saved content.
+    
+    Args:
+        server: The GitHubMCPServer instance under test.
+        tmp_path: Temporary directory provided by pytest for file operations.
+    """
     config_path = tmp_path / "test_config.json"
     
     result = await server.save_config(str(config_path))
@@ -184,7 +269,12 @@ async def test_save_config(server, tmp_path):
 
 @pytest.mark.asyncio
 async def test_load_config(server, temp_config_file):
-    """Test loading configuration from file."""
+    """
+    Tests that the server correctly loads configuration settings from a file.
+    
+    Asserts that the loaded configuration matches the expected values for host, port,
+    authentication token, GitHub token, and log level.
+    """
     result = await server.load_config(str(temp_config_file))
     
     assert result["success"]
@@ -205,7 +295,12 @@ async def test_health_check(server, mock_aiohttp):
 
 @pytest.mark.asyncio
 async def test_metrics_update(server):
-    """Test metrics updating."""
+    """
+    Verifies that the server's metrics are updated correctly after handling requests.
+    
+    This test checks that request counts, success and failure tallies, and average response time
+    are accurately maintained as metrics are updated.
+    """
     # Initial state
     assert server._metrics.requests_total == 0
     assert server._metrics.average_response_time == 0.0
@@ -223,7 +318,9 @@ async def test_metrics_update(server):
 
 @pytest.mark.asyncio
 async def test_error_handling(server):
-    """Test error handling in server operations."""
+    """
+    Tests error handling scenarios for server operations, including loading a nonexistent config file, updating with an invalid port, and simulating a failed health check.
+    """
     # Test with invalid config file
     result = await server.load_config("nonexistent.json")
     assert not result["success"]
@@ -241,7 +338,12 @@ async def test_error_handling(server):
         assert "error" in result
 
 def test_server_config_validation():
-    """Test server configuration validation."""
+    """
+    Tests the MCPServerConfig model for correct field assignment and default values.
+    
+    Verifies that explicit values are set correctly and that default values are applied
+    when fields are omitted.
+    """
     # Valid config
     config = MCPServerConfig(
         host="localhost",
@@ -259,7 +361,9 @@ def test_server_config_validation():
     assert config.timeout == 30
 
 def test_server_metrics_model():
-    """Test server metrics model."""
+    """
+    Tests that the MCPServerMetrics model initializes with correct default values.
+    """
     metrics = MCPServerMetrics()
     assert metrics.requests_total == 0
     assert metrics.requests_success == 0

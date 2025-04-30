@@ -28,7 +28,12 @@ from core.tools.github_tools import (
 
 @pytest.fixture
 def mock_mcp_github():
-    """Mock MCP GitHub functions."""
+    """
+    Provides a pytest fixture that mocks all MCP GitHub API functions used by the GitHub tools.
+    
+    Yields:
+        A dictionary mapping function names to their corresponding mock objects for use in tests.
+    """
     with patch("core.tools.github_tools.mcp_github_create_repository") as create_repo, \
          patch("core.tools.github_tools.mcp_github_create_or_update_file") as update_file, \
          patch("core.tools.github_tools.mcp_github_get_file_contents") as get_contents, \
@@ -59,7 +64,11 @@ def mock_mcp_github():
 
 @pytest.mark.asyncio
 async def test_create_repository(mock_mcp_github):
-    """Test repository creation."""
+    """
+    Asynchronously tests that a repository can be created using the GitHub tools interface.
+    
+    Verifies that the repository creation function returns a successful result with the expected repository name and that the underlying MCP GitHub API is called exactly once.
+    """
     mock_mcp_github["create_repository"].return_value = {
         "id": 123,
         "name": "test-repo",
@@ -80,7 +89,11 @@ async def test_create_repository(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_create_or_update_file(mock_mcp_github):
-    """Test file creation/update."""
+    """
+    Tests asynchronous creation or update of a file in a GitHub repository using mocked API responses.
+    
+    Verifies that the `create_or_update_file` function returns a successful result with the expected file path and that the underlying MCP GitHub API function is called exactly once.
+    """
     mock_mcp_github["create_or_update_file"].return_value = {
         "content": {
             "path": "test.txt",
@@ -102,7 +115,13 @@ async def test_create_or_update_file(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_get_file_contents(mock_mcp_github):
-    """Test getting file contents."""
+    """
+    Tests asynchronous retrieval of file contents using the GitHub tools interface.
+    
+    Mocks the underlying MCP GitHub API call to return a file response, then verifies
+    that the `get_file_contents` function returns a successful result containing the
+    expected content and that the mock was called exactly once.
+    """
     mock_mcp_github["get_file_contents"].return_value = {
         "type": "file",
         "content": "Test content",
@@ -117,7 +136,11 @@ async def test_get_file_contents(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_create_issue(mock_mcp_github):
-    """Test issue creation."""
+    """
+    Tests asynchronous creation of a GitHub issue using mocked API responses.
+    
+    Verifies that the `create_issue` function returns a successful result with the expected issue title and that the underlying API call is invoked exactly once.
+    """
     mock_mcp_github["create_issue"].return_value = {
         "number": 1,
         "title": "Test issue",
@@ -138,7 +161,11 @@ async def test_create_issue(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_create_pull_request(mock_mcp_github):
-    """Test pull request creation."""
+    """
+    Tests asynchronous creation of a pull request using mocked MCP GitHub API.
+    
+    Verifies that the `create_pull_request` function returns a successful result with the expected pull request title and that the underlying API mock is called exactly once.
+    """
     mock_mcp_github["create_pull_request"].return_value = {
         "number": 1,
         "title": "Test PR",
@@ -159,7 +186,11 @@ async def test_create_pull_request(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_search_repositories(mock_mcp_github):
-    """Test repository search."""
+    """
+    Tests the search_repositories function for correct handling of repository search results.
+    
+    Mocks the underlying MCP GitHub search function to return a single repository, then verifies that the search_repositories function returns a successful result with the expected repository data and that the mock was called once.
+    """
     mock_mcp_github["search_repositories"].return_value = {
         "total_count": 1,
         "items": [{"name": "test-repo"}]
@@ -173,7 +204,11 @@ async def test_search_repositories(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_search_code(mock_mcp_github):
-    """Test code search."""
+    """
+    Tests the asynchronous code search functionality using a mocked MCP GitHub API.
+    
+    Verifies that searching for code returns a successful result with the expected number of items and that the underlying API function is called once.
+    """
     mock_mcp_github["search_code"].return_value = {
         "total_count": 1,
         "items": [{"path": "test.py"}]
@@ -187,7 +222,11 @@ async def test_search_code(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_list_issues(mock_mcp_github):
-    """Test listing issues."""
+    """
+    Tests that listing issues returns the expected issues and indicates success.
+    
+    Mocks the underlying MCP GitHub API to return a predefined list of issues, then verifies that the `list_issues` function returns a successful result containing the correct number of issues.
+    """
     mock_mcp_github["list_issues"].return_value = [
         {"number": 1, "title": "Test issue"}
     ]
@@ -205,7 +244,9 @@ async def test_list_issues(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_list_pull_requests(mock_mcp_github):
-    """Test listing pull requests."""
+    """
+    Tests that listing pull requests returns the expected results and calls the underlying API mock once.
+    """
     mock_mcp_github["list_pull_requests"].return_value = [
         {"number": 1, "title": "Test PR"}
     ]
@@ -222,7 +263,12 @@ async def test_list_pull_requests(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_create_branch(mock_mcp_github):
-    """Test branch creation."""
+    """
+    Tests asynchronous creation of a new branch using the GitHub tools interface.
+    
+    Verifies that the branch is created with the expected reference, the operation succeeds,
+    and the underlying MCP GitHub API function is called exactly once.
+    """
     mock_mcp_github["create_branch"].return_value = {
         "ref": "refs/heads/feature",
         "object": {"sha": "abc123"}
@@ -241,7 +287,9 @@ async def test_create_branch(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_fork_repository(mock_mcp_github):
-    """Test repository forking."""
+    """
+    Tests that the fork_repository function successfully forks a repository and returns the expected fork details.
+    """
     mock_mcp_github["fork_repository"].return_value = {
         "id": 456,
         "name": "test-repo",
@@ -256,7 +304,11 @@ async def test_fork_repository(mock_mcp_github):
 
 @pytest.mark.asyncio
 async def test_merge_pull_request(mock_mcp_github):
-    """Test pull request merging."""
+    """
+    Tests merging a pull request using the mocked MCP GitHub API.
+    
+    Asserts that the merge operation succeeds, the merged status is True, and the mock API is called once.
+    """
     mock_mcp_github["merge_pull_request"].return_value = {
         "sha": "abc123",
         "merged": True
@@ -286,7 +338,12 @@ async def test_error_handling():
         assert "API Error" in result["error"]
 
 def test_model_validation():
-    """Test model validation."""
+    """
+    Validates the instantiation and default values of GitHub-related data models.
+    
+    Ensures that the RepositoryCreate, IssueCreate, PullRequestCreate, and FileContent
+    models accept valid input and set default or optional fields as expected.
+    """
     # Valid repository creation
     repo = RepositoryCreate(name="test-repo")
     assert repo.name == "test-repo"
