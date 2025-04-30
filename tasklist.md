@@ -22,8 +22,8 @@ This tasklist provides a structured approach to addressing the gaps identified i
 
 | Task | Description | Complexity | % Complete | Focus |
 |------|-------------|-----------|------------|-------|
-| **7. Implement Specialized Agents** | Implement missing specialized agents (UXDesignerAgent, CodifierAgent, UATAgent, etc.) | High | 20% | Agent System |
-| **8. Implement Agent-LLM Mapping** | Create system to enforce the Agent-LLM mapping specified in playbooks | Medium | 10% | Agent System |
+| **7. Implement Specialized Agents** | Implement missing specialized agents (UXDesignerAgent, CodifierAgent, UATAgent, etc.) | High | 100% | Agent System |
+| **8. Implement Agent-LLM Mapping** | Create system to enforce the Agent-LLM mapping specified in playbooks | Medium | 100% | Agent System |
 | **9. Enhance Agent State Management** | Improve state persistence and context passing between agent operations | Medium | 40% | Agent System |
 | **10. Implement Agent Communication Patterns** | Enhance agent communication for complex interaction patterns | High | 30% | Agent System |
 
