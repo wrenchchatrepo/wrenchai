@@ -12,11 +12,17 @@ class ConnectionManager:
     """Manages WebSocket connections and broadcasts."""
     
     def __init__(self):
-        """Initialize connection manager."""
+        """
+        Initializes the connection manager with an empty set of active WebSocket connections.
+        """
         self.active_connections: Dict[str, List[WebSocket]] = {}
         
     async def connect(self, websocket: WebSocket, client_id: str):
-        """Connect a client."""
+        """
+        Accepts a WebSocket connection and registers it under the specified client ID.
+        
+        Adds the WebSocket to the list of active connections for the client.
+        """
         await websocket.accept()
         if client_id not in self.active_connections:
             self.active_connections[client_id] = []
@@ -24,7 +30,11 @@ class ConnectionManager:
         logger.info(f"Client {client_id} connected")
         
     async def disconnect(self, websocket: WebSocket, client_id: str):
-        """Disconnect a client."""
+        """
+        Removes a WebSocket connection from the active connections for a given client.
+        
+        If the client has no remaining active connections after removal, the client entry is deleted.
+        """
         if client_id in self.active_connections:
             self.active_connections[client_id].remove(websocket)
             if not self.active_connections[client_id]:
@@ -32,7 +42,11 @@ class ConnectionManager:
         logger.info(f"Client {client_id} disconnected")
         
     async def broadcast(self, message: dict, client_id: str):
-        """Broadcast message to specific client."""
+        """
+        Sends a JSON message to all active WebSocket connections for a specific client.
+        
+        If sending fails for any connection, the connection is removed from the client's active connections.
+        """
         if client_id in self.active_connections:
             disconnected = []
             for connection in self.active_connections[client_id]:
@@ -55,7 +69,11 @@ class ConnectionManager:
         result: dict = None,
         error: dict = None
     ):
-        """Broadcast task update to all connected clients."""
+        """
+        Broadcasts a task update to all connected clients.
+        
+        Constructs a task update message containing the task ID, status, progress, optional message, result, error, and a UTC timestamp, then sends it to every connected client.
+        """
         update = {
             "task_id": task_id,
             "status": status,
@@ -71,7 +89,13 @@ class ConnectionManager:
             await self.broadcast(update, client_id)
             
     async def send_error(self, websocket: WebSocket, message: str):
-        """Send error message to specific connection."""
+        """
+        Sends an error message with a timestamp to a specific WebSocket connection.
+        
+        Args:
+            websocket: The WebSocket connection to send the error message to.
+            message: The error message content.
+        """
         try:
             await websocket.send_json({
                 "type": "error",

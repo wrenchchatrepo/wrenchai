@@ -12,14 +12,27 @@ class TaskMonitor:
     """Real-time task monitor component."""
     
     def __init__(self, api_url: str = "http://localhost:8000"):
-        """Initialize task monitor."""
+        """
+        Initializes the TaskMonitor with a WebSocket URL and error handler.
+        
+        Args:
+            api_url: The base API URL to connect for task monitoring. Defaults to "http://localhost:8000".
+        """
         self.api_url = api_url.replace("http", "ws")
         self.ws = None
         self.error_handler = ErrorHandler()
         
     @with_error_handling()
     async def connect_task(self, task_id: str):
-        """Connect to task WebSocket."""
+        """
+        Establishes an asynchronous WebSocket connection for real-time updates of a specific task.
+        
+        Args:
+            task_id: The unique identifier of the task to monitor.
+        
+        Returns:
+            True if the WebSocket connection is successfully established.
+        """
         self.ws = await websockets.connect(
             f"{self.api_url}/api/v1/ws/tasks/{task_id}"
         )
@@ -27,14 +40,26 @@ class TaskMonitor:
             
     @with_error_handling()
     async def connect_agent_tasks(self, agent_id: str):
-        """Connect to agent's tasks WebSocket."""
+        """
+        Asynchronously connects to the WebSocket endpoint for monitoring all tasks of a specific agent.
+        
+        Args:
+            agent_id: The unique identifier of the agent whose tasks will be monitored.
+        
+        Returns:
+            True if the connection is successfully established.
+        """
         self.ws = await websockets.connect(
             f"{self.api_url}/api/v1/ws/agents/{agent_id}/tasks"
         )
         return True
             
     async def disconnect(self):
-        """Disconnect from WebSocket."""
+        """
+        Closes the active WebSocket connection and resets the connection state.
+        
+        If an error occurs during disconnection, it is handled by the error handler.
+        """
         if self.ws:
             try:
                 await self.ws.close()
@@ -45,7 +70,12 @@ class TaskMonitor:
             
     @with_error_handling()
     async def send_ping(self):
-        """Send ping to keep connection alive."""
+        """
+        Sends a ping message over the WebSocket connection to keep it alive.
+        
+        Returns:
+            True if a pong response is received, False otherwise.
+        """
         if self.ws:
             await self.ws.send(json.dumps({"type": "ping"}))
             response = await self.ws.recv()
@@ -53,7 +83,11 @@ class TaskMonitor:
         return False
         
     def render_task_progress(self, task: Dict[str, Any]):
-        """Render task progress UI."""
+        """
+        Displays the progress and details of a task in the Streamlit UI.
+        
+        Shows task type, ID, progress percentage, status with color-coded icon, optional message, and expandable sections for result or error details.
+        """
         try:
             with st.container():
                 # Header
@@ -92,7 +126,14 @@ class TaskMonitor:
                     
     @with_error_handling()
     async def monitor_task(self, task_id: str):
-        """Monitor single task with real-time updates."""
+        """
+        Asynchronously monitors a single task, receiving real-time updates via WebSocket and rendering progress in the Streamlit UI.
+        
+        Continuously listens for task status updates, updates the UI accordingly, and exits when the task is completed or failed. Handles connection closures with retry logic and ensures clean disconnection on exit.
+        
+        Args:
+            task_id: The unique identifier of the task to monitor.
+        """
         if await self.connect_task(task_id):
             try:
                 placeholder = st.empty()
@@ -122,7 +163,11 @@ class TaskMonitor:
                 
     @with_error_handling()
     async def monitor_agent_tasks(self, agent_id: str):
-        """Monitor agent's tasks with real-time updates."""
+        """
+        Monitors all tasks for a given agent in real time via WebSocket and updates the UI.
+        
+        Continuously receives task updates for the specified agent, maintains the latest state for each task, and renders their progress in the Streamlit interface. Handles connection closures with retry logic and ensures clean disconnection on exit.
+        """
         if await self.connect_agent_tasks(agent_id):
             try:
                 tasks_state = {}
@@ -156,7 +201,12 @@ class TaskMonitor:
                 await self.disconnect()
 
 def render_task_monitor(task_id: Optional[str] = None, agent_id: Optional[str] = None):
-    """Render task monitor component."""
+    """
+    Renders the real-time task monitoring component in Streamlit for a specific task or agent.
+    
+    If a task ID is provided, displays live progress for that task. If an agent ID is provided,
+    displays live progress for all tasks associated with the agent.
+    """
     monitor = TaskMonitor(st.session_state.get("api_url", "http://localhost:8000"))
     
     if task_id:
