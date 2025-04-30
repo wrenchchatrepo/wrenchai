@@ -186,6 +186,20 @@ async def run_playbook(data: Dict[str, Any], background_tasks: BackgroundTasks):
         if 'input' not in data:
             raise HTTPException(status_code=400, detail="Missing 'input' field")
             
+        # Validate input data against expected schema
+        from core.playbook_schema import Playbook
+        
+        try:
+            # The playbook name is used to locate the actual playbook file
+            playbook_name = data['playbook']
+            playbook_path = os.path.join(CONFIG_DIR, "playbooks", f"{playbook_name}.yaml")
+            
+            # Validate that the playbook exists
+            if not os.path.exists(playbook_path):
+                raise HTTPException(status_code=404, detail=f"Playbook not found: {playbook_name}")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid playbook request: {str(e)}")
+            
         # Generate a unique run ID
         run_id = f"run_{int(time.time())}"
         
@@ -198,6 +212,8 @@ async def run_playbook(data: Dict[str, Any], background_tasks: BackgroundTasks):
         )
         
         return {"status": "started", "run_id": run_id}
+    except HTTPException:
+        raise
     except Exception as e:
         logging.error(f"Error running playbook: {e}")
         raise HTTPException(status_code=500, detail=str(e))

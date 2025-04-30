@@ -285,10 +285,24 @@ class AgentManager:
                     attached_mcp_servers.append(server)
                     logging.info(f"Attached MCP server '{server_name}' to agent with role '{role_name}'")
         
+        # Check for LLM override from agent-LLM mapping
+        model = role_config['model']
+        try:
+            # Import here to avoid circular imports
+            from core.agents.agent_llm_mapping import agent_llm_manager
+            llm_id = agent_llm_manager.get_agent_llm(role_name)
+            if llm_id:
+                # Override the model with the mapped LLM
+                model = llm_id
+                logging.info(f"Using LLM '{llm_id}' for agent with role '{role_name}' (from mapping)")
+        except ImportError:
+            # If the mapping module is not available, use default model
+            pass
+        
         # Create the agent instance
         agent = AgentWrapper[AgentDependencies, Dict[str, Any]](
             role=role_name,
-            model=role_config['model'],
+            model=model,
             instructions=role_config['system_prompt'],
             dependencies=dependencies,
             mcp_servers=attached_mcp_servers
@@ -297,6 +311,14 @@ class AgentManager:
         # Store the agent
         agent_id = id(agent)
         self.agents[agent_id] = agent
+        
+        # Initialize agent state if available
+        try:
+            from core.agents.agent_state import agent_state_manager
+            agent_state_manager.get_agent_state(str(agent_id)).agent_name = role_name
+        except ImportError:
+            # If the state manager is not available, continue without it
+            pass
         
         return agent
     
@@ -351,6 +373,16 @@ class AgentManager:
         
         # Create workflow context
         context = {"input": input_data, "output": {}, "state": {}}
+        
+        # Check for agent-LLM mappings in the playbook
+        try:
+            from core.agents.agent_llm_mapping import agent_llm_manager
+            if 'agent_llms' in playbook:
+                # Register the agent-LLM mappings from the playbook
+                agent_llm_manager.add_mappings_from_playbook(playbook['agent_llms'], playbook_name)
+                logging.info(f"Registered agent-LLM mappings from playbook {playbook_name}")
+        except ImportError:
+            logging.warning("Agent-LLM mapping module not available")
         
         # Initialize agents required for this playbook
         workflow_agents = {}

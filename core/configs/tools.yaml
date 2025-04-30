@@ -1,121 +1,266 @@
-tool_dependencies:
-- primary: supabase
-  requires: mcp
-- primary: github_mcp
-  requires: mcp
-- primary: puppeteer
-  requires: mcp
-- primary: sequential_thinking
-  requires: mcp
-- primary: memory
-  requires: mcp
-- primary: browser_tools
-  requires: mcp
-- primary: mac_apps
-  requires: mcp
-- primary: docker_mcp
-  requires: mcp
-- primary: brave_search
-  requires: mcp
-- primary: playwright
-  requires: mcp
-- primary: stripe
-  requires: mcp
-- primary: chromadb
-  requires: mcp
-- primary: google_calendar
-  requires: mcp
-- primary: gmail
-  requires: mcp
-- primary: secrets_manager
-  requires: code_execution
-- primary: data_analysis
-  requires: code_execution
+# Tool Configuration for WrenchAI
 
 tools:
-- name: web_search
-  description: Search the web for information
-  implementation: core.tools.web_search.search
-  parameters:
-    query: string
-    max_results: integer
+  - name: web_search
+    description: |
+      Performs web searches and returns results.
+      Use this tool to find information from the internet.
+    implementation: core.tools.web_search.web_search
+    parameters:
+      query:
+        description: The search query
+        type: string
+        required: true
+      num_results:
+        description: Number of results to return
+        type: integer
+        default: 5
+      
+  - name: code_execution
+    description: |
+      Executes code in a secure environment.
+      Supports Python, JavaScript, and Bash code.
+    implementation: core.tools.code_execution.execute_code
+    parameters:
+      code:
+        description: Code to execute
+        type: string
+        required: true
+      language:
+        description: Programming language
+        type: string
+        default: python
+        choices: [python, javascript, bash]
+      timeout:
+        description: Maximum execution time in seconds
+        type: integer
+        default: 30
 
-- name: secrets_manager
-  description: Manage secure credentials and secrets
-  implementation: core.tools.secrets_manager.manage_secrets
-  parameters:
-    action: string
-    key: string
-    value: string
+  - name: github_tool
+    description: |
+      Interacts with GitHub repositories.
+      Supports repository creation, file operations, and PRs.
+    implementation: core.tools.github_tool.github_operation
+    parameters:
+      operation:
+        description: Operation to perform
+        type: string
+        required: true
+        choices: [create_repo, create_file, create_pr, list_repos, list_files]
+      repo:
+        description: Repository name or URL
+        type: string
+      file_path:
+        description: Path to file within repository
+        type: string
+      content:
+        description: Content for file operations
+        type: string
+      commit_message:
+        description: Commit message
+        type: string
 
-- name: memory_manager
-  description: Manage persistent memory for agents
-  implementation: core.tools.memory.manage_memory
-  parameters:
-    action: string
-    key: string
-    data: object
+  - name: github_mcp
+    description: |
+      Manages GitHub Model Context Protocol server for enhanced repository interactions.
+    implementation: core.tools.github_mcp.github_mcp_operation
+    parameters:
+      operation:
+        description: Operation to perform
+        type: string
+        required: true
+        choices: [start_server, stop_server, get_status, get_metrics, update_config, health_check]
+      config:
+        description: Server configuration
+        type: object
 
-- name: code_generation
-  description: Generate code, tests, and documentation
-  implementation: core.tools.code_generation.generate
-  parameters:
-    spec: object
-    language: string
-    framework: string
-    output_type: string
-    context: object
+  - name: memory
+    description: |
+      Stores and retrieves information from memory.
+      Use for maintaining context across interactions.
+    implementation: core.tools.memory.memory_operation
+    parameters:
+      operation:
+        description: Operation to perform
+        type: string
+        required: true
+        choices: [store, retrieve, delete, list, clear]
+      key:
+        description: Memory key
+        type: string
+      value:
+        description: Value to store
+        type: any
+      namespace:
+        description: Memory namespace
+        type: string
+        default: default
 
-- name: code_execution
-  description: Execute code snippets
-  implementation: core.tools.code_execution.execute
-  parameters:
-    code: string
-    language: string
-    timeout: integer
+  - name: code_generation
+    description: |
+      Generates code based on requirements and constraints.
+      Supports multiple programming languages and frameworks.
+    implementation: core.tools.code_generation.generate_code
+    parameters:
+      requirements:
+        description: Description of code requirements
+        type: string
+        required: true
+      language:
+        description: Programming language
+        type: string
+        required: true
+      framework:
+        description: Framework to use
+        type: string
+      style_guide:
+        description: Coding style to follow
+        type: string
 
-- name: github_tool
-  description: Interact with GitHub repositories
-  implementation: core.tools.github_tool.github_action
-  parameters:
-    action: string
-    payload: object
-    repo: string
+  - name: puppeteer
+    description: |
+      Controls a headless browser using Puppeteer.
+      Supports web testing, scraping, and automation.
+    implementation: core.tools.puppeteer.puppeteer_action
+    parameters:
+      action:
+        description: Action to perform
+        type: string
+        required: true
+        choices: [navigate, click, type, screenshot, evaluate, waitForSelector, getText, getAttribute]
+      url:
+        description: URL for navigation
+        type: string
+      options:
+        description: Action-specific options
+        type: object
 
-- name: github_mcp
-  description: MCP server for GitHub operations
-  implementation: core.tools.github_mcp.github_mcp_server
-  parameters:
-    action: string
-    args: object
+  - name: browser_tools
+    description: |
+      Provides tools for browser monitoring and interaction.
+      Captures console logs, network requests, and screenshots.
+    implementation: core.tools.browser_tools.browser_operation
+    parameters:
+      operation:
+        description: Operation to perform
+        type: string
+        required: true
+        choices: [get_console_logs, get_console_errors, get_network_error_logs, get_network_success_logs, take_screenshot, get_selected_element, wipe_logs]
 
-- name: puppeteer
-  description: Browser automation with Puppeteer
-  implementation: core.tools.puppeteer.puppeteer_action
-  parameters:
-    action: string
-    url: string
-    options: object
+  - name: secrets_manager
+    description: |
+      Manages and retrieves API keys and credentials securely.
+    implementation: core.tools.secrets_manager.secrets_operation
+    parameters:
+      operation:
+        description: Operation to perform
+        type: string
+        required: true
+        choices: [get, list, check]
+      key:
+        description: Secret key name
+        type: string
+      service:
+        description: Service name
+        type: string
 
-- name: browser_tools
-  description: Browser interaction tools
-  implementation: core.tools.browser_tools.browser_action
-  parameters:
-    action: string
-    selector: string
-    value: string
+  - name: bayesian_update
+    description: |
+      Updates agent beliefs using Bayesian reasoning.
+    implementation: core.tools.bayesian_tools.bayesian_update
+    parameters:
+      model:
+        description: Belief model name
+        type: string
+        required: true
+      evidence:
+        description: New evidence
+        type: object
+        required: true
+      sample_kwargs:
+        description: Sampling parameters
+        type: object
 
-- name: bayesian_update
-  description: Update Bayesian beliefs using PyMC
-  implementation: core.tools.bayesian_tools.update_beliefs
-  parameters:
-    evidence: object
-    model: string
+  - name: data_analysis
+    description: |
+      Analyzes data using statistical methods and visualization.
+    implementation: core.tools.data_analysis.analyze_data
+    parameters:
+      data:
+        description: Data to analyze
+        type: array
+        required: true
+      analysis_type:
+        description: Type of analysis to perform
+        type: string
+        required: true
+        choices: [summary, correlation, regression, clustering, visualization]
+      options:
+        description: Analysis options
+        type: object
 
-- name: data_analysis
-  description: Analyze data using various methods
-  implementation: core.tools.data_analysis.analyze_data
-  parameters:
-    data: object
-    method: string
-    options: object
+  - name: test_tool
+    description: |
+      Runs tests on code and generates reports.
+    implementation: core.tools.test_tool.run_tests
+    parameters:
+      test_suite:
+        description: Test suite name or definition
+        type: string
+        required: true
+      environment:
+        description: Test environment configuration
+        type: object
+      parallel:
+        description: Whether to run tests in parallel
+        type: boolean
+        default: false
+
+  - name: database_tool
+    description: |
+      Interacts with databases to query and manipulate data.
+    implementation: core.tools.database_tool.database_operation
+    parameters:
+      operation:
+        description: Operation to perform
+        type: string
+        required: true
+        choices: [query, execute, list_tables, describe_table, connect, disconnect]
+      connection_string:
+        description: Database connection string
+        type: string
+      query:
+        description: SQL query to execute
+        type: string
+      params:
+        description: Query parameters
+        type: object
+
+  - name: monitoring_tool
+    description: |
+      Monitors system performance and agent activities.
+    implementation: core.tools.monitoring_tool.monitor
+    parameters:
+      target:
+        description: Target to monitor
+        type: string
+        required: true
+        choices: [agent, system, workflow, resources]
+      metrics:
+        description: Metrics to collect
+        type: array
+      duration:
+        description: Monitoring duration in seconds
+        type: integer
+        default: 60
+
+# Tool dependencies
+tool_dependencies:
+  - primary: code_execution
+    requires: python
+  - primary: github_tool
+    requires: github_api
+  - primary: puppeteer
+    requires: nodejs
+  - primary: browser_tools
+    requires: puppeteer

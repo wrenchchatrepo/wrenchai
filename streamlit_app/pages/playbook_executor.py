@@ -20,16 +20,20 @@ class DocusaurusPlaybookExecutor:
     async def execute_playbook(self, playbook_path: str) -> Dict[str, Any]:
         """Execute playbook with proper error handling and progress tracking."""
         try:
-            # Load and validate playbook
-            playbook = self._load_playbook(playbook_path)
-            if not self._validate_playbook_format(playbook):
-                st.error("Invalid playbook format")
-                return {"success": False, "error": "Invalid playbook format"}
+            # Use the new playbook validator
+            from core.playbook_validator import perform_full_validation
+            from core.playbook_schema import Playbook
+            
+            valid, error, playbook = perform_full_validation(playbook_path)
+            
+            if not valid:
+                st.error(f"Invalid playbook: {error}")
+                return {"success": False, "error": error}
                 
             # Convert to API format and execute
-            api_payload = self._convert_to_api_format(playbook)
+            api_payload = playbook.to_api_format()
             response = await self.session.post(
-                f"{self.api_url}/api/v1/playbooks/execute",
+                f"{self.api_url}/api/playbooks/run",  # Using the correct endpoint path
                 json=api_payload,
                 timeout=30.0
             )
@@ -37,11 +41,13 @@ class DocusaurusPlaybookExecutor:
             
             # Parse response
             result = response.json()
-            if result.get("success"):
+            if result.get("status") == "started":
                 st.success("Playbook execution started successfully")
+                result["success"] = True
                 return result
             else:
                 st.error(f"Playbook execution failed: {result.get('error')}")
+                result["success"] = False
                 return result
                 
         except httpx.TimeoutException:
@@ -62,29 +68,6 @@ class DocusaurusPlaybookExecutor:
         finally:
             await self.session.aclose()
             
-    def _load_playbook(self, playbook_path: str) -> Dict[str, Any]:
-        """Load playbook YAML file."""
-        with open(playbook_path) as f:
-            return yaml.safe_load(f)
-            
-    def _validate_playbook_format(self, playbook: Dict[str, Any]) -> bool:
-        """Validate playbook has required fields."""
-        required_fields = ["name", "description", "steps", "agents"]
-        return all(field in playbook for field in required_fields)
-        
-    def _convert_to_api_format(self, playbook: Dict[str, Any]) -> Dict[str, Any]:
-        """Convert playbook to API payload format."""
-        return {
-            "name": playbook["name"],
-            "description": playbook["description"],
-            "steps": playbook["steps"],
-            "agents": playbook["agents"],
-            "metadata": {
-                "started_at": datetime.utcnow().isoformat(),
-                "source": "streamlit"
-            }
-        }
-
 def main():
     """Main Streamlit app."""
     st.title("Docusaurus Portfolio Playbook Executor")
