@@ -1,48 +1,125 @@
-"""Agent and task schemas for request/response handling."""
+"""Agent schemas with AI-powered validation and capabilities."""
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Optional, List, Dict
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, ConfigDict
+from pydantic_ai import AIField, GraphField
+from pydantic_ai.validators import SemanticValidator, ContentValidator
+from pydantic_ai.types import AIStr, AIDict
 
-from app.schemas.base import BaseAPISchema, BaseSchema
+from app.schemas.base import BaseAISchema, BaseResponse
 
-class AgentBase(BaseSchema):
-    """Base schema for agent data."""
-    role: str = Field(..., description="Agent's role/type (e.g., 'inspector', 'journey', 'dba')")
-    config: Dict[str, Any] = Field(default_factory=dict, description="Agent-specific configuration")
-    is_active: bool = Field(True, description="Whether the agent is currently active")
+class AgentConfig(BaseAISchema):
+    """Configuration schema for agents with AI validation."""
+    capabilities: List[str] = AIField(
+        description="List of agent capabilities",
+        validate_semantic=True,
+        validate_relationships=True
+    )
+    llm_provider: str = AIField(
+        description="LLM provider for the agent",
+        validate_semantic=True,
+        allowed_values=["claude", "gpt4", "gemini"]
+    )
+    parameters: AIDict = AIField(
+        description="Agent-specific parameters",
+        validate_schema=True
+    )
 
-    @field_validator("role")
-    def validate_role(cls, v: str) -> str:
-        """Validate agent role."""
-        allowed_roles = {
-            "inspector", "journey", "dba", "test_engineer",
-            "devops", "infosec", "ux_designer", "paralegal",
-            "codifier", "data_scientist", "gcp_architect",
-            "web_researcher"
-        }
-        if v not in allowed_roles:
-            raise ValueError(f"Invalid role. Must be one of: {', '.join(sorted(allowed_roles))}")
-        return v
+class AgentBase(BaseAISchema):
+    """Base schema for agent with AI-powered validation."""
+    role: AIStr = AIField(
+        description="Role of the agent",
+        validate_semantic=True,
+        min_length=3
+    )
+    config: AgentConfig
+    is_active: bool = True
+    
+    # AI-powered content validation
+    content_validator = ContentValidator(
+        check_pii=True,
+        check_sensitive_data=True,
+        check_content_safety=True
+    )
+    
+    # Graph-based relationship validation
+    relationships = GraphField(
+        validate_dependencies=True,
+        validate_circular_refs=True
+    )
 
 class AgentCreate(AgentBase):
     """Schema for creating a new agent."""
-    owner_id: UUID = Field(..., description="ID of the user who owns this agent")
+    owner_id: UUID = AIField(
+        description="ID of the agent owner",
+        validate_relationships=True
+    )
 
-class AgentUpdate(BaseSchema):
+class AgentUpdate(BaseAISchema):
     """Schema for updating an agent."""
-    role: str | None = None
-    config: Dict[str, Any] | None = None
-    is_active: bool | None = None
+    role: Optional[AIStr] = AIField(
+        description="Updated role of the agent",
+        validate_semantic=True,
+        min_length=3
+    )
+    config: Optional[AgentConfig] = None
+    is_active: Optional[bool] = None
 
-class AgentResponse(AgentBase, BaseAPISchema):
-    """Schema for agent information in API responses."""
+class Agent(AgentBase):
+    """Complete agent schema with all fields."""
+    id: UUID
     owner_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    
+    # AI-powered relationship tracking
+    tasks: List["Task"] = GraphField(
+        description="Tasks assigned to the agent",
+        validate_relationships=True,
+        track_dependencies=True
+    )
+    
+    # Metadata with AI validation
+    metadata: Dict[str, AIStr] = AIField(
+        description="Additional metadata",
+        validate_schema=True,
+        validate_content=True
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "role": "code_reviewer",
+                "config": {
+                    "capabilities": ["code_review", "quality_assurance"],
+                    "llm_provider": "claude",
+                    "parameters": {
+                        "review_depth": "detailed",
+                        "focus_areas": ["security", "performance"]
+                    }
+                },
+                "is_active": True,
+                "owner_id": "550e8400-e29b-41d4-a716-446655440000",
+                "created_at": "2024-03-21T12:00:00",
+                "updated_at": "2024-03-21T12:00:00",
+                "metadata": {
+                    "version": "1.0",
+                    "specialization": "python_backend"
+                }
+            }
+        }
+    )
 
-class AgentWithTasks(AgentResponse):
-    """Schema for agent information including assigned tasks."""
-    tasks: List["TaskResponse"]
+class AgentResponse(BaseResponse[Agent]):
+    """Response schema for agent operations."""
+    pass
+
+# Circular import resolution
+from .task import Task  # noqa
+Agent.model_rebuild()  # Update forward refs
 
 # Task schemas
 class TaskBase(BaseSchema):

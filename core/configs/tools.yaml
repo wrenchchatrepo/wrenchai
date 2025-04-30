@@ -27,156 +27,95 @@ tool_dependencies:
   requires: mcp
 - primary: gmail
   requires: mcp
+- primary: secrets_manager
+  requires: code_execution
+- primary: data_analysis
+  requires: code_execution
+
 tools:
-- description: Core Model Context Protocol operations
-  implementation: core.tools.mcp.standard_operations
-  name: mcp
-  parameters:
-    context_id: string
-    data: object
-    operation: string
-    query: string
-    server: string
-- description: Supabase-specific MCP implementation for vector storage and retrieval
-  implementation: core.tools.mcp_servers.supabase_operations
-  name: supabase
-  parameters:
-    data: object
-    filters: object
-    operation: string
-    table: string
-- description: GitHub operations through MCP
-  implementation: core.tools.mcp_servers.github_operations
-  name: github_mcp
-  parameters:
-    data: object
-    operation: string
-    owner: string
-    repo: string
-- description: Web automation and scraping with Puppeteer
-  implementation: core.tools.mcp_servers.puppeteer_operations
-  name: puppeteer
-  parameters:
-    operation: string
-    script: string
-    url: string
-- description: Sequential reasoning tool for complex problem solving
-  implementation: core.tools.mcp_servers.sequential_thinking_operations
-  name: sequential_thinking
-  parameters:
-    operation: string
-    problem: string
-    steps: integer
-- description: Long-term memory storage and retrieval
-  implementation: core.tools.mcp_servers.memory_operations
-  name: memory
-  parameters:
-    data: object
-    memory_id: string
-    operation: string
-- description: Browser-based tools for web interactions
-  implementation: core.tools.mcp_servers.browser_tools_operations
-  name: browser_tools
-  parameters:
-    action: string
-    operation: string
-    url: string
-- description: Integration with macOS applications
-  implementation: core.tools.mcp_servers.mac_apps_operations
-  name: mac_apps
-  parameters:
-    app: string
-    command: string
-    operation: string
-- description: Docker container management
-  implementation: core.tools.mcp_servers.docker_operations
-  name: docker_mcp
-  parameters:
-    command: string
-    container: string
-    operation: string
-- description: Private search using Brave Search
-  implementation: core.tools.mcp_servers.brave_search_operations
-  name: brave_search
-  parameters:
-    filters: object
-    operation: string
-    query: string
-- description: Advanced web automation with Playwright
-  implementation: core.tools.mcp_servers.playwright_operations
-  name: playwright
-  parameters:
-    operation: string
-    script: string
-    url: string
-- description: Payment processing with Stripe
-  implementation: core.tools.mcp_servers.stripe_operations
-  name: stripe
-  parameters:
-    action: string
-    data: object
-    operation: string
-- description: ChromaDB vector database integration
-  implementation: core.tools.mcp_servers.chromadb_operations
-  name: chromadb
-  parameters:
-    collection: string
-    metadata: object
-    operation: string
-    vectors: array
-- description: Google Calendar integration
-  implementation: core.tools.mcp_servers.google_calendar_operations
-  name: google_calendar
-  parameters:
-    action: string
-    event: object
-    operation: string
-- description: Gmail integration for email operations
-  implementation: core.tools.mcp_servers.gmail_operations
-  name: gmail
-  parameters:
-    action: string
-    email: object
-    operation: string
-- description: Search the web for information
+- name: web_search
+  description: Search the web for information
   implementation: core.tools.web_search.search
-  name: web_search
   parameters:
-    max_results: integer
     query: string
-- description: Execute code snippets
-  implementation: core.tools.code_execution.execute
-  name: code_execution
-  parameters:
-    code: string
-    language: string
-    timeout: integer
-- description: Interact with GitHub repositories
-  implementation: core.tools.github_tool.github_action
-  name: github_tool
+    max_results: integer
+
+- name: secrets_manager
+  description: Manage secure credentials and secrets
+  implementation: core.tools.secrets_manager.manage_secrets
   parameters:
     action: string
-    payload: object
-    repo: string
-- description: Update Bayesian beliefs using PyMC
-  implementation: core.tools.bayesian_tools.update_beliefs
-  name: bayesian_update
+    key: string
+    value: string
+
+- name: memory_manager
+  description: Manage persistent memory for agents
+  implementation: core.tools.memory.manage_memory
   parameters:
-    evidence: object
-    model: string
-- description: Analyze documents for structure, content, and code
-  implementation: core.tools.document_analyzer.analyze_document
-  name: document_analyzer
-  parameters:
-    analysis_type: string
-    file_path: string
-    options: object
-- description: Generate code, tests, and documentation
+    action: string
+    key: string
+    data: object
+
+- name: code_generation
+  description: Generate code, tests, and documentation
   implementation: core.tools.code_generation.generate
-  name: code_generation
   parameters:
     spec: object
     language: string
     framework: string
     output_type: string
     context: object
+
+- name: code_execution
+  description: Execute code snippets
+  implementation: core.tools.code_execution.execute
+  parameters:
+    code: string
+    language: string
+    timeout: integer
+
+- name: github_tool
+  description: Interact with GitHub repositories
+  implementation: core.tools.github_tool.github_action
+  parameters:
+    action: string
+    payload: object
+    repo: string
+
+- name: github_mcp
+  description: MCP server for GitHub operations
+  implementation: core.tools.github_mcp.github_mcp_server
+  parameters:
+    action: string
+    args: object
+
+- name: puppeteer
+  description: Browser automation with Puppeteer
+  implementation: core.tools.puppeteer.puppeteer_action
+  parameters:
+    action: string
+    url: string
+    options: object
+
+- name: browser_tools
+  description: Browser interaction tools
+  implementation: core.tools.browser_tools.browser_action
+  parameters:
+    action: string
+    selector: string
+    value: string
+
+- name: bayesian_update
+  description: Update Bayesian beliefs using PyMC
+  implementation: core.tools.bayesian_tools.update_beliefs
+  parameters:
+    evidence: object
+    model: string
+
+- name: data_analysis
+  description: Analyze data using various methods
+  implementation: core.tools.data_analysis.analyze_data
+  parameters:
+    data: object
+    method: string
+    options: object

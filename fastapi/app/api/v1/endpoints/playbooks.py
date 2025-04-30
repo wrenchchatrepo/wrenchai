@@ -1,13 +1,21 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from uuid import uuid4
+from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.agents import SuperAgent, InspectorAgent, JourneyAgent
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
 from app.schemas.responses import ResponseModel
+from app.core.security import get_current_user
+from app.db.session import get_db
+from app.models.user import User
+from app.models.agent import Agent
+from app.models.task import Task, TaskStatus
+from app.schemas.task import TaskCreate
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -38,6 +46,32 @@ class PlaybookExecutionResponse(BaseModel):
     task_id: str = Field(..., description="Unique task ID for tracking execution")
     status: str = Field(..., description="Current status of the execution")
     message: str = Field(..., description="Status message")
+
+class PlaybookStep(BaseModel):
+    """Model for a playbook step."""
+    name: str
+    action: str
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+class PlaybookAgent(BaseModel):
+    """Model for a playbook agent."""
+    type: str
+    config: Dict[str, Any] = Field(default_factory=dict)
+
+class PlaybookExecuteRequest(BaseModel):
+    """Request model for playbook execution."""
+    name: str
+    description: str
+    steps: List[PlaybookStep]
+    agents: List[PlaybookAgent]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class PlaybookExecuteResponse(BaseModel):
+    """Response model for playbook execution."""
+    success: bool
+    playbook_id: str
+    message: str = ""
+    error: str = ""
 
 async def get_agents(
     agent_names: List[str],
@@ -191,4 +225,112 @@ async def get_execution_status(task_id: str) -> ResponseModel[Dict]:
         success=True,
         message="Task status retrieved successfully",
         data=task_statuses[task_id]
-    ) 
+    )
+
+async def initialize_agents(
+    db: AsyncSession,
+    agents_config: List[PlaybookAgent],
+    user: User
+) -> List[Agent]:
+    """Initialize required agents for playbook execution."""
+    initialized_agents = []
+    
+    for agent_config in agents_config:
+        # Create or get existing agent
+        agent = Agent(
+            type=agent_config.type,
+            config=agent_config.config,
+            user_id=user.id,
+            status="active"
+        )
+        db.add(agent)
+        await db.commit()
+        await db.refresh(agent)
+        initialized_agents.append(agent)
+        
+    return initialized_agents
+
+async def create_execution_tasks(
+    db: AsyncSession,
+    playbook_id: str,
+    steps: List[PlaybookStep],
+    agents: List[Agent]
+) -> List[Task]:
+    """Create tasks for each playbook step."""
+    tasks = []
+    
+    for i, step in enumerate(steps):
+        # Assign step to appropriate agent
+        agent = agents[i % len(agents)]  # Round-robin assignment
+        
+        task = Task(
+            type=step.action,
+            input_data={
+                "params": step.params,
+                "step_name": step.name,
+                "playbook_id": playbook_id
+            },
+            status=TaskStatus.pending,
+            agent_id=agent.id
+        )
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
+        tasks.append(task)
+        
+    return tasks
+
+@router.post("/execute", response_model=PlaybookExecuteResponse)
+async def execute_playbook(
+    request: PlaybookExecuteRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> PlaybookExecuteResponse:
+    """
+    Execute a playbook by initializing agents and creating tasks.
+    
+    Args:
+        request: Playbook execution request
+        background_tasks: FastAPI background tasks
+        db: Database session
+        current_user: Current authenticated user
+        
+    Returns:
+        Execution response with playbook ID
+    """
+    try:
+        # Generate playbook ID
+        playbook_id = f"pb_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Initialize agents
+        agents = await initialize_agents(db, request.agents, current_user)
+        logger.info(f"Initialized {len(agents)} agents for playbook {playbook_id}")
+        
+        # Create tasks
+        tasks = await create_execution_tasks(db, playbook_id, request.steps, agents)
+        logger.info(f"Created {len(tasks)} tasks for playbook {playbook_id}")
+        
+        # Store playbook metadata
+        metadata = {
+            **request.metadata,
+            "user_id": str(current_user.id),
+            "started_at": datetime.utcnow().isoformat(),
+            "total_steps": len(request.steps),
+            "agent_ids": [str(agent.id) for agent in agents],
+            "task_ids": [str(task.id) for task in tasks]
+        }
+        
+        # Return success response
+        return PlaybookExecuteResponse(
+            success=True,
+            playbook_id=playbook_id,
+            message=f"Playbook execution started with {len(tasks)} tasks"
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to execute playbook: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to execute playbook: {str(e)}"
+        ) 
