@@ -40,10 +40,10 @@ class AgentStateManager:
     """Manager for agent state."""
     
     def __init__(self, persistence_dir: Optional[str] = None):
-        """Initialize the agent state manager.
+        """
+        Initializes the AgentStateManager with in-memory state and optional persistence.
         
-        Args:
-            persistence_dir: Directory for state persistence (optional)
+        Creates internal dictionaries for agent states, shared state, and global state, sets up a persistence directory for saving agent states, and ensures thread safety with a reentrant lock.
         """
         self.agent_states: Dict[str, AgentState] = {}
         self.shared_state: Dict[str, AgentStateEntry] = {}
@@ -56,13 +56,14 @@ class AgentStateManager:
             os.makedirs(self.persistence_dir, exist_ok=True)
     
     def get_agent_state(self, agent_id: str) -> AgentState:
-        """Get the state for an agent, creating it if it doesn't exist.
+        """
+        Retrieves the AgentState for the specified agent, loading from persistence or creating a new state if necessary.
         
         Args:
-            agent_id: ID of the agent
-            
+            agent_id: Unique identifier of the agent.
+        
         Returns:
-            Agent state
+            The AgentState object associated with the agent.
         """
         with self._lock:
             if agent_id not in self.agent_states:
@@ -76,13 +77,11 @@ class AgentStateManager:
             return self.agent_states[agent_id]
     
     def _load_state(self, agent_id: str) -> Optional[AgentState]:
-        """Load agent state from persistence.
+        """
+        Loads the persisted state for the specified agent from disk.
         
-        Args:
-            agent_id: ID of the agent
-            
         Returns:
-            Agent state or None if not found
+            The AgentState object if found and successfully loaded; otherwise, None.
         """
         if not self.persistence_dir:
             return None
@@ -100,10 +99,10 @@ class AgentStateManager:
             return None
     
     def _save_state(self, agent_id: str):
-        """Save agent state to persistence.
+        """
+        Persists the specified agent's state to a JSON file in the persistence directory.
         
-        Args:
-            agent_id: ID of the agent
+        If the agent state does not exist or persistence is not configured, the method does nothing.
         """
         if not self.persistence_dir:
             return
@@ -122,17 +121,20 @@ class AgentStateManager:
     def set_state_entry(self, agent_id: str, key: str, value: Any, 
                        scope: str = "agent", visibility: str = "private",
                        ttl: Optional[int] = None, tags: Optional[List[str]] = None):
-        """Set a state entry for an agent.
-        
-        Args:
-            agent_id: ID of the agent
-            key: Entry key
-            value: Entry value
-            scope: Scope of the entry (agent, operation, workflow)
-            visibility: Visibility of the entry (private, shared, global)
-            ttl: Time-to-live in seconds (None for no expiration)
-            tags: Tags for categorizing the entry
         """
+                       Creates or updates a state entry for an agent with specified scope, visibility, TTL, and tags.
+                       
+                       Depending on the visibility, the entry is stored as private (agent-specific), shared (accessible to multiple agents), or global (accessible to all agents). Private entries update the agent's state metadata and are persisted to disk. Shared and global entries are managed in memory.
+                       
+                       Args:
+                           agent_id: Unique identifier of the agent.
+                           key: The key for the state entry.
+                           value: The value to associate with the key.
+                           scope: The logical scope of the entry (e.g., "agent", "operation", "workflow").
+                           visibility: Determines who can access the entry ("private", "shared", or "global").
+                           ttl: Optional time-to-live in seconds; if set, the entry expires after this duration.
+                           tags: Optional list of tags for categorizing the entry.
+                       """
         with self._lock:
             entry = AgentStateEntry(
                 key=key,
@@ -160,15 +162,10 @@ class AgentStateManager:
                 self._save_state(agent_id)
     
     def get_state_entry(self, agent_id: str, key: str, default: Any = None) -> Any:
-        """Get a state entry for an agent.
+        """
+        Retrieves the value of a state entry for an agent, checking private, shared, and global scopes.
         
-        Args:
-            agent_id: ID of the agent
-            key: Entry key
-            default: Default value if entry not found
-            
-        Returns:
-            Entry value or default if not found
+        If the entry is expired or not found, returns the provided default value.
         """
         with self._lock:
             # Check in order: agent state, shared state, global state
@@ -213,15 +210,18 @@ class AgentStateManager:
             return default
     
     def delete_state_entry(self, agent_id: str, key: str, visibility: Optional[str] = None) -> bool:
-        """Delete a state entry.
+        """
+        Deletes a state entry for an agent by key, optionally filtered by visibility.
+        
+        If visibility is not specified, attempts to delete the entry from private, shared, and global state. Returns True if the entry was deleted from any location; otherwise, returns False.
         
         Args:
-            agent_id: ID of the agent
-            key: Entry key
-            visibility: Optional visibility to target specific storage
-            
+            agent_id: The unique identifier of the agent.
+            key: The key of the state entry to delete.
+            visibility: If provided, restricts deletion to "private", "shared", or "global" state.
+        
         Returns:
-            Whether the entry was deleted
+            True if the entry was deleted from any state; False otherwise.
         """
         with self._lock:
             deleted = False
@@ -248,11 +248,10 @@ class AgentStateManager:
             return deleted
     
     def register_operation(self, agent_id: str, operation: str):
-        """Register an operation in the agent's history.
+        """
+        Appends an operation to the specified agent's operation history.
         
-        Args:
-            agent_id: ID of the agent
-            operation: Operation name
+        Updates the agent's last_updated timestamp and persists the updated state.
         """
         with self._lock:
             state = self.get_agent_state(agent_id)
@@ -263,13 +262,14 @@ class AgentStateManager:
             self._save_state(agent_id)
     
     def get_operations_history(self, agent_id: str) -> List[str]:
-        """Get the operation history for an agent.
+        """
+        Returns a copy of the operation history for the specified agent.
         
         Args:
-            agent_id: ID of the agent
-            
+            agent_id: The unique identifier of the agent.
+        
         Returns:
-            List of operation names
+            A list of operation names performed by the agent, in chronological order.
         """
         with self._lock:
             state = self.get_agent_state(agent_id)
@@ -277,21 +277,29 @@ class AgentStateManager:
     
     def get_all_entries(self, agent_id: str, visibility: Optional[str] = None,
                        scope: Optional[str] = None, tags: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Get all state entries for an agent, filtered by criteria.
-        
-        Args:
-            agent_id: ID of the agent
-            visibility: Optional visibility filter
-            scope: Optional scope filter
-            tags: Optional tags filter (entries must have ALL specified tags)
-            
-        Returns:
-            Dictionary of key-value pairs
         """
+                       Returns all state entries for an agent filtered by visibility, scope, and tags.
+                       
+                       Entries are included only if they match all specified tags and scope, and have not expired based on their TTL. Aggregates entries from private, shared, and global states according to the visibility filter.
+                       
+                       Args:
+                           agent_id: The unique identifier of the agent.
+                           visibility: Optional filter to restrict entries by visibility ("private", "shared", "global").
+                           scope: Optional filter to restrict entries by scope.
+                           tags: Optional list of tags; only entries containing all specified tags are included.
+                       
+                       Returns:
+                           A dictionary mapping entry keys to their values for all matching state entries.
+                       """
         with self._lock:
             result = {}
             
             def add_matching_entries(entries):
+                """
+                Adds entries to the result dictionary if they match the specified scope, tags, and TTL.
+                
+                Entries are included only if their scope matches the provided scope (if set), contain all specified tags (if any), and have not expired based on their TTL.
+                """
                 for key, entry in entries.items():
                     # Check filters
                     if scope and entry.scope != scope:
@@ -322,10 +330,10 @@ class AgentStateManager:
             return result
     
     def clear_agent_state(self, agent_id: str):
-        """Clear all state for an agent.
+        """
+        Resets the state of the specified agent, removing all entries and operation history.
         
-        Args:
-            agent_id: ID of the agent
+        The agent's name is preserved, and the cleared state is saved to persistent storage.
         """
         with self._lock:
             if agent_id in self.agent_states:
@@ -337,7 +345,11 @@ class AgentStateManager:
                 self._save_state(agent_id)
     
     def clear_all_states(self):
-        """Clear all agent states."""
+        """
+        Removes all agent, shared, and global states from memory and deletes all persisted state files.
+        
+        This operation resets the entire state management system, erasing all agent data and associated JSON files in the persistence directory.
+        """
         with self._lock:
             self.agent_states.clear()
             self.shared_state.clear()
