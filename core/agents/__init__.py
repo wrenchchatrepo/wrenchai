@@ -17,6 +17,8 @@ from .agent_definitions import (
 
 from .agent_factory import AgentFactory
 from .agent_state import agent_state_manager
+from .agent_state_enhanced import async_agent_state_manager
+from .agent_state_migration import migrate_state_sync
 from .agent_llm_mapping import agent_llm_manager
 
 # Import specialized agent classes
@@ -39,6 +41,8 @@ __all__ = [
     # Factory and managers
     'AgentFactory',
     'agent_state_manager',
+    'async_agent_state_manager',
+    'migrate_state_sync',
     'agent_llm_manager',
     
     # Specialized agents
