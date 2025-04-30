@@ -23,7 +23,9 @@ class Agent(Base):
     tasks = relationship("Task", back_populates="agent")
 
     def __repr__(self) -> str:
-        """String representation of the agent."""
+        """
+        Returns a string representation of the Agent instance, including its id, type, and status.
+        """
         return f"<Agent(id={self.id}, type={self.type}, status={self.status})>"
 
 class Task(Base):

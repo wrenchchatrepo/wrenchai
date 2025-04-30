@@ -20,7 +20,12 @@ from core.tools.code_execution import (
 
 @pytest.fixture
 def sample_python_code():
-    """Sample Python code for testing."""
+    """
+    Provides a sample Python code snippet that prints a greeting message.
+    
+    Returns:
+        A multi-line string containing Python code for testing purposes.
+    """
     return """
 def greet(name):
     return f"Hello, {name}!"
@@ -30,7 +35,12 @@ print(greet("World"))
 
 @pytest.fixture
 def sample_javascript_code():
-    """Sample JavaScript code for testing."""
+    """
+    Provides a sample JavaScript code snippet that prints a greeting message.
+    
+    Returns:
+        A string containing JavaScript code for testing purposes.
+    """
     return """
 function greet(name) {
     return `Hello, ${name}!`;
@@ -41,7 +51,12 @@ console.log(greet("World"));
 
 @pytest.fixture
 def sample_typescript_code():
-    """Sample TypeScript code for testing."""
+    """
+    Provides a sample TypeScript code snippet for testing purposes.
+    
+    Returns:
+        A string containing TypeScript code that defines a greeting function and logs its output.
+    """
     return """
 function greet(name: string): string {
     return `Hello, ${name}!`;
@@ -52,7 +67,9 @@ console.log(greet("World"));
 
 @pytest.fixture
 def sample_shell_code():
-    """Sample shell script for testing."""
+    """
+    Provides a sample shell script that prints "Hello, World!" for testing purposes.
+    """
     return """
 #!/bin/bash
 echo "Hello, World!"
@@ -60,7 +77,12 @@ echo "Hello, World!"
 
 @pytest.fixture
 def resource_limits():
-    """Sample resource limits."""
+    """
+    Provides a sample ResourceLimits instance with predefined constraints for testing.
+    
+    Returns:
+        A ResourceLimits object with limited execution time, memory, processes, and access settings.
+    """
     return ResourceLimits(
         max_time=5,
         max_memory=256,
@@ -71,7 +93,9 @@ def resource_limits():
 
 @pytest.fixture
 async def executor():
-    """Create a CodeExecutor instance."""
+    """
+    Yields a CodeExecutor instance for use in tests and ensures cleanup after use.
+    """
     exec = CodeExecutor()
     yield exec
     exec.cleanup()
@@ -121,7 +145,11 @@ async def test_typescript_execution(executor, sample_typescript_code):
 
 @pytest.mark.asyncio
 async def test_shell_execution(executor, sample_shell_code):
-    """Test shell script execution."""
+    """
+    Tests execution of a shell script and verifies successful output.
+    
+    Asserts that the script runs without errors and produces the expected output.
+    """
     context = ExecutionContext(
         language=Language.SHELL,
         mode=ExecutionMode.SCRIPT
@@ -153,7 +181,11 @@ print(np.array([1, 2, 3]).mean())
 
 @pytest.mark.asyncio
 async def test_execution_timeout(executor):
-    """Test execution timeout."""
+    """
+    Tests that code execution fails with a timeout error when exceeding the maximum allowed time.
+    
+    Verifies that executing Python code with a sleep longer than the specified time limit results in failure and an appropriate timeout error message.
+    """
     code = """
 import time
 time.sleep(10)
@@ -189,7 +221,11 @@ print(os.environ.get('TEST_VAR'))
 
 @pytest.mark.asyncio
 async def test_execution_with_working_directory(executor, tmp_path):
-    """Test execution with custom working directory."""
+    """
+    Tests that code execution in a custom working directory can access files present in that directory.
+    
+    Creates a test file in a temporary directory, executes Python code listing directory contents, and verifies the file is listed in the output.
+    """
     # Create a test file in the temp directory
     test_file = tmp_path / "test.txt"
     test_file.write_text("test content")
@@ -311,7 +347,9 @@ def test_cleanup(executor):
     assert not temp_dir.exists()
 
 def test_resource_limits_validation():
-    """Test resource limits validation."""
+    """
+    Tests that ResourceLimits accepts valid values and raises ValueError for invalid time or memory limits.
+    """
     # Valid limits
     limits = ResourceLimits(
         max_time=30,
@@ -330,7 +368,11 @@ def test_resource_limits_validation():
         ResourceLimits(max_memory=-1)
 
 def test_execution_context_validation():
-    """Test execution context validation."""
+    """
+    Tests that ExecutionContext correctly validates language and mode values.
+    
+    Verifies that valid language and mode are accepted, and that invalid values raise ValueError.
+    """
     # Valid context
     context = ExecutionContext(
         language=Language.PYTHON,

@@ -13,12 +13,25 @@ class DocusaurusPlaybookExecutor:
     """Executes Docusaurus portfolio playbook via FastAPI."""
     
     def __init__(self, api_url: str = "http://localhost:8000"):
-        """Initialize executor with API URL."""
+        """
+        Initializes the executor with the specified FastAPI backend URL.
+        
+        Args:
+            api_url: The base URL of the FastAPI backend to use for playbook execution.
+        """
         self.api_url = api_url
         self.session = httpx.AsyncClient()
         
     async def execute_playbook(self, playbook_path: str) -> Dict[str, Any]:
-        """Execute playbook with proper error handling and progress tracking."""
+        """
+        Executes a Docusaurus playbook by validating the YAML file and submitting it to the FastAPI backend.
+        
+        Args:
+            playbook_path: Path to the YAML playbook file to execute.
+        
+        Returns:
+            A dictionary containing the execution result, including a 'success' flag and any error messages or API response details.
+        """
         try:
             # Use the new playbook validator
             from core.playbook_validator import perform_full_validation
@@ -69,7 +82,13 @@ class DocusaurusPlaybookExecutor:
             await self.session.aclose()
             
 def main():
-    """Main Streamlit app."""
+    """
+    Runs the Streamlit user interface for uploading and executing a Docusaurus playbook.
+    
+    Provides configuration for the FastAPI backend URL, file upload for playbook YAML files,
+    and controls to trigger playbook execution. Displays progress, results, and example
+    playbook format for user guidance.
+    """
     st.title("Docusaurus Portfolio Playbook Executor")
     
     # Sidebar configuration

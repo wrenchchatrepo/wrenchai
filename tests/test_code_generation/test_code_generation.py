@@ -17,7 +17,12 @@ from core.tools.code_generation import (
 
 @pytest.fixture
 def sample_spec() -> CodeSpec:
-    """Fixture that provides a sample code specification."""
+    """
+    Provides a sample CodeSpec fixture describing a recursive factorial function.
+    
+    Returns:
+        A CodeSpec instance with a description, requirements, and usage examples for a factorial function.
+    """
     return CodeSpec(
         description="Create a function to calculate factorial",
         requirements=[
@@ -33,7 +38,12 @@ def sample_spec() -> CodeSpec:
 
 @pytest.fixture
 def sample_context() -> GenerationContext:
-    """Fixture that provides a sample generation context."""
+    """
+    Provides a sample GenerationContext fixture for testing code generation scenarios.
+    
+    Returns:
+        A GenerationContext configured with typical project settings and additional context.
+    """
     return GenerationContext(
         project_type="library",
         style_guide="pep8",
@@ -47,7 +57,12 @@ def sample_context() -> GenerationContext:
 
 @pytest.mark.asyncio
 async def test_generate_code_only(sample_spec: CodeSpec, sample_context: GenerationContext):
-    """Test generating only code."""
+    """
+    Tests that generating code with output type 'code' produces only code output.
+    
+    Verifies that the generated result contains non-empty code, no tests or documentation,
+    and valid dependencies and setup instructions.
+    """
     result = await generate(
         spec=sample_spec,
         language="python",
@@ -65,7 +80,11 @@ async def test_generate_code_only(sample_spec: CodeSpec, sample_context: Generat
 
 @pytest.mark.asyncio
 async def test_generate_with_tests(sample_spec: CodeSpec, sample_context: GenerationContext):
-    """Test generating code with tests."""
+    """
+    Tests that code, tests, and documentation are generated when requesting all output types.
+    
+    Verifies that the generated result includes non-empty code, tests, documentation, a list of dependencies, and setup instructions.
+    """
     result = await generate(
         spec=sample_spec,
         language="python",
@@ -83,7 +102,11 @@ async def test_generate_with_tests(sample_spec: CodeSpec, sample_context: Genera
 
 @pytest.mark.asyncio
 async def test_generate_docs_only(sample_spec: CodeSpec, sample_context: GenerationContext):
-    """Test generating only documentation."""
+    """
+    Tests that generating with output type "docs" produces only documentation.
+    
+    Verifies that the generated result contains non-empty documentation, no code, no tests, and includes dependencies and setup instructions.
+    """
     result = await generate(
         spec=sample_spec,
         language="python",
@@ -101,7 +124,9 @@ async def test_generate_docs_only(sample_spec: CodeSpec, sample_context: Generat
 
 @pytest.mark.asyncio
 async def test_invalid_language():
-    """Test handling of invalid language."""
+    """
+    Tests that an exception is raised when an invalid language is provided to the generate function.
+    """
     spec = CodeSpec(description="Test invalid language")
     
     with pytest.raises(Exception):
@@ -113,7 +138,9 @@ async def test_invalid_language():
 
 @pytest.mark.asyncio
 async def test_invalid_framework():
-    """Test handling of invalid framework."""
+    """
+    Tests that an exception is raised when an invalid framework is provided to the generate function.
+    """
     spec = CodeSpec(description="Test invalid framework")
     
     with pytest.raises(Exception):
@@ -125,7 +152,11 @@ async def test_invalid_framework():
 
 @pytest.mark.asyncio
 async def test_complex_spec(sample_context: GenerationContext):
-    """Test generating code from a complex specification."""
+    """
+    Tests code generation for a REST API endpoint specification with multiple dependencies.
+    
+    Verifies that the generated code, tests, and documentation include references to FastAPI, SQLAlchemy, Pydantic, and relevant API features.
+    """
     spec = CodeSpec(
         description="Create a REST API endpoint",
         requirements=[
@@ -165,7 +196,12 @@ async def test_complex_spec(sample_context: GenerationContext):
 
 @pytest.mark.asyncio
 async def test_minimal_spec():
-    """Test generating code from a minimal specification."""
+    """
+    Tests code generation from a minimal specification containing only a description.
+    
+    Asserts that the generated code includes a print statement, and that tests and
+    documentation are produced.
+    """
     spec = CodeSpec(description="Print hello world")
     
     result = await generate(
@@ -181,7 +217,9 @@ async def test_minimal_spec():
 
 @pytest.mark.asyncio
 async def test_custom_context():
-    """Test generating code with custom context."""
+    """
+    Tests code generation with a custom context, verifying that generated code, tests, and documentation reflect the specified style guide, test framework, and documentation format.
+    """
     spec = CodeSpec(description="Create a logging utility")
     context = GenerationContext(
         project_type="application",

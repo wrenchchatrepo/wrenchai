@@ -12,13 +12,24 @@ from bs4 import BeautifulSoup
 class SearchResult:
     """Container for search results."""
     def __init__(self, title: str, url: str, snippet: str, source: str = "web"):
+        """
+        Initializes a SearchResult instance with title, URL, snippet, and source.
+        
+        Args:
+            title: The title of the search result.
+            url: The URL of the search result.
+            snippet: A brief description or snippet from the search result.
+            source: The source of the search result (default is "web").
+        """
         self.title = title
         self.url = url
         self.snippet = snippet
         self.source = source
 
     def to_dict(self) -> Dict[str, str]:
-        """Convert to dictionary format."""
+        """
+        Returns the search result as a dictionary with title, URL, snippet, and source.
+        """
         return {
             "title": self.title,
             "url": self.url,
@@ -27,14 +38,10 @@ class SearchResult:
         }
 
 async def search(query: str, max_results: int = 10) -> List[Dict[str, Any]]:
-    """Search the web for information.
+    """
+    Performs an asynchronous web search using multiple fallback strategies.
     
-    Args:
-        query: Search query string
-        max_results: Maximum number of results to return
-        
-    Returns:
-        List of search results with title, URL, and snippet
+    Attempts to retrieve up to `max_results` results for the given query by first searching DuckDuckGo, then Brave Search, and finally a custom placeholder if all else fails. Returns a list of dictionaries containing the title, URL, snippet, and source for each result. Returns an empty list if all search methods fail.
     """
     try:
         # First try DuckDuckGo
@@ -56,7 +63,17 @@ async def search(query: str, max_results: int = 10) -> List[Dict[str, Any]]:
         return []
 
 async def _search_duckduckgo(query: str, max_results: int) -> List[SearchResult]:
-    """Search using DuckDuckGo."""
+    """
+    Performs an asynchronous web search using DuckDuckGo and returns search results.
+    
+    Args:
+        query: The search query string.
+        max_results: The maximum number of results to retrieve.
+    
+    Returns:
+        A list of SearchResult objects containing the search results from DuckDuckGo.
+        Returns an empty list if the search fails.
+    """
     try:
         from duckduckgo_search import ddg
         
@@ -74,7 +91,20 @@ async def _search_duckduckgo(query: str, max_results: int) -> List[SearchResult]
         return []
 
 async def _search_brave(query: str, max_results: int) -> List[SearchResult]:
-    """Search using Brave Search API."""
+    """
+    Performs an asynchronous web search using the Brave Search API.
+    
+    Attempts to retrieve search results for the given query and returns a list of
+    SearchResult objects with source set to "brave". Returns an empty list if the
+    API key is missing, the API request fails, or an exception occurs.
+    
+    Args:
+        query: The search query string.
+        max_results: The maximum number of results to retrieve.
+    
+    Returns:
+        A list of SearchResult objects from Brave Search, or an empty list on failure.
+    """
     try:
         # Get API key from secrets manager
         from core.tools.secrets_manager import get_secret
@@ -115,7 +145,16 @@ async def _search_brave(query: str, max_results: int) -> List[SearchResult]:
         return []
 
 async def _search_custom(query: str, max_results: int) -> List[SearchResult]:
-    """Custom search implementation as final fallback."""
+    """
+    Returns placeholder search results as a fallback when other search methods fail.
+    
+    Args:
+        query: The search query string.
+        max_results: The number of placeholder results to generate.
+    
+    Returns:
+        A list of SearchResult objects containing generic placeholder content.
+    """
     # This is a placeholder implementation
     return [SearchResult(
         title=f"Search result for: {query}",
