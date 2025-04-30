@@ -38,22 +38,41 @@ class DocusaurusPlaybookExecutor:
     async def load_playbook(self, playbook_path: str) -> Dict[str, Any]:
         """Load and validate the Docusaurus portfolio playbook."""
         try:
-            with open(playbook_path, 'r') as f:
-                playbook = yaml.safe_load(f)
+            from core.playbook_validator import perform_full_validation
+            from core.playbook_schema import Playbook
+            
+            valid, error, playbook = perform_full_validation(playbook_path)
+            if not valid:
+                st.error(f"Failed to load playbook: {error}")
+                raise ValueError(error)
+                
             return playbook
         except Exception as e:
             st.error(f"Failed to load playbook: {str(e)}")
             raise
 
-    async def execute_playbook(self, playbook: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_playbook(self, playbook: 'Playbook') -> Dict[str, Any]:
         """Execute the Docusaurus portfolio playbook."""
         try:
+            # Convert to API format
+            api_payload = playbook.to_api_format()
+            
+            # Use the correct endpoint
             response = await self.client.post(
-                "/api/v1/playbooks/execute",
-                json=playbook
+                "/api/playbooks/run",
+                json=api_payload
             )
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            
+            # Standardize response format
+            if result.get("status") == "started":
+                result["success"] = True
+                result["task_id"] = result.get("run_id")
+            else:
+                result["success"] = False
+                
+            return result
         except Exception as e:
             st.error(f"Failed to execute playbook: {str(e)}")
             raise
@@ -180,7 +199,7 @@ async def execute_portfolio_generation(
             )
             
             # Update playbook with form data
-            playbook.update(config)
+            playbook = playbook.merge_user_config(config)
         
         with st.spinner("Generating portfolio..."):
             result = await executor.execute_playbook(playbook)
