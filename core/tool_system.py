@@ -4,8 +4,15 @@
 import os
 import importlib
 import logging
-from typing import Dict, Any, Callable, List
+import time
+from typing import Dict, Any, Callable, List, Optional, Tuple, Union
+import inspect
+from datetime import datetime
+
 from core.config_loader import load_config
+from core.tools.tool_response import format_success_response, format_error_response, standardize_legacy_response
+from core.tools.tool_authorization import tool_authorization, ToolAuthorizationSystem
+from core.tools.tool_dependency import tool_dependency_manager, ToolDependencyManager
 
 class ToolRegistry:
     """Registry for all available tools"""
@@ -15,6 +22,8 @@ class ToolRegistry:
         self.config_path = config_path
         self.tools = {}
         self.configs = load_config(config_path)
+        self.authorization_system = tool_authorization
+        self.dependency_manager = tool_dependency_manager
         self._load_tools()
         
     def _load_tools(self):
@@ -35,7 +44,7 @@ class ToolRegistry:
                 logging.error(f"Error loading tool {tool_config['name']}: {e}")
                 # For debugging purposes, we'll still register the tool but with a placeholder function
                 self.tools[tool_config['name']] = {
-                    'function': lambda **kwargs: {"error": f"Tool {tool_config['name']} is not available: {str(e)}"},
+                    'function': lambda **kwargs: format_error_response(f"Tool {tool_config['name']} is not available: {str(e)}"),
                     'config': tool_config
                 }
     
@@ -83,3 +92,105 @@ class ToolRegistry:
             if dependency['primary'] == tool_name:
                 dependencies.append(dependency['requires'])
         return dependencies
+        
+    async def execute_tool(self, tool_name: str, agent_role: str, agent_id: str, **kwargs) -> Dict[str, Any]:
+        """Execute a tool with authorization checking and standardized response.
+        
+        Args:
+            tool_name: Name of the tool to execute
+            agent_role: Role of the agent requesting tool execution
+            agent_id: ID of the agent requesting tool execution
+            **kwargs: Tool-specific parameters
+            
+        Returns:
+            Standardized tool response dictionary
+        """
+        # Check if tool exists
+        if tool_name not in self.tools:
+            return format_error_response(f"Tool '{tool_name}' not found")
+        
+        # Check if agent is authorized to use this tool
+        can_use, reason = self.authorization_system.can_agent_use_tool(agent_role, tool_name)
+        if not can_use:
+            return format_error_response(f"Authorization failed: {reason}")
+        
+        # Check if tool can run based on dependencies
+        can_run, run_reason = self.dependency_manager.can_tool_run(tool_name)
+        if not can_run:
+            return format_error_response(f"Dependency check failed: {run_reason}")
+        
+        # Execute the tool with timing
+        tool_func = self.get_tool(tool_name)
+        start_time = time.time()
+        success = True
+        try:
+            # Check if tool function is async
+            if inspect.iscoroutinefunction(tool_func):
+                result = await tool_func(**kwargs)
+            else:
+                result = tool_func(**kwargs)
+            
+            # Standardize the response format if needed
+            if not (isinstance(result, dict) and \
+                   ("success" in result and ("data" in result or "error" in result)) and \
+                   "timestamp" in result):
+                result = standardize_legacy_response(result)
+        except Exception as e:
+            success = False
+            result = format_error_response(f"Tool execution error: {str(e)}")
+        
+        # Record tool usage
+        execution_time = time.time() - start_time
+        self.authorization_system.register_tool_usage(
+            tool_id=tool_name,
+            agent_id=agent_id,
+            success=success,
+            parameters=kwargs,
+            execution_time=execution_time
+        )
+        
+        # Add limited functionality warnings if applicable
+        limited_functionality = self.dependency_manager.get_limited_functionality(tool_name)
+        if limited_functionality and success:
+            result.setdefault("meta", {})[
+                "limited_functionality"] = f"Limited functionality due to missing dependencies: {', '.join(limited_functionality)}"
+        
+        return result
+    
+    def verify_tools_for_agent(self, agent_role: str, required_tools: List[str]) -> Tuple[bool, Dict[str, Any]]:
+        """Verify that an agent has access to all required tools and they can run.
+        
+        Args:
+            agent_role: Role of the agent
+            required_tools: List of required tool names
+            
+        Returns:
+            Tuple of (all_available, details)
+        """
+        # Check authorization
+        auth_status, missing_tools = self.authorization_system.verify_tools_for_agent(
+            agent_role, required_tools
+        )
+        
+        # Check tool dependencies if authorization passes
+        dependency_status = {}
+        if auth_status:
+            all_available = True
+            for tool_name in required_tools:
+                can_run, reason = self.dependency_manager.can_tool_run(tool_name)
+                dependency_status[tool_name] = {
+                    "can_run": can_run,
+                    "reason": reason
+                }
+                if not can_run:
+                    all_available = False
+        else:
+            all_available = False
+        
+        return all_available, {
+            "authorization": {
+                "authorized": auth_status,
+                "missing_tools": missing_tools
+            },
+            "dependencies": dependency_status
+        }

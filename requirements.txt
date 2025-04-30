@@ -47,7 +47,7 @@ dirty-equals>=0.6.0          # For flexible comparisons in tests
 # Database dependencies
 sqlalchemy>=2.0.23
 psycopg2-binary>=2.9.9  # PostgreSQL
-pymysql>=1.1.0  # MySQL
+pymysql>=1.1.1  # MySQL
 psutil>=5.9.6
 
 # Monitoring dependencies
@@ -86,7 +86,7 @@ unittest2>=1.1.0
 # Database dependencies
 sqlalchemy>=2.0.23
 psycopg2-binary>=2.9.9
-pymysql>=1.1.0
+pymysql>=1.1.1
 alembic>=1.12.0
 sqlalchemy-utils>=0.41.1
 python-dateutil>=2.8.2

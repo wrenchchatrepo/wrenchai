@@ -7,8 +7,36 @@ import logging
 import asyncio
 import json
 from pathlib import Path
+from pydantic import BaseModel, Field
+from fastapi import HTTPException, status
+from datetime import datetime
+from core.tools.browser_tools import BrowserTools
+from core.tools.memory_manager import MemoryManager
 
 from .journey_agent import JourneyAgent
+
+logger = logging.getLogger(__name__)
+
+class TestCase(BaseModel):
+    """Test case specification"""
+    id: str
+    title: str
+    description: str
+    steps: List[Dict[str, str]]
+    expected_result: str
+    priority: str = "medium"
+    category: str
+    prerequisites: Optional[List[str]] = None
+
+class TestResult(BaseModel):
+    """Test execution result"""
+    test_case_id: str
+    status: str
+    actual_result: str
+    screenshots: Optional[List[str]] = None
+    logs: Optional[List[str]] = None
+    execution_time: float
+    executed_at: datetime
 
 class UAT(JourneyAgent):
     """
@@ -72,6 +100,10 @@ class UAT(JourneyAgent):
             if tool not in tools:
                 logging.warning(f"UAT agent should have '{tool}' tool")
                 
+        self.browser_tools = BrowserTools()
+        self.memory_manager = MemoryManager()
+        self.test_results: Dict[str, TestResult] = {}
+        
     async def create_uat_plan(self, 
                           project: Dict[str, Any], 
                           features: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -402,6 +434,12 @@ class UAT(JourneyAgent):
             report = await self.generate_uat_report(uat_plan, feedback_analysis)
             return {"uat_report": report}
             
+        elif action == "create_test_suite":
+            features = step.get("features", context.get("features", []))
+            
+            test_suite = await self.create_test_suite(features)
+            return {"test_suite": test_suite}
+            
         else:
             return await super().run_playbook_step(step, context)
     
@@ -452,3 +490,296 @@ class UAT(JourneyAgent):
             results["uat_report"] = context["uat_report"]
             
         return results
+    
+    async def create_test_suite(self, features: List[str]) -> Dict[str, Any]:
+        """Create a test suite based on features"""
+        try:
+            test_cases = []
+            
+            for feature in features:
+                feature_tests = await self._generate_test_cases(feature)
+                test_cases.extend(feature_tests)
+            
+            test_suite = {
+                "id": f"suite_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "features": features,
+                "test_cases": test_cases,
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Store test suite in memory
+            await self.memory_manager.store_test_suite(test_suite)
+            
+            return test_suite
+        except Exception as e:
+            logger.error(f"Test suite creation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Test suite creation failed: {str(e)}"
+            )
+            
+    async def _generate_test_cases(self, feature: str) -> List[TestCase]:
+        """Generate test cases for a feature"""
+        test_cases = []
+        
+        if feature == "documentation":
+            test_cases.extend(self._generate_documentation_tests())
+        elif feature == "navigation":
+            test_cases.extend(self._generate_navigation_tests())
+        elif feature == "search":
+            test_cases.extend(self._generate_search_tests())
+        elif feature == "responsive":
+            test_cases.extend(self._generate_responsive_tests())
+            
+        return test_cases
+        
+    def _generate_documentation_tests(self) -> List[TestCase]:
+        """Generate documentation-specific test cases"""
+        return [
+            TestCase(
+                id="DOC_001",
+                title="Documentation Structure",
+                description="Verify documentation hierarchy and organization",
+                steps=[
+                    {"step": "1", "action": "Navigate to documentation home"},
+                    {"step": "2", "action": "Check sidebar navigation"},
+                    {"step": "3", "action": "Verify section organization"}
+                ],
+                expected_result="Documentation is properly organized with clear hierarchy",
+                category="documentation",
+                priority="high"
+            ),
+            TestCase(
+                id="DOC_002",
+                title="Code Examples",
+                description="Verify code examples are properly formatted and copyable",
+                steps=[
+                    {"step": "1", "action": "Navigate to code example section"},
+                    {"step": "2", "action": "Check code block formatting"},
+                    {"step": "3", "action": "Test copy functionality"}
+                ],
+                expected_result="Code examples are well-formatted and can be copied",
+                category="documentation",
+                priority="medium"
+            )
+        ]
+        
+    def _generate_navigation_tests(self) -> List[TestCase]:
+        """Generate navigation-specific test cases"""
+        return [
+            TestCase(
+                id="NAV_001",
+                title="Main Navigation",
+                description="Verify main navigation functionality",
+                steps=[
+                    {"step": "1", "action": "Click each navigation item"},
+                    {"step": "2", "action": "Verify correct page loads"},
+                    {"step": "3", "action": "Check active state indication"}
+                ],
+                expected_result="Navigation works correctly with proper state indication",
+                category="navigation",
+                priority="high"
+            ),
+            TestCase(
+                id="NAV_002",
+                title="Breadcrumb Navigation",
+                description="Verify breadcrumb navigation functionality",
+                steps=[
+                    {"step": "1", "action": "Navigate to deep page"},
+                    {"step": "2", "action": "Check breadcrumb trail"},
+                    {"step": "3", "action": "Test breadcrumb links"}
+                ],
+                expected_result="Breadcrumb navigation is accurate and functional",
+                category="navigation",
+                priority="medium"
+            )
+        ]
+        
+    def _generate_search_tests(self) -> List[TestCase]:
+        """Generate search-specific test cases"""
+        return [
+            TestCase(
+                id="SEARCH_001",
+                title="Search Functionality",
+                description="Verify search feature works correctly",
+                steps=[
+                    {"step": "1", "action": "Enter search term"},
+                    {"step": "2", "action": "Check search results"},
+                    {"step": "3", "action": "Verify result relevance"}
+                ],
+                expected_result="Search returns relevant results",
+                category="search",
+                priority="high"
+            ),
+            TestCase(
+                id="SEARCH_002",
+                title="Search Performance",
+                description="Verify search response time",
+                steps=[
+                    {"step": "1", "action": "Perform multiple searches"},
+                    {"step": "2", "action": "Measure response times"},
+                    {"step": "3", "action": "Check result caching"}
+                ],
+                expected_result="Search responds within acceptable time limits",
+                category="search",
+                priority="medium"
+            )
+        ]
+        
+    def _generate_responsive_tests(self) -> List[TestCase]:
+        """Generate responsive design test cases"""
+        return [
+            TestCase(
+                id="RESP_001",
+                title="Mobile Responsiveness",
+                description="Verify mobile device compatibility",
+                steps=[
+                    {"step": "1", "action": "Set viewport to mobile size"},
+                    {"step": "2", "action": "Check layout adaptation"},
+                    {"step": "3", "action": "Test touch interactions"}
+                ],
+                expected_result="Site works properly on mobile devices",
+                category="responsive",
+                priority="high"
+            ),
+            TestCase(
+                id="RESP_002",
+                title="Tablet Responsiveness",
+                description="Verify tablet device compatibility",
+                steps=[
+                    {"step": "1", "action": "Set viewport to tablet size"},
+                    {"step": "2", "action": "Check layout adaptation"},
+                    {"step": "3", "action": "Test touch interactions"}
+                ],
+                expected_result="Site works properly on tablet devices",
+                category="responsive",
+                priority="medium"
+            )
+        ]
+        
+    async def execute_test_case(self, test_case: TestCase) -> TestResult:
+        """Execute a single test case"""
+        try:
+            start_time = datetime.now()
+            
+            # Execute test steps
+            logs = []
+            screenshots = []
+            
+            for step in test_case.steps:
+                step_result = await self._execute_test_step(step)
+                logs.extend(step_result["logs"])
+                screenshots.extend(step_result["screenshots"])
+                
+                if step_result["status"] == "failed":
+                    return TestResult(
+                        test_case_id=test_case.id,
+                        status="failed",
+                        actual_result=step_result["message"],
+                        screenshots=screenshots,
+                        logs=logs,
+                        execution_time=(datetime.now() - start_time).total_seconds(),
+                        executed_at=datetime.now()
+                    )
+            
+            # Test passed if all steps completed
+            result = TestResult(
+                test_case_id=test_case.id,
+                status="passed",
+                actual_result="All steps completed successfully",
+                screenshots=screenshots,
+                logs=logs,
+                execution_time=(datetime.now() - start_time).total_seconds(),
+                executed_at=datetime.now()
+            )
+            
+            # Store result
+            self.test_results[test_case.id] = result
+            
+            return result
+        except Exception as e:
+            logger.error(f"Test case execution failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Test case execution failed: {str(e)}"
+            )
+            
+    async def _execute_test_step(self, step: Dict[str, str]) -> Dict[str, Any]:
+        """Execute a single test step"""
+        try:
+            action = step["action"]
+            logs = []
+            screenshots = []
+            
+            # Navigate
+            if action.startswith("Navigate"):
+                await self.browser_tools.navigate(action.split(" to ")[1])
+                screenshots.append(await self.browser_tools.take_screenshot())
+                
+            # Click
+            elif action.startswith("Click"):
+                element = action.split("Click ")[1]
+                await self.browser_tools.click(f"[data-testid='{element}']")
+                
+            # Check
+            elif action.startswith("Check"):
+                element = action.split("Check ")[1]
+                exists = await self.browser_tools.element_exists(f"[data-testid='{element}']")
+                if not exists:
+                    return {
+                        "status": "failed",
+                        "message": f"Element {element} not found",
+                        "logs": logs,
+                        "screenshots": screenshots
+                    }
+                
+            # Set viewport
+            elif action.startswith("Set viewport"):
+                size = action.split("to ")[1]
+                await self.browser_tools.set_viewport(size)
+                screenshots.append(await self.browser_tools.take_screenshot())
+                
+            return {
+                "status": "passed",
+                "message": f"Step '{action}' completed successfully",
+                "logs": logs,
+                "screenshots": screenshots
+            }
+        except Exception as e:
+            logger.error(f"Test step execution failed: {str(e)}")
+            return {
+                "status": "failed",
+                "message": str(e),
+                "logs": logs,
+                "screenshots": screenshots
+            }
+            
+    async def generate_test_report(self, test_results: List[TestResult]) -> Dict[str, Any]:
+        """Generate a comprehensive test report"""
+        try:
+            total_tests = len(test_results)
+            passed_tests = len([r for r in test_results if r.status == "passed"])
+            failed_tests = len([r for r in test_results if r.status == "failed"])
+            
+            report = {
+                "summary": {
+                    "total_tests": total_tests,
+                    "passed_tests": passed_tests,
+                    "failed_tests": failed_tests,
+                    "pass_rate": (passed_tests / total_tests) * 100 if total_tests > 0 else 0
+                },
+                "results": [result.dict() for result in test_results],
+                "execution_time": sum(r.execution_time for r in test_results),
+                "generated_at": datetime.now().isoformat()
+            }
+            
+            # Store report in memory
+            await self.memory_manager.store_test_report(report)
+            
+            return report
+        except Exception as e:
+            logger.error(f"Test report generation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Test report generation failed: {str(e)}"
+            )
