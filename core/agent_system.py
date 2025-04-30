@@ -299,7 +299,37 @@ class AgentManager:
             # If the mapping module is not available, use default model
             pass
         
-        # Create the agent instance
+        # First try to create a specialized agent using the factory
+        specialized_agent = None
+        try:
+            from core.agents.agent_factory import AgentFactory
+            # Check if this is a specialized agent type
+            if role_name in ["UXDesignerAgent", "CodifierAgent", "UATAgent"]:
+                logging.info(f"Creating specialized agent for role {role_name}")
+                
+                # TODO: Create a proper playbook path and LLM client
+                playbook_path = "path/to/playbook.yaml"  # Placeholder
+                llm_client = {"model": model}  # Placeholder
+                
+                # Try to create a specialized agent
+                specialized_agent = AgentFactory.create_agent(
+                    agent_name=role_name,
+                    llm_client=llm_client,
+                    tools=[],  # Tools will be assigned later
+                    playbook_path=playbook_path,
+                    context={}
+                )
+                
+                if specialized_agent:
+                    # Register with state manager
+                    agent_id = AgentFactory.register_agent_state(specialized_agent)
+                    self.agents[int(agent_id)] = specialized_agent
+                    return specialized_agent
+        except Exception as e:
+            logging.warning(f"Failed to create specialized agent: {e}")
+            specialized_agent = None
+        
+        # If specialized agent creation failed or not applicable, create a generic agent
         agent = AgentWrapper[AgentDependencies, Dict[str, Any]](
             role=role_name,
             model=model,
