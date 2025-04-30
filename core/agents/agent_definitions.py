@@ -57,8 +57,26 @@ class AgentCapability(Enum):
 class LLMProvider(Enum):
     """Available LLM providers."""
     CLAUDE = "claude-3.7-sonnet"
+    CLAUDE_OPUS = "claude-3-opus"
+    CLAUDE_SONNET = "claude-3-sonnet"
+    CLAUDE_HAIKU = "claude-3-haiku"
     GPT4 = "gpt-4o"
+    GPT4_TURBO = "gpt-4-turbo"
+    GPT3_5 = "gpt-3.5-turbo"
     GEMINI = "gemini-2.5-flash"
+    GEMINI_PRO = "gemini-2.5-pro"
+    
+    @classmethod
+    def is_valid_id(cls, llm_id: str) -> bool:
+        """Check if an LLM ID is valid.
+        
+        Args:
+            llm_id: The LLM ID to check
+            
+        Returns:
+            Whether the ID is valid
+        """
+        return llm_id in [provider.value for provider in cls]
 
 @dataclass
 class Agent:

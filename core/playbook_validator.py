@@ -161,6 +161,62 @@ def check_tool_references(playbook: Playbook) -> Tuple[bool, Optional[str]]:
     
     return True, None
 
+def check_agent_llm_mappings(playbook: Playbook) -> Tuple[bool, Optional[str]]:
+    """Check that all agent-LLM mappings are valid.
+    
+    Args:
+        playbook: The validated Playbook object
+        
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    # Skip if no agent_llms defined
+    if not hasattr(playbook, 'agent_llms') or not playbook.agent_llms:
+        return True, None
+        
+    # Check that all agents are defined in the playbook
+    agents = set(playbook.agents or [])
+    
+    for agent_name in playbook.agent_llms:
+        if agent_name not in agents:
+            error_message = f"Agent-LLM mapping references non-existent agent '{agent_name}'"
+            logger.error(error_message)
+            return False, error_message
+    
+    # Validate LLM IDs
+    try:
+        # Import here to avoid circular imports
+        from core.agents.agent_definitions import LLMProvider
+        
+        # Get all known LLM IDs
+        valid_llm_ids = set(provider.value for provider in LLMProvider)
+        
+        # Add any custom LLM IDs defined in config
+        try:
+            import os
+            import yaml
+            config_path = os.path.join("core", "configs", "llms.yaml")
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    llm_config = yaml.safe_load(f)
+                    if llm_config and "llms" in llm_config:
+                        for llm in llm_config["llms"]:
+                            if "id" in llm:
+                                valid_llm_ids.add(llm["id"])
+        except Exception as e:
+            logger.warning(f"Failed to load custom LLM IDs: {e}")
+        
+        # Check each LLM ID
+        for agent_name, llm_id in playbook.agent_llms.items():
+            if llm_id not in valid_llm_ids:
+                logger.warning(f"Agent-LLM mapping for '{agent_name}' uses unknown LLM ID '{llm_id}'")
+                # Don't fail validation, just warn - the ID might be valid in the runtime environment
+    
+    except ImportError:
+        logger.warning("Could not import LLMProvider for validation, skipping LLM ID checks")
+    
+    return True, None
+
 def validate_playbook_consistency(playbook: Playbook) -> Tuple[bool, Optional[str]]:
     """Validate the internal consistency of a playbook.
     
@@ -182,6 +238,11 @@ def validate_playbook_consistency(playbook: Playbook) -> Tuple[bool, Optional[st
     
     # Check tool references
     valid, error = check_tool_references(playbook)
+    if not valid:
+        return False, error
+    
+    # Check agent-LLM mappings
+    valid, error = check_agent_llm_mappings(playbook)
     if not valid:
         return False, error
     
