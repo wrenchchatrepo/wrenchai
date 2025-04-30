@@ -7,8 +7,23 @@ import logging
 import asyncio
 import json
 from pathlib import Path
+from pydantic import BaseModel, Field
+from fastapi import HTTPException, status
+from datetime import datetime
+from core.tools.memory_manager import MemoryManager
 
 from .journey_agent import JourneyAgent
+
+logger = logging.getLogger(__name__)
+
+class DesignSpec(BaseModel):
+    """Specification for design tasks"""
+    theme: str = Field(..., description="Design theme (e.g., modern, minimal, corporate)")
+    color_scheme: Dict[str, str] = Field(..., description="Color palette for the design")
+    typography: Dict[str, str] = Field(..., description="Typography specifications")
+    spacing: Dict[str, str] = Field(..., description="Spacing and layout rules")
+    components: List[str] = Field(default_factory=list, description="Required components")
+    responsive_breakpoints: Dict[str, int] = Field(..., description="Responsive design breakpoints")
 
 class UXDesigner(JourneyAgent):
     """
@@ -360,3 +375,293 @@ class UXDesigner(JourneyAgent):
             results["responsive_variations"] = context["responsive_design"]
             
         return results
+
+class UXDesignerAgent:
+    def __init__(self):
+        self.memory_manager = MemoryManager()
+        self.design_systems = {
+            "modern": {
+                "color_scheme": {
+                    "primary": "#1B03A3",  # Neon Blue
+                    "secondary": "#9D00FF",  # Neon Purple
+                    "accent": "#FF10F0",  # Neon Pink
+                    "background": "#FFFFFF",
+                    "text": "#000000"
+                },
+                "typography": {
+                    "heading": "Inter",
+                    "body": "Inter",
+                    "code": "JetBrains Mono"
+                },
+                "spacing": {
+                    "base": "1rem",
+                    "large": "2rem",
+                    "small": "0.5rem"
+                }
+            },
+            "minimal": {
+                "color_scheme": {
+                    "primary": "#000000",
+                    "secondary": "#333333",
+                    "accent": "#666666",
+                    "background": "#FFFFFF",
+                    "text": "#000000"
+                },
+                "typography": {
+                    "heading": "SF Pro Display",
+                    "body": "SF Pro Text",
+                    "code": "SF Mono"
+                },
+                "spacing": {
+                    "base": "1.5rem",
+                    "large": "3rem",
+                    "small": "0.75rem"
+                }
+            }
+        }
+        
+    async def create_design_system(self, spec: DesignSpec) -> Dict[str, Any]:
+        """Create a comprehensive design system based on specifications"""
+        try:
+            design_system = {
+                "theme": spec.theme,
+                "color_scheme": self._generate_color_scheme(spec),
+                "typography": self._generate_typography(spec),
+                "spacing": self._generate_spacing_system(spec),
+                "components": await self._generate_component_library(spec),
+                "responsive": self._generate_responsive_rules(spec)
+            }
+            
+            # Store design system in memory
+            await self.memory_manager.store_design_system(design_system)
+            
+            return design_system
+        except Exception as e:
+            logger.error(f"Design system creation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Design system creation failed: {str(e)}"
+            )
+            
+    def _generate_color_scheme(self, spec: DesignSpec) -> Dict[str, str]:
+        """Generate a complete color scheme with variations"""
+        base_colors = spec.color_scheme
+        return {
+            **base_colors,
+            "primary-light": self._lighten_color(base_colors["primary"]),
+            "primary-dark": self._darken_color(base_colors["primary"]),
+            "secondary-light": self._lighten_color(base_colors["secondary"]),
+            "secondary-dark": self._darken_color(base_colors["secondary"]),
+            "accent-light": self._lighten_color(base_colors["accent"]),
+            "accent-dark": self._darken_color(base_colors["accent"])
+        }
+        
+    def _generate_typography(self, spec: DesignSpec) -> Dict[str, Any]:
+        """Generate typography system with scale and variants"""
+        return {
+            "fonts": spec.typography,
+            "scale": {
+                "h1": "2.5rem",
+                "h2": "2rem",
+                "h3": "1.75rem",
+                "h4": "1.5rem",
+                "body": "1rem",
+                "small": "0.875rem"
+            },
+            "weights": {
+                "light": 300,
+                "regular": 400,
+                "medium": 500,
+                "bold": 700
+            },
+            "line-heights": {
+                "tight": 1.2,
+                "normal": 1.5,
+                "loose": 1.8
+            }
+        }
+        
+    def _generate_spacing_system(self, spec: DesignSpec) -> Dict[str, Any]:
+        """Generate comprehensive spacing system"""
+        base = int(spec.spacing["base"].replace("rem", ""))
+        return {
+            "space": {
+                "xxs": f"{base * 0.25}rem",
+                "xs": f"{base * 0.5}rem",
+                "sm": f"{base * 0.75}rem",
+                "md": f"{base}rem",
+                "lg": f"{base * 1.5}rem",
+                "xl": f"{base * 2}rem",
+                "xxl": f"{base * 3}rem"
+            },
+            "layout": {
+                "container": "1200px",
+                "content": "800px"
+            }
+        }
+        
+    async def _generate_component_library(self, spec: DesignSpec) -> Dict[str, Any]:
+        """Generate component library specifications"""
+        components = {
+            "buttons": {
+                "primary": {
+                    "background": spec.color_scheme["primary"],
+                    "color": "#FFFFFF",
+                    "padding": "0.75rem 1.5rem",
+                    "border-radius": "0.375rem"
+                },
+                "secondary": {
+                    "background": spec.color_scheme["secondary"],
+                    "color": "#FFFFFF",
+                    "padding": "0.75rem 1.5rem",
+                    "border-radius": "0.375rem"
+                }
+            },
+            "cards": {
+                "default": {
+                    "background": "#FFFFFF",
+                    "border-radius": "0.5rem",
+                    "shadow": "0 4px 6px rgba(0, 0, 0, 0.1)"
+                }
+            },
+            "navigation": {
+                "header": {
+                    "height": "4rem",
+                    "background": "#FFFFFF"
+                },
+                "sidebar": {
+                    "width": "16rem",
+                    "background": "#F8F9FA"
+                }
+            }
+        }
+        
+        # Add custom components based on spec
+        for component in spec.components:
+            if component not in components:
+                components[component] = await self._generate_component_spec(component, spec)
+                
+        return components
+        
+    def _generate_responsive_rules(self, spec: DesignSpec) -> Dict[str, Any]:
+        """Generate responsive design rules"""
+        return {
+            "breakpoints": spec.responsive_breakpoints,
+            "containers": {
+                "sm": "540px",
+                "md": "720px",
+                "lg": "960px",
+                "xl": "1140px"
+            },
+            "grid": {
+                "columns": 12,
+                "gap": "1rem"
+            }
+        }
+        
+    async def _generate_component_spec(self, component: str, spec: DesignSpec) -> Dict[str, Any]:
+        """Generate specification for a custom component"""
+        # Implementation would depend on specific component requirements
+        return {
+            "background": spec.color_scheme["background"],
+            "color": spec.color_scheme["text"],
+            "padding": spec.spacing["base"],
+            "border-radius": "0.375rem"
+        }
+        
+    def _lighten_color(self, color: str, amount: float = 0.2) -> str:
+        """Lighten a hex color"""
+        # Implementation of color lightening logic
+        return color  # Placeholder
+        
+    def _darken_color(self, color: str, amount: float = 0.2) -> str:
+        """Darken a hex color"""
+        # Implementation of color darkening logic
+        return color  # Placeholder
+        
+    async def generate_design_tokens(self, spec: DesignSpec) -> Dict[str, Any]:
+        """Generate design tokens for the design system"""
+        try:
+            design_system = await self.create_design_system(spec)
+            
+            tokens = {
+                "colors": self._generate_color_tokens(design_system),
+                "typography": self._generate_typography_tokens(design_system),
+                "spacing": self._generate_spacing_tokens(design_system),
+                "shadows": self._generate_shadow_tokens(),
+                "animations": self._generate_animation_tokens()
+            }
+            
+            return tokens
+        except Exception as e:
+            logger.error(f"Design token generation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Design token generation failed: {str(e)}"
+            )
+            
+    def _generate_color_tokens(self, design_system: Dict[str, Any]) -> Dict[str, str]:
+        """Generate color design tokens"""
+        colors = design_system["color_scheme"]
+        return {
+            "--color-primary": colors["primary"],
+            "--color-primary-light": colors["primary-light"],
+            "--color-primary-dark": colors["primary-dark"],
+            "--color-secondary": colors["secondary"],
+            "--color-secondary-light": colors["secondary-light"],
+            "--color-secondary-dark": colors["secondary-dark"],
+            "--color-accent": colors["accent"],
+            "--color-accent-light": colors["accent-light"],
+            "--color-accent-dark": colors["accent-dark"],
+            "--color-background": colors["background"],
+            "--color-text": colors["text"]
+        }
+        
+    def _generate_typography_tokens(self, design_system: Dict[str, Any]) -> Dict[str, str]:
+        """Generate typography design tokens"""
+        typography = design_system["typography"]
+        return {
+            "--font-family-heading": typography["fonts"]["heading"],
+            "--font-family-body": typography["fonts"]["body"],
+            "--font-family-code": typography["fonts"]["code"],
+            "--font-size-h1": typography["scale"]["h1"],
+            "--font-size-h2": typography["scale"]["h2"],
+            "--font-size-h3": typography["scale"]["h3"],
+            "--font-size-body": typography["scale"]["body"],
+            "--font-weight-light": str(typography["weights"]["light"]),
+            "--font-weight-regular": str(typography["weights"]["regular"]),
+            "--font-weight-bold": str(typography["weights"]["bold"])
+        }
+        
+    def _generate_spacing_tokens(self, design_system: Dict[str, Any]) -> Dict[str, str]:
+        """Generate spacing design tokens"""
+        spacing = design_system["spacing"]
+        return {
+            "--space-xxs": spacing["space"]["xxs"],
+            "--space-xs": spacing["space"]["xs"],
+            "--space-sm": spacing["space"]["sm"],
+            "--space-md": spacing["space"]["md"],
+            "--space-lg": spacing["space"]["lg"],
+            "--space-xl": spacing["space"]["xl"],
+            "--space-xxl": spacing["space"]["xxl"]
+        }
+        
+    def _generate_shadow_tokens(self) -> Dict[str, str]:
+        """Generate shadow design tokens"""
+        return {
+            "--shadow-sm": "0 1px 2px rgba(0, 0, 0, 0.05)",
+            "--shadow-md": "0 4px 6px rgba(0, 0, 0, 0.1)",
+            "--shadow-lg": "0 10px 15px rgba(0, 0, 0, 0.1)",
+            "--shadow-xl": "0 20px 25px rgba(0, 0, 0, 0.15)"
+        }
+        
+    def _generate_animation_tokens(self) -> Dict[str, str]:
+        """Generate animation design tokens"""
+        return {
+            "--transition-fast": "150ms ease-in-out",
+            "--transition-normal": "300ms ease-in-out",
+            "--transition-slow": "500ms ease-in-out",
+            "--ease-in-out": "cubic-bezier(0.4, 0, 0.2, 1)",
+            "--ease-in": "cubic-bezier(0.4, 0, 1, 1)",
+            "--ease-out": "cubic-bezier(0, 0, 0.2, 1)"
+        }

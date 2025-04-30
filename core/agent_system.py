@@ -8,6 +8,7 @@ from typing import Dict, List, Any, Optional, Callable, TypeVar, Generic, Union
 from dataclasses import dataclass
 from pydantic_ai import Agent as PydanticAgent, RunContext, Agent
 from typing import Optional, List
+import asyncio
 
 # Try to import MCP components
 try:
@@ -401,11 +402,17 @@ class AgentManager:
         if step_type == 'standard':
             return await self._execute_standard_step(step, context, workflow_agents)
             
-        elif step_type == 'parallel':
+        elif step_type == 'work_in_parallel':
             return await self._execute_parallel_step(step, context, workflow_agents)
             
-        elif step_type == 'partner_loop':
+        elif step_type == 'partner_feedback_loop':
             return await self._execute_partner_loop(step, context, workflow_agents)
+            
+        elif step_type == 'process':
+            return await self._execute_process_step(step, context, workflow_agents)
+            
+        elif step_type == 'handoff':
+            return await self._execute_handoff_step(step, context, workflow_agents)
             
         else:
             raise ValueError(f"Unknown step type: {step_type}")
@@ -426,17 +433,13 @@ class AgentManager:
         
         # Process the step with the agent
         result = await agent.process(step_input)
-        
         return result
     
     async def _execute_parallel_step(self, step: Dict[str, Any],
                                    context: Dict[str, Any],
                                    workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
         """Execute a parallel workflow step with multiple agents"""
-        # This is a simplified implementation - in a real system, 
-        # you would use asyncio.gather() for true parallel execution
-        
-        results = {}
+        tasks = []
         for agent_spec in step['agents']:
             # Parse agent spec (format: "AgentName:operation")
             parts = agent_spec.split(':')
@@ -452,25 +455,32 @@ class AgentManager:
                 "step": step
             }
             
-            # Process with the agent
-            result = await agent.process(agent_input)
-            results[agent_role] = result
+            # Create task
+            task = agent.process(agent_input)
+            tasks.append(task)
+        
+        # Execute all tasks in parallel
+        results = await asyncio.gather(*tasks)
         
         # Combine results according to the aggregation strategy
         if 'output_aggregation' in step:
             strategy = step['output_aggregation']['strategy']
-            # Implement different aggregation strategies here
-            # For now, just return all results
+            if strategy == 'combine_content':
+                combined_results = {}
+                for result in results:
+                    combined_results.update(result)
+                return combined_results
         
-        return results
+        # Default: return all results in a list
+        return {"results": results}
     
     async def _execute_partner_loop(self, step: Dict[str, Any],
                                   context: Dict[str, Any],
                                   workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
         """Execute a partner loop workflow where agents collaborate iteratively"""
         iterations = step.get('iterations', 3)
-        roles = step['roles']
-        agents_map = step['agents']
+        agents = step['agents']
+        operations = step['operations']
         
         results = []
         current_state = context.copy()
@@ -478,16 +488,15 @@ class AgentManager:
         for i in range(iterations):
             iteration_results = {}
             
-            for role_config in roles:
-                role = role_config['role']
-                operation = role_config['operation']
+            for operation in operations:
+                role = operation['role']
+                operation_name = operation['name']
                 
-                agent_role = agents_map[role]
-                agent = workflow_agents[agent_role]
+                agent = workflow_agents[agents[role]]
                 
                 # Prepare input for this role
                 role_input = {
-                    "operation": operation,
+                    "operation": operation_name,
                     "context": current_state,
                     "iteration": i,
                     "step": step
@@ -504,11 +513,95 @@ class AgentManager:
             
             # Check for early termination condition if specified
             if 'termination_condition' in step:
-                # Placeholder for termination condition evaluation
-                # In a real implementation, this would evaluate the condition
-                pass
+                condition = step['termination_condition']
+                if self._evaluate_condition(condition, current_state):
+                    break
         
         return {
             "iterations": results,
             "final_state": current_state
         }
+    
+    async def _execute_process_step(self, step: Dict[str, Any],
+                                  context: Dict[str, Any],
+                                  workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
+        """Execute a process step with conditional branching"""
+        agent = workflow_agents[step['agent']]
+        process = step['process']
+        
+        results = {}
+        current_state = context.copy()
+        
+        for operation in process:
+            # Check condition if present
+            if 'condition' in operation:
+                if not self._evaluate_condition(operation['condition'], current_state):
+                    continue
+            
+            # Execute operation
+            operation_input = {
+                "operation": operation['operation'],
+                "context": current_state,
+                "step": step
+            }
+            
+            result = await agent.process(operation_input)
+            results[operation['operation']] = result
+            
+            # Update state
+            current_state = {**current_state, "previous_result": result}
+        
+        return results
+    
+    async def _execute_handoff_step(self, step: Dict[str, Any],
+                                  context: Dict[str, Any],
+                                  workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
+        """Execute a handoff step with conditional agent selection"""
+        primary_agent = workflow_agents[step['primary_agent']]
+        
+        # Execute primary operation
+        primary_result = await primary_agent.process({
+            "operation": step['operation'],
+            "context": context,
+            "step": step
+        })
+        
+        results = {"primary": primary_result}
+        
+        # Check handoff conditions
+        for handoff in step.get('handoff_conditions', []):
+            if self._evaluate_condition(handoff['condition'], {**context, **primary_result}):
+                target_agent = workflow_agents[handoff['target_agent']]
+                
+                # Execute handoff operation
+                handoff_result = await target_agent.process({
+                    "operation": handoff['operation'],
+                    "context": {**context, **primary_result},
+                    "step": step
+                })
+                
+                results[handoff['target_agent']] = handoff_result
+        
+        # Execute completion action if specified
+        if 'completion_action' in step:
+            completion_result = await primary_agent.process({
+                "operation": step['completion_action'],
+                "context": {**context, **results},
+                "step": step
+            })
+            results['completion'] = completion_result
+        
+        return results
+    
+    def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
+        """Evaluate a condition string against a context"""
+        try:
+            # Create a safe evaluation environment
+            eval_globals = {"__builtins__": {}}
+            eval_locals = context.copy()
+            
+            # Evaluate the condition
+            return bool(eval(condition, eval_globals, eval_locals))
+        except Exception as e:
+            logging.error(f"Error evaluating condition '{condition}': {e}")
+            return False

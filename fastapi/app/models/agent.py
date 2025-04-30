@@ -1,25 +1,30 @@
-from datetime import datetime
-from typing import Dict
-from sqlalchemy import Column, String, Boolean, DateTime, JSON, Float, ForeignKey
+"""SQLAlchemy model for agents."""
+
+from typing import Dict, Any
+from sqlalchemy import Column, String, JSON, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
 
 from app.db.base_class import Base
 
 class Agent(Base):
-    """Agent model."""
+    """Agent model for database storage."""
     __tablename__ = "agents"
 
-    id = Column(String, primary_key=True, index=True)
-    role = Column(String, nullable=False)
-    config = Column(JSON, nullable=False, default={})
-    is_active = Column(Boolean, default=True)
-    owner_id = Column(String, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    type = Column(String, nullable=False)
+    config = Column(JSON, nullable=False, default=dict)
+    status = Column(String, nullable=False, default="inactive")
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
     # Relationships
-    owner = relationship("User", back_populates="agents")
+    user = relationship("User", back_populates="agents")
     tasks = relationship("Task", back_populates="agent")
+
+    def __repr__(self) -> str:
+        """String representation of the agent."""
+        return f"<Agent(id={self.id}, type={self.type}, status={self.status})>"
 
 class Task(Base):
     """Task model."""

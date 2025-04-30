@@ -4,16 +4,22 @@ Integration tests for WebSocket functionality.
 These tests verify real-time communication between clients and agents.
 """
 import pytest
+import json
+from uuid import uuid4
 from httpx import AsyncClient
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocket
 from typing import AsyncGenerator, Dict
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.session import async_session, engine
 from core.db.models import Agent, Task, Message
 from app.main import app
 from app.core.security import create_access_token
 from app.api.deps import get_db
+from app.core.websocket import manager
+from app.models.task import Task as AppTask
+from app.schemas.task import TaskCreate
 
 # Override database dependency
 async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -184,4 +190,123 @@ async def test_message_broadcast(
         assert response1["type"] == "broadcast"
         assert response2["type"] == "broadcast"
         assert response1["message"] == "Hello everyone!"
-        assert response2["message"] == "Hello everyone!" 
+        assert response2["message"] == "Hello everyone!"
+
+@pytest.mark.anyio
+async def test_task_websocket_connection(async_client: AsyncClient, test_db: AsyncSession):
+    """Test WebSocket connection for task updates."""
+    # Create a test task
+    task_id = str(uuid4())
+    task = AppTask(
+        id=task_id,
+        type="test",
+        status="pending",
+        progress=0.0,
+        input_data={"test": "data"}
+    )
+    test_db.add(task)
+    await test_db.commit()
+
+    # Connect to WebSocket
+    async with AsyncClient(
+        app=app,
+        base_url="http://test"
+    ) as ac:
+        async with ac.websocket_connect(f"/api/v1/ws/tasks/{task_id}") as websocket:
+            # Should receive initial task state
+            data = await websocket.receive_json()
+            assert data["task_id"] == task_id
+            assert data["status"] == "pending"
+            assert data["progress"] == 0.0
+
+            # Test ping-pong
+            await websocket.send_json({"type": "ping"})
+            response = await websocket.receive_json()
+            assert response["type"] == "pong"
+
+@pytest.mark.anyio
+async def test_agent_tasks_websocket(async_client: AsyncClient, test_db: AsyncSession):
+    """Test WebSocket connection for agent's tasks updates."""
+    # Create test agent and tasks
+    agent_id = str(uuid4())
+    tasks = []
+    for i in range(3):
+        task = AppTask(
+            id=str(uuid4()),
+            agent_id=agent_id,
+            type=f"test_{i}",
+            status="pending",
+            progress=0.0,
+            input_data={"test": f"data_{i}"}
+        )
+        tasks.append(task)
+        test_db.add(task)
+    await test_db.commit()
+
+    # Connect to WebSocket
+    async with AsyncClient(
+        app=app,
+        base_url="http://test"
+    ) as ac:
+        async with ac.websocket_connect(f"/api/v1/ws/agents/{agent_id}/tasks") as websocket:
+            # Should receive initial state for all tasks
+            received_tasks = set()
+            for _ in range(len(tasks)):
+                data = await websocket.receive_json()
+                received_tasks.add(data["task_id"])
+                assert data["status"] == "pending"
+                assert data["progress"] == 0.0
+
+            assert len(received_tasks) == len(tasks)
+
+            # Test ping-pong
+            await websocket.send_json({"type": "ping"})
+            response = await websocket.receive_json()
+            assert response["type"] == "pong"
+
+@pytest.mark.anyio
+async def test_task_update_broadcast(async_client: AsyncClient, test_db: AsyncSession):
+    """Test broadcasting task updates to connected clients."""
+    task_id = str(uuid4())
+    task = AppTask(
+        id=task_id,
+        type="test",
+        status="pending",
+        progress=0.0,
+        input_data={"test": "data"}
+    )
+    test_db.add(task)
+    await test_db.commit()
+
+    # Connect to WebSocket
+    async with AsyncClient(
+        app=app,
+        base_url="http://test"
+    ) as ac:
+        async with ac.websocket_connect(f"/api/v1/ws/tasks/{task_id}") as websocket:
+            # Update task
+            await manager.broadcast_task_update(
+                task_id=str(task_id),
+                status="running",
+                progress=50.0,
+                message="Task is running"
+            )
+
+            # Should receive update
+            data = await websocket.receive_json()
+            assert data["task_id"] == str(task_id)
+            assert data["status"] == "running"
+            assert data["progress"] == 50.0
+            assert data["message"] == "Task is running"
+
+@pytest.mark.anyio
+async def test_websocket_error_handling(async_client: AsyncClient):
+    """Test WebSocket error handling."""
+    # Test connection to non-existent task
+    async with AsyncClient(
+        app=app,
+        base_url="http://test"
+    ) as ac:
+        with pytest.raises(Exception):
+            async with ac.websocket_connect("/api/v1/ws/tasks/nonexistent"):
+                pass 

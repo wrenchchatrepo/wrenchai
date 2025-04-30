@@ -138,34 +138,128 @@ wrenchai/
 
 ## Roadmap
 
-### Generation 1 (MVP)
+### MVP Implementation
 
-*   Core agentic framework implementation:
-    *   `SuperAgent`: Orchestrates the overall process, analyzes user requests, assigns roles and tools, and creates the execution plan.
-    *   `InspectorAgent`: Monitors the progress of `Journey` agents, evaluates their outputs using Bayesian reasoning, and reports to the `SuperAgent`.
-    *   `JourneyAgent`: Executes specific tasks according to assigned playbooks and utilizes allocated tools.
-*   Bayesian reasoning for decision-making and evaluation within the `InspectorAgent`.
-*   Basic tool integration (initial set: web search, code execution).
-*   Streamlit UI for basic interaction:
-    *   Simple user input for requests.
-    *   Verbose output explaining agent actions and reasoning.
-    *   Progress indicators.
-    *   Cost tracking.
-*   YAML-based configuration for agents and playbooks.
-*   Cost tracking for LLM API usage and (basic) GCP resource usage.
-*   Dockerization of agents for isolation and reproducibility.
-*   GitHub integration for version control, collaboration, and CI/CD.
+1. **Core Framework Components**
+   - Base Agent Structure ✅
+   - Agent Communication System 🚧
+   - Tool Registry ✅
+   - Message Queue ✅
+   - Database Integration 🚧
+   - Logging System ✅
+   - Error Handling 🚧
+   - Security Layer 🚧
 
-### Generation 2 (Post-MVP)
+2. **MVP Agents**
+   - SuperAgent (In Progress 🚧)
+     - Orchestration and task delegation
+     - Progress monitoring
+     - Result aggregation
+   - InspectorAgent (In Progress 🚧)
+     - Code analysis and quality assurance
+     - Standards checking
+     - Improvement suggestions
+   - JourneyAgent (Planned 📋)
+     - User interaction management
+     - Context tracking
+     - Conversation management
+   - DBAAgent (Planned 📋)
+     - Database operations
+     - Query optimization
+     - Schema management
+   - TestEngineerAgent (Planned 📋)
+     - Test suite design
+     - Coverage analysis
+     - Result reporting
 
-*   **Visual Workflow Editor (React-based):** Replace YAML playbooks with a drag-and-drop interface for creating and managing agent workflows, inspired by tools like Praison.ai's canvas.
-*   **Expanded Tool Catalog:** Add more pre-built tools to the framework, covering a wider range of functionalities.
-*   **Advanced Data Connection Management:** Implement a more robust and user-friendly system for managing connections to various data sources (databases, cloud storage, APIs).
-*   **Multiple Trigger Mechanisms:** Support different trigger types for agent execution, including:
-    *   Schedule triggers (e.g., run every hour).
-    *   Webhook triggers (e.g., triggered by external events).
-    *   Data change triggers (e.g., triggered by updates in a database).
-*   **Enhanced Agent Communication:** Refine and expand the mechanisms for communication between agents, potentially using message queues or other asynchronous communication patterns.
+3. **FastAPI Backend Implementation**
+   - Basic API structure with versioning ✅
+   - Core endpoints with validation ✅
+   - Database integration with SQLAlchemy ✅
+   - Query optimization ✅
+   - WebSocket support ✅
+   - Basic authentication ✅
+   - Error handling ✅
+   - Rate limiting ✅
+   - CORS configuration ✅
+   - Health check endpoints ✅
+
+4. **Streamlit Implementation**
+   - Basic UI components ✅
+   - State management ✅
+   - Session handling ✅
+   - Authentication flow ✅
+   - WebSocket integration ✅
+
+5. **Documentation**
+   - Basic API documentation ✅
+   - Code documentation ✅
+   - Type hints ✅
+   - OpenAPI schema ✅
+   - Architecture documentation ✅
+
+### Post-MVP Implementation
+
+1. **Enhanced Content Generation**
+   - GitHub Projects Auto-Sync
+   - Technical Articles Pipeline
+   - Code Examples Enhancement
+
+2. **Advanced UI/UX Features**
+   - Dynamic Visualizations
+   - Enhanced Navigation
+   - Accessibility Improvements
+
+3. **Performance Optimizations**
+   - Code Splitting
+   - Asset Optimization
+   - Caching Strategy
+
+4. **Analytics and Monitoring**
+   - User Behavior Analytics
+   - Performance Monitoring
+   - Automated Reports
+
+5. **Security Enhancements**
+   - Content Security
+   - Access Control
+   - Audit Logging
+
+6. **Post-MVP Agents**
+   - DevOpsAgent
+     - CI/CD pipeline optimization
+     - Infrastructure management
+   - InfoSecAgent
+     - Security audits
+     - Compliance checking
+   - UXDesignerAgent
+     - Interface design
+     - User flow optimization
+   - ZeroKProofAgent
+     - Protocol selection
+     - Proof generation
+   - DataScientistAgent
+     - Data preprocessing
+     - Model training
+   - ParalegalAgent
+     - Legal compliance
+     - Document analysis
+   - ComptrollerAgent
+     - Resource tracking
+     - Cost optimization
+   - GCPArchitectAgent
+     - Cloud optimization
+     - Architecture design
+   - CodeGeneratorAgent
+     - Template generation
+     - Code scaffolding
+   - WebResearcherAgent
+     - Information gathering
+     - Data synthesis
+
+For detailed implementation plans and timelines, see:
+- [MVP Implementation Plan](MVP_IMPLEMENTATION_PLAN.md)
+- [Post-MVP Implementation Plan](POST_MVP_IMPLEMENTATION_PLAN.md)
 
 ## Contributing
 
