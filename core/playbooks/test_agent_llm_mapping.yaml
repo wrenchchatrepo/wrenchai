@@ -1,0 +1,89 @@
+---
+# Test playbook for agent-LLM mapping system
+name: "Agent-LLM Mapping Test"
+description: "A test playbook to verify agent-LLM mapping functionality"
+tools:
+  - file_system
+  - web_search
+  - documentation_tool
+  - design_tool
+  - uat_tool
+agents:
+  - SuperAgent
+  - UXDesignerAgent
+  - CodifierAgent
+  - UATAgent
+agent_llms:
+  # Override default LLM mappings
+  SuperAgent: claude-3-opus
+  UXDesignerAgent: claude-3-sonnet  # Change from GPT-4
+  CodifierAgent: claude-3-sonnet    # Keep the same
+  UATAgent: claude-3-haiku          # Change from Gemini
+steps:
+  - step_id: "metadata"
+    type: "standard"
+    description: "Playbook metadata"
+    agent: "SuperAgent"
+    operation: "validate_config"
+    metadata:
+      name: "Agent-LLM Mapping Test"
+      description: "A test playbook to verify agent-LLM mapping functionality"
+      tools:
+        - file_system
+        - web_search
+        - documentation_tool
+        - design_tool
+        - uat_tool
+      agents:
+        - SuperAgent
+        - UXDesignerAgent
+        - CodifierAgent
+        - UATAgent
+      agent_llms:
+        # Override default LLM mappings
+        SuperAgent: claude-3-opus
+        UXDesignerAgent: claude-3-sonnet
+        CodifierAgent: claude-3-sonnet
+        UATAgent: claude-3-haiku
+      sections:
+        - start
+        - middle
+        - end
+    next: "design_work"
+
+  - step_id: "design_work"
+    type: "standard"
+    description: "Create design wireframes"
+    agent: "UXDesignerAgent"
+    operation: "create_wireframe"
+    parameters:
+      requirements:
+        theme: "modern"
+        components:
+          - header
+          - footer
+          - hero
+          - projects
+        responsiveness: true
+    next: "document_design"
+
+  - step_id: "document_design"
+    type: "standard"
+    description: "Document the design"
+    agent: "CodifierAgent"
+    operation: "generate_technical_docs"
+    parameters:
+      doc_type: "design"
+      format: "markdown"
+    next: "test_design"
+
+  - step_id: "test_design"
+    type: "standard"
+    description: "Test the design"
+    agent: "UATAgent"
+    operation: "create_test_scenarios"
+    parameters:
+      features:
+        - navigation
+        - responsive
+        - accessibility

@@ -249,14 +249,20 @@ class AgentManager:
         self.bayesian_engine = bayesian_engine
     
     def initialize_agent(self, role_name: str, mcp_servers: Optional[List[str]] = None) -> AgentWrapper:
-        """Initialize an agent with a specific role
+        """
+        Initializes and configures an agent for a specified role.
+        
+        Creates an agent with the given role, attaches dependencies and optional MCP servers, applies any LLM override from agent-LLM mapping if available, and initializes agent state if supported.
         
         Args:
-            role_name: The role name to initialize
-            mcp_servers: Optional list of MCP server names to attach to the agent
-            
+            role_name: The name of the agent role to initialize.
+            mcp_servers: Optional list of MCP server names to attach to the agent.
+        
         Returns:
-            Initialized agent wrapper
+            An AgentWrapper instance representing the initialized agent.
+        
+        Raises:
+            ValueError: If the specified agent role is not found.
         """
         # Find the role configuration
         role_config = next((r for r in self.agent_configs['agent_roles'] 
@@ -323,7 +329,18 @@ class AgentManager:
         return agent
     
     def assign_tools_to_agent(self, agent_id: str, tool_names: List[str]) -> None:
-        """Assign tools to an agent, automatically including dependencies"""
+        """
+        Assigns a set of tools to an agent, automatically including any required tool dependencies.
+        
+        If a tool has dependencies specified in the tool dependency list, those dependencies are also assigned to the agent. Replaces the agent instance with a new one configured with the updated tool set.
+        
+        Args:
+            agent_id: The identifier of the agent to update.
+            tool_names: List of tool names to assign to the agent.
+        
+        Raises:
+            ValueError: If the specified agent ID does not exist.
+        """
         
         if agent_id not in self.agents:
             raise ValueError(f"Agent not found: {agent_id}")
@@ -360,7 +377,21 @@ class AgentManager:
         logging.info(f"Agent {agent_id} assigned tools: {new_agent.assigned_tools}")
     
     async def run_workflow(self, playbook_name: str, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run a workflow defined in a playbook"""
+        """
+        Executes a workflow defined in a playbook using the specified input data.
+        
+        Initializes agents, assigns tools, registers agent-LLM mappings if present, and sequentially executes workflow steps as defined in the playbook. Returns the final output produced by the workflow.
+        
+        Args:
+            playbook_name: The name of the playbook to execute.
+            input_data: Input data to be provided to the workflow.
+        
+        Returns:
+            The output dictionary resulting from the workflow execution.
+        
+        Raises:
+            ValueError: If the specified playbook is not found.
+        """
         # Find the playbook
         playbook = next((p for p in self.playbook_configs['playbooks'] 
                          if p['name'] == playbook_name), None)
@@ -428,7 +459,22 @@ class AgentManager:
     async def _execute_step(self, step: Dict[str, Any], 
                           context: Dict[str, Any],
                           workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
-        """Execute a workflow step based on its type"""
+        """
+                          Executes a workflow step according to its specified type.
+                          
+                          Dispatches the step to the appropriate handler based on its type, supporting standard, parallel, partner feedback loop, process, and handoff step types. Raises a ValueError if the step type is unrecognized.
+                          
+                          Args:
+                              step: The workflow step definition.
+                              context: The current workflow context.
+                              workflow_agents: Mapping of agent names to agent instances.
+                          
+                          Returns:
+                              The updated workflow context after executing the step.
+                          
+                          Raises:
+                              ValueError: If the step type is unknown.
+                          """
         step_type = step.get('type', 'standard')
         
         if step_type == 'standard':
@@ -452,7 +498,17 @@ class AgentManager:
     async def _execute_standard_step(self, step: Dict[str, Any], 
                                    context: Dict[str, Any],
                                    workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
-        """Execute a standard workflow step"""
+        """
+                                   Executes a standard workflow step by invoking the specified agent's operation.
+                                   
+                                   Args:
+                                       step: The workflow step definition containing the agent role and operation.
+                                       context: The current workflow context passed to the agent.
+                                       workflow_agents: Mapping of agent roles to agent instances.
+                                   
+                                   Returns:
+                                       The result produced by the agent for this workflow step.
+                                   """
         agent_role = step['agent']
         agent = workflow_agents[agent_role]
         
@@ -470,7 +526,19 @@ class AgentManager:
     async def _execute_parallel_step(self, step: Dict[str, Any],
                                    context: Dict[str, Any],
                                    workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
-        """Execute a parallel workflow step with multiple agents"""
+        """
+                                   Executes a parallel workflow step by running multiple agent operations concurrently.
+                                   
+                                   Each agent specified in the step is invoked with the provided context and operation. Results are aggregated according to the specified output aggregation strategy, or returned as a list by default.
+                                   
+                                   Args:
+                                       step: The workflow step definition containing agent specifications and optional output aggregation strategy.
+                                       context: The current workflow context shared among agents.
+                                       workflow_agents: A mapping of agent role names to agent instances.
+                                   
+                                   Returns:
+                                       A dictionary containing the aggregated results from all agents, either as a combined dictionary or a list, depending on the aggregation strategy.
+                                   """
         tasks = []
         for agent_spec in step['agents']:
             # Parse agent spec (format: "AgentName:operation")
@@ -509,7 +577,19 @@ class AgentManager:
     async def _execute_partner_loop(self, step: Dict[str, Any],
                                   context: Dict[str, Any],
                                   workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
-        """Execute a partner loop workflow where agents collaborate iteratively"""
+        """
+                                  Executes a partner feedback loop where multiple agents perform operations iteratively.
+                                  
+                                  Each iteration, agents execute their assigned operations in sequence, updating the shared state after each operation. The loop can terminate early if a specified condition is met.
+                                  
+                                  Args:
+                                      step: The workflow step definition containing agents, operations, and optional termination condition.
+                                      context: The initial context for the workflow step.
+                                      workflow_agents: Mapping of agent identifiers to agent instances.
+                                  
+                                  Returns:
+                                      A dictionary containing the results of each iteration and the final state after completion or early termination.
+                                  """
         iterations = step.get('iterations', 3)
         agents = step['agents']
         operations = step['operations']
@@ -557,7 +637,19 @@ class AgentManager:
     async def _execute_process_step(self, step: Dict[str, Any],
                                   context: Dict[str, Any],
                                   workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
-        """Execute a process step with conditional branching"""
+        """
+                                  Executes a process step for an agent, performing a sequence of operations with optional conditional branching.
+                                  
+                                  Each operation in the process is executed in order if its condition (if present) evaluates to True. The result of each operation is stored and used to update the state for subsequent operations.
+                                  
+                                  Args:
+                                      step: The workflow step definition containing the agent and process operations.
+                                      context: The current workflow context.
+                                      workflow_agents: Mapping of agent names to agent instances.
+                                  
+                                  Returns:
+                                      A dictionary mapping operation names to their results.
+                                  """
         agent = workflow_agents[step['agent']]
         process = step['process']
         
@@ -588,7 +680,11 @@ class AgentManager:
     async def _execute_handoff_step(self, step: Dict[str, Any],
                                   context: Dict[str, Any],
                                   workflow_agents: Dict[str, Agent]) -> Dict[str, Any]:
-        """Execute a handoff step with conditional agent selection"""
+        """
+                                  Executes a handoff workflow step, running a primary agent operation and conditionally delegating follow-up operations to other agents.
+                                  
+                                  The method first executes the primary operation with the designated agent. It then evaluates each handoff condition; if a condition is met, it invokes the specified operation on the target agent using the updated context. If a completion action is defined, it is executed by the primary agent after all handoffs. Returns a dictionary containing results from the primary operation, any handoff operations, and the completion action if present.
+                                  """
         primary_agent = workflow_agents[step['primary_agent']]
         
         # Execute primary operation
@@ -626,7 +722,16 @@ class AgentManager:
         return results
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
-        """Evaluate a condition string against a context"""
+        """
+        Safely evaluates a condition expression against a given context dictionary.
+        
+        Args:
+            condition: A string representing a Python expression to evaluate.
+            context: A dictionary providing variable bindings for the evaluation.
+        
+        Returns:
+            True if the condition evaluates to a truthy value, False if evaluation fails or the result is falsy.
+        """
         try:
             # Create a safe evaluation environment
             eval_globals = {"__builtins__": {}}

@@ -20,7 +20,13 @@ from core.tools.data_analysis import (
 
 @pytest.fixture
 def sample_numeric_data():
-    """Create sample numeric data for testing."""
+    """
+    Generates a DataFrame with three numeric columns for testing purposes.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with columns 'A', 'B', and 'C', each containing 100
+        randomly generated numeric values from normal and exponential distributions.
+    """
     np.random.seed(42)
     return pd.DataFrame({
         'A': np.random.normal(0, 1, 100),
@@ -30,7 +36,13 @@ def sample_numeric_data():
 
 @pytest.fixture
 def sample_categorical_data():
-    """Create sample categorical data for testing."""
+    """
+    Generates a sample DataFrame with categorical and numeric columns for testing.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with a 'category' column containing repeated categories
+        and a 'value' column of normally distributed random numbers.
+    """
     return pd.DataFrame({
         'category': ['A', 'B', 'A', 'C', 'B'] * 20,
         'value': np.random.normal(0, 1, 100)
@@ -38,7 +50,12 @@ def sample_categorical_data():
 
 @pytest.fixture
 def sample_time_series_data():
-    """Create sample time series data for testing."""
+    """
+    Generates a sample time series DataFrame with dates and noisy sinusoidal values.
+    
+    Returns:
+        pd.DataFrame: A DataFrame with a 'date' column of 100 consecutive days starting from 2023-01-01 and a 'value' column containing a sinusoidal signal with added Gaussian noise.
+    """
     dates = pd.date_range(start='2023-01-01', periods=100, freq='D')
     return pd.DataFrame({
         'date': dates,
@@ -46,7 +63,9 @@ def sample_time_series_data():
     })
 
 def test_analyze_data_descriptive(sample_numeric_data):
-    """Test descriptive analysis."""
+    """
+    Tests that the descriptive analysis returns summary statistics, skewness, quartiles, and correct row and column counts for numeric data.
+    """
     result = analyze_data(
         sample_numeric_data.to_dict(),
         'descriptive',
@@ -60,7 +79,9 @@ def test_analyze_data_descriptive(sample_numeric_data):
     assert result['column_count'] == 3
 
 def test_analyze_data_correlation(sample_numeric_data):
-    """Test correlation analysis."""
+    """
+    Tests that correlation analysis returns a correlation matrix, method, and p-values when using Pearson correlation on numeric data.
+    """
     result = analyze_data(
         sample_numeric_data.to_dict(),
         'correlation',
@@ -72,7 +93,11 @@ def test_analyze_data_correlation(sample_numeric_data):
     assert result['pvalues'] is not None
 
 def test_analyze_data_hypothesis_test(sample_categorical_data):
-    """Test hypothesis testing."""
+    """
+    Tests the hypothesis testing analysis using ANOVA on categorical data.
+    
+    Verifies that the result includes the test type, test statistic, p-value, and group information.
+    """
     result = analyze_data(
         sample_categorical_data.to_dict(),
         'hypothesis_test',
@@ -89,7 +114,12 @@ def test_analyze_data_hypothesis_test(sample_categorical_data):
     assert 'groups' in result
 
 def test_analyze_data_time_series(sample_time_series_data):
-    """Test time series analysis."""
+    """
+    Tests the time series analysis functionality of the analyze_data function.
+    
+    Verifies that the result includes total periods, start and end dates, rolling statistics,
+    and that the rolling window size is correctly set to 7.
+    """
     result = analyze_data(
         sample_time_series_data.to_dict(),
         'time_series',
@@ -108,7 +138,12 @@ def test_analyze_data_time_series(sample_time_series_data):
     assert result['rolling_stats']['window'] == 7
 
 def test_analyze_data_clustering(sample_numeric_data):
-    """Test clustering analysis."""
+    """
+    Tests the clustering analysis functionality of the analyze_data function.
+    
+    Verifies that clustering with k-means produces the expected method, number of clusters,
+    cluster labels, and cluster statistics in the result.
+    """
     result = analyze_data(
         sample_numeric_data.to_dict(),
         'clustering',
@@ -124,7 +159,9 @@ def test_analyze_data_clustering(sample_numeric_data):
     assert 'cluster_stats' in result
 
 def test_analyze_data_feature_importance(sample_numeric_data):
-    """Test feature importance analysis."""
+    """
+    Tests feature importance analysis by verifying the presence and correctness of feature importance scores and model type in the result when a target column is provided.
+    """
     # Add target column
     data = sample_numeric_data.copy()
     data['target'] = data['A'] * 0.3 + data['B'] * 0.5 + data['C'] * 0.2 + np.random.normal(0, 0.1, 100)
@@ -157,7 +194,11 @@ def test_analyze_data_distribution(sample_numeric_data):
         assert 'percentiles' in result['distributions'][col]
 
 def test_analyze_data_outliers(sample_numeric_data):
-    """Test outlier analysis."""
+    """
+    Tests the outlier detection analysis using the IQR method on specified numeric columns.
+    
+    Verifies that the result includes outlier statistics for columns 'A' and 'B', including method, threshold, outlier count, and outlier percentage.
+    """
     result = analyze_data(
         sample_numeric_data.to_dict(),
         'outliers',
@@ -178,7 +219,9 @@ def test_analyze_data_outliers(sample_numeric_data):
         assert 'outlier_percentage' in result['outliers'][col]
 
 def test_analyze_data_invalid_input():
-    """Test handling of invalid input."""
+    """
+    Tests that analyze_data returns an error when given an invalid JSON input string.
+    """
     result = analyze_data(
         "invalid json",
         'descriptive'
@@ -187,7 +230,11 @@ def test_analyze_data_invalid_input():
     assert result['error'] == 'Invalid JSON string'
 
 def test_analyze_data_unsupported_analysis():
-    """Test handling of unsupported analysis type."""
+    """
+    Tests that analyze_data returns an error when given an unsupported analysis type.
+    
+    Asserts that the result contains an error message indicating the analysis type is unsupported.
+    """
     result = analyze_data(
         {'A': [1, 2, 3]},
         'unsupported_type'
@@ -203,14 +250,18 @@ def test_descriptive_analysis_empty_data():
     assert result['column_count'] == 0
 
 def test_correlation_analysis_single_column():
-    """Test correlation analysis with single column."""
+    """
+    Tests that correlation analysis on a single-column DataFrame returns a correlation matrix containing the column.
+    """
     single_col_df = pd.DataFrame({'A': [1, 2, 3]})
     result = _correlation_analysis(single_col_df, {'method': 'pearson'})
     assert result['correlation_matrix'] is not None
     assert 'A' in result['correlation_matrix']
 
 def test_hypothesis_test_invalid_groups():
-    """Test hypothesis test with invalid groups."""
+    """
+    Tests that the hypothesis test function returns an error when only one group is present for a t-test.
+    """
     df = pd.DataFrame({
         'group': ['A'] * 10,  # Only one group
         'value': range(10)
@@ -224,7 +275,9 @@ def test_hypothesis_test_invalid_groups():
     assert 'T-test requires exactly two groups' in result['error']
 
 def test_time_series_analysis_invalid_date():
-    """Test time series analysis with invalid date."""
+    """
+    Tests that time series analysis returns an error when the date column contains invalid date strings.
+    """
     df = pd.DataFrame({
         'date': ['invalid_date'] * 10,
         'value': range(10)
@@ -236,7 +289,9 @@ def test_time_series_analysis_invalid_date():
     assert 'error' in result
 
 def test_clustering_analysis_invalid_method():
-    """Test clustering analysis with invalid method."""
+    """
+    Tests that clustering analysis returns an error when an unsupported clustering method is specified.
+    """
     df = pd.DataFrame({'A': range(10)})
     result = _clustering_analysis(df, {'method': 'invalid_method'})
     assert 'error' in result
@@ -250,7 +305,9 @@ def test_feature_importance_no_target():
     assert 'target_column must be specified' in result['error']
 
 def test_distribution_analysis_insufficient_data():
-    """Test distribution analysis with insufficient data."""
+    """
+    Tests that distribution analysis handles columns with insufficient data points by omitting the normality test result.
+    """
     df = pd.DataFrame({'A': [1, 2]})  # Too few points for normality test
     result = _distribution_analysis(df, {'columns': ['A']})
     assert 'distributions' in result

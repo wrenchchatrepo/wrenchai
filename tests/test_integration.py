@@ -355,7 +355,12 @@ class TestEndToEndWorkflows:
     
     @pytest.mark.asyncio
     async def test_error_recovery_workflow(self, agent_manager, test_db):
-        """Test workflow error recovery capabilities."""
+        """
+        Tests that a workflow can recover from errors using retries and fallback actions.
+        
+        Initializes a workflow designed to trigger an error, verifies that recovery mechanisms
+        such as retries and fallback actions are executed, and asserts successful workflow completion.
+        """
         # Initialize workflow with intentional error
         workflow_id = "error-recovery-test"
         workflow_config = {
@@ -390,7 +395,11 @@ class TestPortfolioWorkflows:
     
     @pytest.mark.asyncio
     async def test_portfolio_creation_workflow(self, agent_manager, test_db, mock_secrets):
-        """Test the complete portfolio creation workflow."""
+        """
+        Tests the end-to-end workflow for creating a portfolio involving multiple agents.
+        
+        This test initializes the necessary agents, coordinates a portfolio creation task, and verifies that the workflow completes successfully. It asserts the presence of expected output URLs and checks that the created portfolio is correctly stored in the database with the appropriate title and published status.
+        """
         # Initialize required agents
         super_agent = agent_manager.initialize_agent("SuperAgent")
         journey_agent = agent_manager.initialize_agent("JourneyAgent")
@@ -425,7 +434,11 @@ class TestPortfolioWorkflows:
     
     @pytest.mark.asyncio
     async def test_content_update_workflow(self, agent_manager, test_db, mock_secrets):
-        """Test the portfolio content update workflow."""
+        """
+        Tests the workflow for updating portfolio content and verifies database and git commit changes.
+        
+        This test initializes a portfolio, performs a content update via an agent, and asserts that the update is reflected in the database and that a corresponding git commit is created.
+        """
         # Initialize portfolio with existing content
         portfolio_id = await self._create_test_portfolio(test_db)
         
@@ -462,7 +475,11 @@ class TestPortfolioWorkflows:
     
     @pytest.mark.asyncio
     async def test_deployment_workflow(self, agent_manager, test_db, mock_secrets):
-        """Test the portfolio deployment workflow."""
+        """
+        Tests the end-to-end deployment workflow for a portfolio using multiple agents.
+        
+        Initializes a test portfolio and agents, coordinates a deployment task, and verifies successful deployment, correct deployment URL, passing checks, and the presence of deployment logs indicating success.
+        """
         # Initialize portfolio
         portfolio_id = await self._create_test_portfolio(test_db)
         
@@ -495,7 +512,15 @@ class TestPortfolioWorkflows:
         assert any("Deployment successful" in log["message"] for log in logs)
     
     async def _create_test_portfolio(self, test_db) -> str:
-        """Helper method to create a test portfolio."""
+        """
+        Creates a draft test portfolio in the database and returns its ID.
+        
+        Args:
+            test_db: The asynchronous test database connection.
+        
+        Returns:
+            The ID of the newly created test portfolio.
+        """
         portfolio_data = {
             "title": "Test Portfolio",
             "content": {"About": "Test content"},
@@ -509,7 +534,11 @@ class TestMultiAgentCollaboration:
     
     @pytest.mark.asyncio
     async def test_task_handoff_verification(self, agent_manager, test_db):
-        """Test proper handoff of tasks between agents."""
+        """
+        Verifies that tasks are correctly handed off and completed across multiple agents in a staged workflow.
+        
+        This test initializes several agents, creates a multi-stage task with defined roles and actions, executes the workflow, and asserts that each stage transition is completed with appropriate handoff metadata.
+        """
         # Initialize agents
         super_agent = agent_manager.initialize_agent("SuperAgent")
         journey_agent = agent_manager.initialize_agent("JourneyAgent")
@@ -538,7 +567,11 @@ class TestMultiAgentCollaboration:
     
     @pytest.mark.asyncio
     async def test_state_synchronization(self, agent_manager, test_db):
-        """Test state synchronization between collaborating agents."""
+        """
+        Verifies that multiple agents can update and observe synchronized shared state.
+        
+        Initializes two agents with access to a shared state object, performs updates through each agent, and asserts that state changes are visible to all collaborating agents.
+        """
         # Initialize agents with shared state
         agents = [
             agent_manager.initialize_agent("JourneyAgent"),
@@ -563,7 +596,11 @@ class TestMultiAgentCollaboration:
     
     @pytest.mark.asyncio
     async def test_error_propagation(self, agent_manager, test_db):
-        """Test error handling and propagation in multi-agent scenarios."""
+        """
+        Tests error handling and propagation when an agent processes an invalid task in a multi-agent environment.
+        
+        Verifies that errors are logged, propagated, and that all agents receive error notifications.
+        """
         # Initialize agents
         agents = [
             agent_manager.initialize_agent("SuperAgent"),
@@ -592,7 +629,11 @@ class TestMultiAgentCollaboration:
 
     @pytest.mark.asyncio
     async def test_concurrent_task_processing(self, agent_manager, test_db):
-        """Test multiple agents processing tasks concurrently."""
+        """
+        Tests that multiple agents can process different tasks concurrently without resource conflicts.
+        
+        Verifies that all tasks complete successfully and that each task's resources remain isolated and unlocked after processing.
+        """
         # Initialize agents
         agents = [
             agent_manager.initialize_agent("JourneyAgent"),
@@ -623,7 +664,9 @@ class TestMultiAgentCollaboration:
     
     @pytest.mark.asyncio
     async def test_resource_conflict_resolution(self, agent_manager, test_db):
-        """Test handling of resource conflicts between agents."""
+        """
+        Tests concurrent access to a shared resource by multiple agents and verifies that resource conflicts are properly resolved, ensuring the resource is unlocked and status metadata is updated after task completion.
+        """
         # Initialize agents
         agent1 = agent_manager.initialize_agent("JourneyAgent")
         agent2 = agent_manager.initialize_agent("Codifier")
@@ -664,7 +707,11 @@ class TestToolChainIntegration:
     
     @pytest.mark.asyncio
     async def test_github_workflow_integration(self, agent_manager, mock_secrets):
-        """Test integration with GitHub workflows."""
+        """
+        Tests end-to-end integration with GitHub workflows by creating a pull request via an agent and verifying successful PR creation and workflow run completion.
+        
+        Verifies that the agent can create a pull request with specified changes, and checks that the associated GitHub workflow run completes successfully.
+        """
         # Initialize agents
         journey_agent = agent_manager.initialize_agent("JourneyAgent")
         
@@ -697,7 +744,11 @@ class TestToolChainIntegration:
     
     @pytest.mark.asyncio
     async def test_documentation_generation_pipeline(self, agent_manager):
-        """Test the documentation generation pipeline."""
+        """
+        Tests the end-to-end documentation generation pipeline using an agent.
+        
+        Initializes a documentation agent, executes a documentation generation task, verifies that documentation files are produced, and checks that the generated documentation meets quality and coverage thresholds.
+        """
         # Initialize agents
         codifier = agent_manager.initialize_agent("Codifier")
         
@@ -725,7 +776,11 @@ class TestToolChainIntegration:
     
     @pytest.mark.asyncio
     async def test_analytics_integration(self, agent_manager, test_db):
-        """Test integration with analytics pipeline."""
+        """
+        Tests the integration of the analytics pipeline, including data collection and processing.
+        
+        Verifies that analytics metrics are collected and processed correctly, and that insights and recommendations are generated.
+        """
         # Initialize analytics configuration
         analytics_config = {
             "metrics": ["page_views", "interaction_time"],
@@ -757,7 +812,11 @@ class TestToolChainIntegration:
     
     @pytest.mark.asyncio
     async def test_deployment_pipeline(self, agent_manager, test_db, mock_secrets):
-        """Test the complete deployment pipeline integration."""
+        """
+        Tests the end-to-end deployment pipeline integration, including build, test, deploy steps, rollback strategy, and notifications.
+        
+        Initializes agents, configures a deployment pipeline, executes it, and verifies step completion, environment health, deployed version, and that notifications (including Slack) are sent.
+        """
         # Initialize agents
         super_agent = agent_manager.initialize_agent("SuperAgent")
         test_engineer = agent_manager.initialize_agent("TestEngineer")
@@ -809,7 +868,11 @@ class TestToolChainIntegration:
     
     @pytest.mark.asyncio
     async def test_deployment_rollback(self, agent_manager, test_db, mock_secrets):
-        """Test deployment rollback scenario."""
+        """
+        Tests the deployment pipeline's rollback mechanism when a failure occurs.
+        
+        Simulates a deployment with an intentional test failure, verifies that rollback is triggered, the environment is restored to its previous state, and rollback actions are properly logged.
+        """
         # Initialize agents
         super_agent = agent_manager.initialize_agent("SuperAgent")
         test_engineer = agent_manager.initialize_agent("TestEngineer")

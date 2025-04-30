@@ -91,4 +91,32 @@ def validate_playbook_configuration(playbook_config: Dict[str, Any],
         
         raise ValueError(f"Playbook '{playbook_config['name']}' has missing dependencies: {', '.join(errors)}")
     
+    # Validate agent-LLM mappings if present
+    if 'agent_llms' in playbook_config:
+        try:
+            # Import here to avoid circular imports
+            from core.agents.agent_definitions import AGENTS
+            from core.agents.agent_llm_mapping import agent_llm_manager
+            
+            # Check that all agents in the mapping exist in the playbook
+            playbook_agents = set(playbook_config.get('agents', []))
+            for agent_name in playbook_config['agent_llms']:
+                if agent_name not in playbook_agents:
+                    raise ValueError(f"Agent-LLM mapping references non-existent agent '{agent_name}'")
+                
+                # Check that the agent is defined in agent_definitions
+                if agent_name not in AGENTS:
+                    raise ValueError(f"Agent '{agent_name}' not found in agent definitions")
+                    
+                # Verify LLM ID (warning only)
+                llm_id = playbook_config['agent_llms'][agent_name]
+                if not agent_llm_manager.check_llm_availability(llm_id):
+                    import logging
+                    logging.warning(f"Agent-LLM mapping for '{agent_name}' uses LLM '{llm_id}' which may not be available")
+                    
+        except ImportError:
+            # If we can't import the modules, skip this validation
+            import logging
+            logging.warning("Could not import agent modules for validation, skipping agent-LLM mapping checks")
+    
     return True

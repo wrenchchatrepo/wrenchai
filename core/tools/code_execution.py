@@ -65,18 +65,19 @@ class CodeExecutor:
     """Manages code execution in various languages."""
     
     def __init__(self):
-        """Initialize the code executor."""
+        """
+        Initializes the CodeExecutor with a temporary directory and process tracking.
+        
+        Creates a temporary directory for code execution and sets up a dictionary to track running subprocesses by execution ID.
+        """
         self.temp_dir = Path(tempfile.mkdtemp())
         self.current_processes: Dict[str, subprocess.Popen] = {}
         
     async def setup_environment(self, context: ExecutionContext) -> bool:
-        """Set up execution environment for the given context.
+        """
+        Asynchronously prepares the execution environment for the specified context.
         
-        Args:
-            context: Execution context with language and requirements
-            
-        Returns:
-            bool: True if setup successful, False otherwise
+        Creates a virtual environment and installs dependencies for Python, or installs Node.js dependencies for JavaScript and TypeScript. Returns True if the setup completes successfully, otherwise returns False.
         """
         try:
             # Create virtual environment if needed
@@ -118,14 +119,17 @@ class CodeExecutor:
             return False
     
     def create_execution_script(self, code: str, context: ExecutionContext) -> Path:
-        """Create a temporary script file with the code.
+        """
+        Creates a temporary script file containing the provided code for execution.
+        
+        The file extension is determined by the language specified in the execution context. For shell scripts, executable permissions are set.
         
         Args:
-            code: Code to execute
-            context: Execution context
-            
+        	code: The code to be written to the script file.
+        	context: The execution context specifying language and other parameters.
+        
         Returns:
-            Path: Path to the created script file
+        	Path to the created script file.
         """
         extension = {
             Language.PYTHON: ".py",
@@ -147,14 +151,17 @@ class CodeExecutor:
         code: str,
         context: ExecutionContext
     ) -> ExecutionResult:
-        """Execute code with the given context.
+        """
+        Asynchronously executes code in a controlled environment according to the provided context.
+        
+        Runs the given code snippet using the specified language, environment variables, working directory, resource limits, and dependencies. Captures standard output, error output, execution time, and exit code. Handles environment setup, script creation, process management, and enforces execution timeout.
         
         Args:
-            code: Code to execute
-            context: Execution context
-            
+            code: The code to execute.
+            context: Execution parameters including language, mode, environment, resource limits, and dependencies.
+        
         Returns:
-            ExecutionResult: Result of the execution
+            An ExecutionResult containing the outcome, output, error message, execution time, and exit code.
         """
         start_time = datetime.now()
         
@@ -223,14 +230,18 @@ class CodeExecutor:
             )
     
     def _get_execution_command(self, script_path: Path, context: ExecutionContext) -> List[str]:
-        """Get the command to execute the script.
+        """
+        Constructs the command to execute a script file based on the specified language.
         
         Args:
-            script_path: Path to the script file
-            context: Execution context
-            
+            script_path: The path to the script file to execute.
+            context: The execution context specifying the language.
+        
         Returns:
-            List[str]: Command parts
+            A list of command-line arguments to run the script with the appropriate interpreter.
+        
+        Raises:
+            ValueError: If the language specified in the context is not supported.
         """
         if context.language == Language.PYTHON:
             python_path = self.temp_dir / "venv" / "bin" / "python"
@@ -248,13 +259,11 @@ class CodeExecutor:
         raise ValueError(f"Unsupported language: {context.language}")
     
     async def cancel_execution(self, execution_id: str) -> bool:
-        """Cancel a running execution.
+        """
+        Attempts to terminate a running code execution by its execution ID.
         
-        Args:
-            execution_id: ID of the execution to cancel
-            
         Returns:
-            bool: True if cancelled successfully, False otherwise
+            True if the execution was successfully cancelled, False otherwise.
         """
         if proc := self.current_processes.get(execution_id):
             try:
@@ -265,7 +274,11 @@ class CodeExecutor:
         return False
     
     def cleanup(self):
-        """Clean up temporary files and processes."""
+        """
+        Releases resources by terminating running processes and deleting the temporary directory.
+        
+        Terminates all tracked subprocesses and removes the temporary directory used for code execution. Logs errors if cleanup fails.
+        """
         # Terminate any running processes
         for proc in self.current_processes.values():
             try:
@@ -292,19 +305,10 @@ async def execute_code(
     resource_limits: Optional[ResourceLimits] = None,
     dependencies: Optional[List[str]] = None
 ) -> Dict[str, Any]:
-    """Execute code with the given parameters.
+    """
+    Asynchronously executes code in a specified language and environment, returning execution results.
     
-    Args:
-        code: Code to execute
-        language: Programming language
-        mode: Execution mode
-        environment_vars: Environment variables
-        working_directory: Working directory
-        resource_limits: Resource limits
-        dependencies: Required dependencies
-        
-    Returns:
-        Dict containing execution results
+    Creates an execution context with the provided parameters, runs the code using the global executor, and returns a dictionary containing the outcome, including output, errors, execution time, memory usage, and exit code. On failure, returns an error message.
     """
     try:
         context = ExecutionContext(
@@ -334,13 +338,14 @@ async def execute_code(
         }
 
 async def cancel_execution(execution_id: str) -> Dict[str, Any]:
-    """Cancel a running code execution.
+    """
+    Attempts to cancel a running code execution by its execution ID.
     
     Args:
-        execution_id: ID of the execution to cancel
-        
+        execution_id: The unique identifier of the execution to cancel.
+    
     Returns:
-        Dict containing operation status
+        A dictionary indicating whether the cancellation was successful and a message or error.
     """
     try:
         success = await code_executor.cancel_execution(execution_id)

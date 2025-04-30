@@ -39,10 +39,10 @@ class ToolAuthorizationSystem:
     """System for managing tool authorization and access control."""
     
     def __init__(self, config_path: Optional[str] = None):
-        """Initialize the tool authorization system.
+        """
+        Initializes the tool authorization system and loads configuration.
         
-        Args:
-            config_path: Path to authorization configuration file
+        If no configuration path is provided, uses the default path for the authorization config file. Sets up internal mappings for tool access, agent permissions, and usage history.
         """
         self.tool_access_map: Dict[str, ToolAccess] = {}
         self.agent_tool_map: Dict[str, Set[str]] = {}
@@ -51,7 +51,11 @@ class ToolAuthorizationSystem:
         self._load_configuration()
         
     def _load_configuration(self):
-        """Load tool authorization configuration."""
+        """
+        Loads the tool authorization configuration from the specified YAML file.
+        
+        If the configuration file is missing or an error occurs during loading, creates and loads a default configuration. Parses tool access settings and updates internal mappings for tool permissions and agent roles.
+        """
         try:
             config_path = Path(self.config_path)
             if not config_path.exists():
@@ -86,7 +90,11 @@ class ToolAuthorizationSystem:
             self._create_default_config()
             
     def _create_default_config(self):
-        """Create a default configuration if none exists."""
+        """
+        Creates and saves a default tool authorization configuration if none exists.
+        
+        Initializes the system with predefined tools and permissions, writes the configuration to disk, loads it into memory, and updates internal mappings.
+        """
         default_config = {
             'tools': [
                 {
@@ -139,7 +147,11 @@ class ToolAuthorizationSystem:
             logger.error(f"Error creating default tool authorization config: {e}")
     
     def _build_agent_tool_map(self):
-        """Build a mapping of agents to their allowed tools."""
+        """
+        Constructs a mapping from agent roles to sets of tool IDs they are permitted to access.
+        
+        Agent roles with wildcard access ('*') are excluded from this mapping.
+        """
         self.agent_tool_map.clear()
         
         for tool_id, access in self.tool_access_map.items():
@@ -152,25 +164,29 @@ class ToolAuthorizationSystem:
                 self.agent_tool_map[role].add(tool_id)
     
     def is_tool_available(self, tool_id: str) -> bool:
-        """Check if a tool is available in the system.
+        """
+        Checks whether a tool with the given ID exists in the authorization system.
         
         Args:
-            tool_id: Tool identifier
-            
+            tool_id: The unique identifier of the tool to check.
+        
         Returns:
-            True if tool is available, False otherwise
+            True if the tool is registered and available; False otherwise.
         """
         return tool_id in self.tool_access_map
     
     def can_agent_use_tool(self, agent_role: str, tool_id: str) -> Tuple[bool, Optional[str]]:
-        """Check if an agent can use a specific tool.
+        """
+        Determines whether an agent role is permitted to use a specified tool.
+        
+        Checks if the tool exists, verifies the agent's permission (including wildcard access), and enforces any configured rate limits. Returns a tuple indicating whether access is allowed and, if denied, the reason.
         
         Args:
-            agent_role: Role of the agent
-            tool_id: Tool identifier
-            
+            agent_role: The role of the agent requesting access.
+            tool_id: The identifier of the tool to check.
+        
         Returns:
-            Tuple of (allowed, reason)
+            A tuple (allowed, reason), where allowed is True if access is permitted, and reason provides the denial explanation if not.
         """
         # Check if tool exists
         if not self.is_tool_available(tool_id):
@@ -197,13 +213,14 @@ class ToolAuthorizationSystem:
         return False, f"Agent '{agent_role}' does not have permission to use tool '{tool_id}'"
     
     def _check_rate_limits(self, tool_id: str) -> Tuple[bool, Optional[str]]:
-        """Check if a tool has exceeded its rate limits.
+        """
+        Checks whether the specified tool has exceeded its configured rate limits.
         
         Args:
-            tool_id: Tool identifier
-            
+            tool_id: The unique identifier of the tool to check.
+        
         Returns:
-            Tuple of (rate_limited, reason)
+            A tuple (rate_limited, reason), where rate_limited is True if the tool's per-minute or per-hour call limit has been exceeded, and reason provides a descriptive message if rate limited; otherwise, (False, None).
         """
         access = self.tool_access_map[tool_id]
         
@@ -231,15 +248,11 @@ class ToolAuthorizationSystem:
     
     def register_tool_usage(self, tool_id: str, agent_id: str, success: bool, 
                            parameters: Dict[str, Any], execution_time: float):
-        """Register a tool usage event.
-        
-        Args:
-            tool_id: Tool identifier
-            agent_id: Agent identifier
-            success: Whether the operation succeeded
-            parameters: Tool parameters used
-            execution_time: Execution time in seconds
         """
+                           Records a tool usage event with details such as agent, parameters, success status, and execution time.
+                           
+                           Adds the usage record to the internal history, maintaining a maximum of 10,000 recent entries.
+                           """
         usage = ToolUsage(
             tool_id=tool_id,
             agent_id=agent_id,
@@ -257,13 +270,10 @@ class ToolAuthorizationSystem:
             self.usage_history = self.usage_history[-10000:]
     
     def get_agent_allowed_tools(self, agent_role: str) -> List[str]:
-        """Get a list of tools an agent is allowed to use.
+        """
+        Returns a list of tool IDs that the specified agent role is permitted to use.
         
-        Args:
-            agent_role: Role of the agent
-            
-        Returns:
-            List of tool identifiers
+        Includes tools explicitly assigned to the agent role and those available to all roles via wildcard access.
         """
         # Tools explicitly assigned to this agent
         allowed_tools = set(self.agent_tool_map.get(agent_role, set()))
@@ -276,14 +286,16 @@ class ToolAuthorizationSystem:
         return list(allowed_tools)
     
     def verify_tools_for_agent(self, agent_role: str, required_tools: List[str]) -> Tuple[bool, List[str]]:
-        """Verify that an agent has access to all required tools.
+        """
+        Checks if an agent role has access to all specified tools.
         
         Args:
-            agent_role: Role of the agent
-            required_tools: List of required tool identifiers
-            
+            agent_role: The role of the agent to check permissions for.
+            required_tools: List of tool IDs that the agent needs access to.
+        
         Returns:
-            Tuple of (all_available, missing_tools)
+            A tuple where the first element is True if the agent can access all required tools,
+            and the second element is a list of tool IDs the agent cannot access.
         """
         allowed_tools = set(self.get_agent_allowed_tools(agent_role))
         missing_tools = [tool for tool in required_tools if tool not in allowed_tools]
@@ -293,16 +305,17 @@ class ToolAuthorizationSystem:
     def get_tool_usage_stats(self, tool_id: Optional[str] = None, 
                             agent_id: Optional[str] = None,
                             start_time: Optional[datetime] = None) -> Dict[str, Any]:
-        """Get usage statistics for tools.
-        
-        Args:
-            tool_id: Optional filter by tool ID
-            agent_id: Optional filter by agent ID
-            start_time: Optional filter from start time
-            
-        Returns:
-            Dictionary with usage statistics
         """
+                            Returns usage statistics for tools, optionally filtered by tool ID, agent ID, and start time.
+                            
+                            Args:
+                                tool_id: If provided, only usage records for this tool are included.
+                                agent_id: If provided, only usage records for this agent are included.
+                                start_time: If provided, only usage records from this time onward are included.
+                            
+                            Returns:
+                                A dictionary containing total calls, successful calls, success rate, and per-tool call counts.
+                            """
         filtered_usage = self.usage_history
         
         if tool_id:
