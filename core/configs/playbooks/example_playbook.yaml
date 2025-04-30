@@ -1,0 +1,56 @@
+# Example Playbook
+
+# This playbook demonstrates the standardized format for WrenchAI playbooks
+
+name: example_playbook
+description: "An example playbook that demonstrates the standardized format"
+tools:
+  - web_search
+  - code_generation
+  - memory
+agents:
+  - SuperAgent
+  - CodeGeneratorAgent
+  - InspectorAgent
+agent_llms:
+  SuperAgent: "claude-3.5-sonnet"
+  CodeGeneratorAgent: "claude-3.5-sonnet"
+  InspectorAgent: "claude-3.5-sonnet"
+
+steps:
+  - step_id: gather_requirements
+    type: standard
+    description: "Gather requirements for the project"
+    agent: SuperAgent
+    operation: "gather_requirements"
+    tools:
+      - web_search
+      - memory
+    next: generate_code
+
+  - step_id: generate_code
+    type: standard
+    description: "Generate code based on requirements"
+    agent: CodeGeneratorAgent
+    operation: "generate_code"
+    tools:
+      - code_generation
+    parameters:
+      language: "python"
+      framework: "fastapi"
+    next: review_code
+    
+  - step_id: review_code
+    type: partner_feedback_loop
+    description: "Review and improve code quality"
+    agents:
+      creator: CodeGeneratorAgent
+      reviewer: InspectorAgent
+    operations:
+      - role: creator
+        name: "prepare_code_for_review"
+      - role: reviewer
+        name: "review_code"
+      - role: creator
+        name: "implement_feedback"
+    iterations: 2

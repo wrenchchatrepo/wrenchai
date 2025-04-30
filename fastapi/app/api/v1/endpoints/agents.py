@@ -1,127 +1,274 @@
-from typing import Annotated, List
+"""FastAPI endpoints for agent management."""
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, status
+from typing import List
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.websocket import manager
-from app.db.models.user import User
+from app.core.logging import get_logger
+from app.core.security import get_current_user
 from app.db.session import get_db
-from app.api.v1.endpoints.users import get_current_user
-from app.schemas.agent import AgentCreate, AgentResponse, AgentUpdate, TaskRequest
+from app.models.user import User
+from app.models.agent import Agent
+from app.schemas.agent import AgentCreate, AgentResponse, AgentUpdate
+from app.schemas.task import TaskResponse
+from app.schemas.responses import ResponseModel
 
+logger = get_logger(__name__)
 router = APIRouter()
 
-@router.post("", response_model=AgentResponse)
+@router.post(
+    "",
+    response_model=ResponseModel[AgentResponse],
+    status_code=status.HTTP_201_CREATED,
+    description="Create a new agent"
+)
 async def create_agent(
-    *,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    agent_in: AgentCreate,
-) -> AgentResponse:
-    """Create new agent.
-    
-    Args:
-        db: Database session
-        current_user: Current authenticated user
-        agent_in: Agent creation data
-        
-    Returns:
-        AgentResponse: Created agent
-    """
-    # Initialize agent with SuperAgent
-    super_agent = SuperAgent()
-    agent = await super_agent.create_agent(
-        role=agent_in.role,
-        config=agent_in.config,
-        owner_id=current_user.id,
-    )
-    return agent
-
-@router.post("/execute", response_model=dict)
-async def execute_task(
-    *,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
-    task: TaskRequest,
-) -> dict:
-    """Execute task with agents.
-    
-    Args:
-        db: Database session
-        current_user: Current authenticated user
-        task: Task request
-        
-    Returns:
-        dict: Task execution result
-    """
+    agent_data: AgentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> ResponseModel[AgentResponse]:
+    """Create a new agent."""
     try:
-        # Initialize agents
-        super_agent = SuperAgent()
-        inspector_agent = InspectorAgent()
-        
-        # Execute task
-        result = await super_agent.orchestrate_task(task)
-        
-        # Monitor execution
-        monitoring = await inspector_agent.monitor_execution(
-            task.task_id,
-            result
+        # Create agent instance
+        agent = Agent(
+            type=agent_data.type,
+            config=agent_data.config,
+            user_id=current_user.id,
+            status="inactive"
         )
         
-        return {
-            "status": "success",
-            "task_id": task.task_id,
-            "result": result,
-            "monitoring": monitoring
-        }
+        # Save to database
+        db.add(agent)
+        await db.commit()
+        await db.refresh(agent)
+        
+        logger.info(f"Created agent: {agent.id}")
+        return ResponseModel(
+            success=True,
+            message="Agent created successfully",
+            data=AgentResponse.model_validate(agent)
+        )
+        
     except Exception as e:
+        logger.error(f"Failed to create agent: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Task execution failed: {str(e)}",
+            detail=f"Failed to create agent: {str(e)}"
         )
 
-@router.websocket("/ws/{task_id}")
-async def websocket_endpoint(
-    websocket: WebSocket,
-    task_id: str,
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> None:
-    """WebSocket endpoint for real-time task updates.
-    
-    Args:
-        websocket: WebSocket connection
-        task_id: Task ID
-        db: Database session
-    """
-    await manager.connect(websocket, task_id)
+@router.get(
+    "",
+    response_model=ResponseModel[List[AgentResponse]],
+    description="Get all agents for current user"
+)
+async def list_agents(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> ResponseModel[List[AgentResponse]]:
+    """Get all agents for the current user."""
     try:
-        while True:
-            # Get task status
-            status = await get_task_status(task_id)
-            
-            # Broadcast status
-            await manager.broadcast(
-                {
-                    "task_id": task_id,
-                    "status": status.dict(),
-                    "timestamp": datetime.utcnow().isoformat()
-                },
-                task_id
+        # Query agents
+        result = await db.execute(
+            select(Agent).where(Agent.user_id == current_user.id)
+        )
+        agents = result.scalars().all()
+        
+        return ResponseModel(
+            success=True,
+            message=f"Found {len(agents)} agents",
+            data=[AgentResponse.model_validate(agent) for agent in agents]
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to list agents: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list agents: {str(e)}"
+        )
+
+@router.get(
+    "/{agent_id}",
+    response_model=ResponseModel[AgentResponse],
+    description="Get agent by ID"
+)
+async def get_agent(
+    agent_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> ResponseModel[AgentResponse]:
+    """Get agent by ID."""
+    try:
+        # Query agent
+        result = await db.execute(
+            select(Agent)
+            .where(Agent.id == agent_id)
+            .where(Agent.user_id == current_user.id)
+        )
+        agent = result.scalar_one_or_none()
+        
+        if not agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Agent {agent_id} not found"
             )
             
-            # Check if task is completed
-            if status.status in ["completed", "failed"]:
-                break
-            
-            await asyncio.sleep(1)
-    except Exception as e:
-        await manager.broadcast(
-            {
-                "task_id": task_id,
-                "status": {"status": "error", "message": str(e)},
-                "timestamp": datetime.utcnow().isoformat()
-            },
-            task_id
+        return ResponseModel(
+            success=True,
+            message="Agent found",
+            data=AgentResponse.model_validate(agent)
         )
-    finally:
-        await manager.disconnect(websocket, task_id) 
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get agent {agent_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get agent: {str(e)}"
+        )
+
+@router.put(
+    "/{agent_id}",
+    response_model=ResponseModel[AgentResponse],
+    description="Update agent"
+)
+async def update_agent(
+    agent_id: UUID,
+    agent_data: AgentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> ResponseModel[AgentResponse]:
+    """Update agent."""
+    try:
+        # Query agent
+        result = await db.execute(
+            select(Agent)
+            .where(Agent.id == agent_id)
+            .where(Agent.user_id == current_user.id)
+        )
+        agent = result.scalar_one_or_none()
+        
+        if not agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Agent {agent_id} not found"
+            )
+            
+        # Update fields
+        for field, value in agent_data.model_dump(exclude_unset=True).items():
+            setattr(agent, field, value)
+            
+        await db.commit()
+        await db.refresh(agent)
+        
+        logger.info(f"Updated agent: {agent.id}")
+        return ResponseModel(
+            success=True,
+            message="Agent updated successfully",
+            data=AgentResponse.model_validate(agent)
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update agent {agent_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update agent: {str(e)}"
+        )
+
+@router.delete(
+    "/{agent_id}",
+    response_model=ResponseModel[bool],
+    description="Delete agent"
+)
+async def delete_agent(
+    agent_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> ResponseModel[bool]:
+    """Delete agent."""
+    try:
+        # Query agent
+        result = await db.execute(
+            select(Agent)
+            .where(Agent.id == agent_id)
+            .where(Agent.user_id == current_user.id)
+        )
+        agent = result.scalar_one_or_none()
+        
+        if not agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Agent {agent_id} not found"
+            )
+            
+        # Delete agent
+        await db.delete(agent)
+        await db.commit()
+        
+        logger.info(f"Deleted agent: {agent_id}")
+        return ResponseModel(
+            success=True,
+            message="Agent deleted successfully",
+            data=True
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete agent {agent_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete agent: {str(e)}"
+        )
+
+@router.get(
+    "/{agent_id}/tasks",
+    response_model=ResponseModel[List[TaskResponse]],
+    description="Get tasks for agent"
+)
+async def get_agent_tasks(
+    agent_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> ResponseModel[List[TaskResponse]]:
+    """Get tasks for agent."""
+    try:
+        # Verify agent exists and belongs to user
+        result = await db.execute(
+            select(Agent)
+            .where(Agent.id == agent_id)
+            .where(Agent.user_id == current_user.id)
+        )
+        agent = result.scalar_one_or_none()
+        
+        if not agent:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Agent {agent_id} not found"
+            )
+            
+        # Get tasks
+        tasks = await db.execute(
+            select(Task)
+            .where(Task.agent_id == agent_id)
+            .order_by(Task.created_at.desc())
+        )
+        tasks = tasks.scalars().all()
+        
+        return ResponseModel(
+            success=True,
+            message=f"Found {len(tasks)} tasks",
+            data=[TaskResponse.model_validate(task) for task in tasks]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get tasks for agent {agent_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get agent tasks: {str(e)}"
+        ) 

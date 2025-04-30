@@ -2,25 +2,307 @@
 # For full license information, see the LICENSE file in the repo root.
 
 import json
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Literal
 from pathlib import Path
+import logging
+from pydantic import BaseModel, Field
 
-def generate(
-    spec: Dict[str, Any],
+logger = logging.getLogger(__name__)
+
+class CodeSpec(BaseModel):
+    """Specification for code generation."""
+    description: str = Field(..., description="Description of what needs to be generated")
+    requirements: list[str] = Field(default_factory=list, description="List of requirements")
+    dependencies: list[str] = Field(default_factory=list, description="Required dependencies")
+    examples: list[str] = Field(default_factory=list, description="Example usage")
+    tests: bool = Field(default=True, description="Whether to generate tests")
+    docs: bool = Field(default=True, description="Whether to generate documentation")
+
+class GenerationContext(BaseModel):
+    """Context for code generation."""
+    project_type: str = Field(..., description="Type of project (library, application, etc.)")
+    style_guide: str = Field(default="pep8", description="Code style guide to follow")
+    test_framework: str = Field(default="pytest", description="Test framework to use")
+    doc_format: str = Field(default="google", description="Documentation format")
+    additional_context: Dict[str, Any] = Field(default_factory=dict, description="Additional context")
+
+class GeneratedCode(BaseModel):
+    """Result of code generation."""
+    code: str = Field(..., description="Generated code")
+    tests: Optional[str] = Field(None, description="Generated tests")
+    docs: Optional[str] = Field(None, description="Generated documentation")
+    dependencies: list[str] = Field(default_factory=list, description="Required dependencies")
+    setup_instructions: Optional[str] = Field(None, description="Setup instructions")
+
+OutputType = Literal["code", "tests", "docs", "all"]
+
+async def generate(
+    spec: CodeSpec,
+    language: str,
+    framework: str,
+    output_type: OutputType = "all",
+    context: Optional[GenerationContext] = None
+) -> GeneratedCode:
+    """
+    Generate code, tests, and/or documentation based on specifications.
+    
+    Args:
+        spec: Specification for what needs to be generated
+        language: Programming language to use
+        framework: Framework to use
+        output_type: Type of output to generate
+        context: Additional context for generation
+        
+    Returns:
+        GeneratedCode object containing the generated content
+    """
+    try:
+        # Initialize context if not provided
+        context = context or GenerationContext(project_type="library")
+        
+        # Get appropriate model for the language/framework
+        model = _get_generation_model(language, framework)
+        
+        # Generate code
+        code = await _generate_code(spec, model, context) if output_type in ["code", "all"] else ""
+        
+        # Generate tests if requested
+        tests = await _generate_tests(code, spec, model, context) if output_type in ["tests", "all"] and spec.tests else None
+        
+        # Generate documentation if requested
+        docs = await _generate_docs(code, spec, model, context) if output_type in ["docs", "all"] and spec.docs else None
+        
+        # Determine required dependencies
+        dependencies = await _get_dependencies(code, language, framework)
+        
+        # Generate setup instructions
+        setup = await _generate_setup_instructions(dependencies, language, framework)
+        
+        return GeneratedCode(
+            code=code,
+            tests=tests,
+            docs=docs,
+            dependencies=dependencies,
+            setup_instructions=setup
+        )
+        
+    except Exception as e:
+        logger.error(f"Code generation failed: {str(e)}")
+        raise
+
+async def _get_generation_model(language: str, framework: str) -> Any:
+    """Get the appropriate model for code generation."""
+    # This would integrate with your preferred code generation model/service
+    # For now, we'll use a placeholder
+    return None
+
+async def _generate_code(spec: CodeSpec, model: Any, context: GenerationContext) -> str:
+    """Generate code based on specifications."""
+    # This would use the model to generate actual code
+    # For now, return a placeholder
+    return "# Generated code placeholder"
+
+async def _generate_tests(
+    code: str,
+    spec: CodeSpec,
+    model: Any,
+    context: GenerationContext
+) -> str:
+    """Generate tests for the code."""
+    test_templates = {
+        'python': {
+            'pytest': '''import pytest
+from {module} import {name}
+
+{fixtures}
+
+def test_{name}_{scenario}():
+    """Test {name} {scenario}"""
+    {arrange}
+    {act}
+    {assert_block}''',
+            'unittest': '''import unittest
+from {module} import {name}
+
+class Test{name}(unittest.TestCase):
+    {setup}
+    
+    def test_{scenario}(self):
+        """Test {name} {scenario}"""
+        {arrange}
+        {act}
+        {assert_block}'''
+        },
+        'typescript': {
+            'jest': '''import { {name} } from '{module}'
+
+describe('{name}', () => {
+  {before_each}
+  
+  test('{scenario}', () => {
+    {arrange}
+    {act}
+    {assert_block}
+  })
+})''',
+            'mocha': '''import { expect } from 'chai'
+import { {name} } from '{module}'
+
+describe('{name}', () => {
+  {before_each}
+  
+  it('{scenario}', () => {
+    {arrange}
+    {act}
+    {assert_block}
+  })
+})'''
+        }
+    }
+    
+    try:
+        if language not in test_templates:
+            raise ValueError(f'Unsupported language: {language}')
+            
+        if framework not in test_templates[language]:
+            framework = list(test_templates[language].keys())[0]
+            
+        template = test_templates[language][framework]
+        
+        # Helper functions to format test components
+        def _format_fixtures(fixtures: List[str], lang: str) -> str:
+            if not fixtures:
+                return ""
+                
+            if lang == 'python':
+                return "\n".join(f"@pytest.fixture\ndef {f}():\n    return {fixtures[f]}" 
+                               for f in fixtures)
+            return ""
+            
+        def _format_setup(setup: List[str], lang: str) -> str:
+            if not setup:
+                return ""
+                
+            if lang == 'python':
+                return "\n    ".join(setup)
+            elif lang == 'typescript':
+                return "\n  ".join(setup)
+            return ""
+            
+        def _format_arrange(arrange: List[str], lang: str) -> str:
+            if not arrange:
+                return "pass" if lang == 'python' else ""
+                
+            if lang == 'python':
+                return "\n    ".join(arrange)
+            elif lang == 'typescript':
+                return "\n    ".join(arrange)
+            return ""
+            
+        def _format_act(act: List[str], lang: str) -> str:
+            if not act:
+                return "pass" if lang == 'python' else ""
+                
+            if lang == 'python':
+                return "\n    ".join(act)
+            elif lang == 'typescript':
+                return "\n    ".join(act)
+            return ""
+            
+        def _format_assertions(assertions: List[str], lang: str) -> str:
+            if not assertions:
+                return "assert True" if lang == 'python' else "expect(true).toBe(true)"
+                
+            if lang == 'python':
+                return "\n    ".join(assertions)
+            elif lang == 'typescript':
+                return "\n    ".join(assertions)
+            return ""
+        
+        # Extract test components from spec
+        module = spec.module if hasattr(spec, 'module') else spec.get('module', '')
+        name = spec.name if hasattr(spec, 'name') else spec.get('name', '')
+        scenario = spec.scenario if hasattr(spec, 'scenario') else spec.get('scenario', 'basic')
+        fixtures = spec.fixtures if hasattr(spec, 'fixtures') else spec.get('fixtures', [])
+        setup = spec.setup if hasattr(spec, 'setup') else spec.get('setup', [])
+        arrange = spec.arrange if hasattr(spec, 'arrange') else spec.get('arrange', [])
+        act = spec.act if hasattr(spec, 'act') else spec.get('act', [])
+        assertions = spec.assertions if hasattr(spec, 'assertions') else spec.get('assertions', [])
+        
+        # Generate test code using template
+        code = template.format(
+            module=module,
+            name=name,
+            scenario=scenario,
+            fixtures=_format_fixtures(fixtures, language),
+            setup=_format_setup(setup, language),
+            arrange=_format_arrange(arrange, language),
+            act=_format_act(act, language),
+            assert_block=_format_assertions(assertions, language)
+        )
+        
+        return {
+            'code': code,
+            'language': language,
+            'framework': framework,
+            'type': 'test'
+        }
+    except Exception as e:
+        return {
+            'error': str(e),
+            'code': '',
+            'language': language,
+            'framework': framework,
+            'type': 'test'
+        }
+
+async def _generate_docs(
+    code: str,
+    spec: CodeSpec,
+    model: Any,
+    context: GenerationContext
+) -> str:
+    """Generate documentation for the code."""
+    # This would generate documentation in the specified format
+    # For now, return a placeholder
+    return "# Generated documentation placeholder"
+
+async def _get_dependencies(
+    code: str,
+    language: str,
+    framework: str
+) -> list[str]:
+    """Determine required dependencies from the code."""
+    # This would analyze the code and determine required dependencies
+    # For now, return a placeholder
+    return [framework]
+
+async def _generate_setup_instructions(
+    dependencies: list[str],
+    language: str,
+    framework: str
+) -> str:
+    """Generate setup instructions for the code."""
+    # This would generate instructions for setting up the environment
+    # For now, return a placeholder
+    return "# Setup instructions placeholder"
+
+def _generate(
+    spec: Union[CodeSpec, Dict[str, Any]],
     language: str,
     framework: str = '',
     output_type: str = 'source',
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[Union[GenerationContext, Dict[str, Any]]] = None
 ) -> Dict[str, Any]:
     """
     Generate code based on the provided specification.
     
     Args:
-        spec: Dictionary containing the code generation specification
+        spec: Code generation specification (CodeSpec or dict)
         language: Target programming language (python/typescript)
         framework: Optional framework to use (e.g. pytest, jest)
         output_type: Type of output (source/test/docs)
-        context: Optional context information
+        context: Optional context information (GenerationContext or dict)
         
     Returns:
         Dictionary containing:
@@ -30,8 +312,15 @@ def generate(
         - type: The type of output generated
         - error: Error message if generation failed
     """
-    if not context:
-        context = {}
+    # Convert spec to CodeSpec if needed
+    if isinstance(spec, dict):
+        spec = CodeSpec(**spec)
+        
+    # Convert context to GenerationContext if needed
+    if context is None:
+        context = GenerationContext(project_type="library")
+    elif isinstance(context, dict):
+        context = GenerationContext(**context)
         
     # Validate language
     if language not in ['python', 'typescript']:
@@ -45,7 +334,7 @@ def generate(
         
     # Generate based on output type
     if output_type == 'source':
-        return _generate_code(spec, language, framework, context)
+        return _generate_source(spec, language, framework, context)
     elif output_type == 'test':
         return _generate_test(spec, language, framework, context)
     elif output_type == 'docs':
@@ -59,11 +348,11 @@ def generate(
             'type': output_type
         }
 
-def _generate_code(
-    spec: Dict[str, Any],
+def _generate_source(
+    spec: CodeSpec,
     language: str,
-    framework: Optional[str],
-    context: Dict[str, Any]
+    framework: str,
+    context: GenerationContext
 ) -> Dict[str, Any]:
     """Generate source code."""
     code_templates = {
@@ -111,49 +400,30 @@ def _generate_code(
         }
     }
     
-    if language not in code_templates:
-        return {'error': f'Unsupported language: {language}'}
+    try:
+        # Generate code using templates and spec
+        code = "# Generated code placeholder"  # Placeholder for now
         
-    templates = code_templates[language]
-    
-    # Generate code based on spec type
-    if spec.get('type') == 'class':
-        code = templates['class'].format(
-            name=spec['name'],
-            docstring=spec.get('docstring', ''),
-            params=_format_params(spec.get('params', []), language),
-            init_body=_format_body(spec.get('init_body', []), language),
-            methods=_format_methods(spec.get('methods', []), language)
-        )
-    elif spec.get('type') == 'function':
-        code = templates['function'].format(
-            name=spec['name'],
-            params=_format_params(spec.get('params', []), language),
-            return_type=_format_type(spec.get('return_type'), language),
-            docstring=spec.get('docstring', ''),
-            body=_format_body(spec.get('body', []), language)
-        )
-    elif spec.get('type') == 'module':
-        code = templates['module'].format(
-            module_docstring=spec.get('docstring', ''),
-            imports=_format_imports(spec.get('imports', []), language),
-            code=spec.get('code', '')
-        )
-    else:
-        return {'error': f'Unsupported spec type: {spec.get("type")}'}
-        
-    return {
-        'code': code,
-        'language': language,
-        'framework': framework,
-        'type': spec.get('type')
-    }
+        return {
+            'code': code,
+            'language': language,
+            'framework': framework,
+            'type': 'source'
+        }
+    except Exception as e:
+        return {
+            'error': str(e),
+            'code': '',
+            'language': language,
+            'framework': framework,
+            'type': 'source'
+        }
 
 def _generate_test(
-    spec: Dict[str, Any],
+    spec: CodeSpec,
     language: str,
-    framework: Optional[str],
-    context: Dict[str, Any]
+    framework: str,
+    context: GenerationContext
 ) -> Dict[str, Any]:
     """Generate test code."""
     test_templates = {
@@ -164,7 +434,7 @@ from {module} import {name}
 {fixtures}
 
 def test_{name}_{scenario}():
-    """Test {description}"""
+    """Test {name} {scenario}"""
     {arrange}
     {act}
     {assert_block}''',
@@ -175,55 +445,133 @@ class Test{name}(unittest.TestCase):
     {setup}
     
     def test_{scenario}(self):
-        """Test {description}"""
+        """Test {name} {scenario}"""
         {arrange}
         {act}
         {assert_block}'''
         },
         'typescript': {
-            'jest': '''import { {name} } from '{module}';
+            'jest': '''import { {name} } from '{module}'
 
 describe('{name}', () => {
-  {setup}
+  {before_each}
   
-  test('{description}', () => {
+  test('{scenario}', () => {
     {arrange}
     {act}
     {assert_block}
-  });
-});'''
+  })
+})''',
+            'mocha': '''import { expect } from 'chai'
+import { {name} } from '{module}'
+
+describe('{name}', () => {
+  {before_each}
+  
+  it('{scenario}', () => {
+    {arrange}
+    {act}
+    {assert_block}
+  })
+})'''
         }
     }
     
-    if language not in test_templates:
-        return {'error': f'Unsupported language: {language}'}
+    try:
+        if language not in test_templates:
+            raise ValueError(f'Unsupported language: {language}')
+            
+        if framework not in test_templates[language]:
+            framework = list(test_templates[language].keys())[0]
+            
+        template = test_templates[language][framework]
         
-    if not framework:
-        framework = list(test_templates[language].keys())[0]
+        # Helper functions to format test components
+        def _format_fixtures(fixtures: List[str], lang: str) -> str:
+            if not fixtures:
+                return ""
+                
+            if lang == 'python':
+                return "\n".join(f"@pytest.fixture\ndef {f}():\n    return {fixtures[f]}" 
+                               for f in fixtures)
+            return ""
+            
+        def _format_setup(setup: List[str], lang: str) -> str:
+            if not setup:
+                return ""
+                
+            if lang == 'python':
+                return "\n    ".join(setup)
+            elif lang == 'typescript':
+                return "\n  ".join(setup)
+            return ""
+            
+        def _format_arrange(arrange: List[str], lang: str) -> str:
+            if not arrange:
+                return "pass" if lang == 'python' else ""
+                
+            if lang == 'python':
+                return "\n    ".join(arrange)
+            elif lang == 'typescript':
+                return "\n    ".join(arrange)
+            return ""
+            
+        def _format_act(act: List[str], lang: str) -> str:
+            if not act:
+                return "pass" if lang == 'python' else ""
+                
+            if lang == 'python':
+                return "\n    ".join(act)
+            elif lang == 'typescript':
+                return "\n    ".join(act)
+            return ""
+            
+        def _format_assertions(assertions: List[str], lang: str) -> str:
+            if not assertions:
+                return "assert True" if lang == 'python' else "expect(true).toBe(true)"
+                
+            if lang == 'python':
+                return "\n    ".join(assertions)
+            elif lang == 'typescript':
+                return "\n    ".join(assertions)
+            return ""
         
-    if framework not in test_templates[language]:
-        return {'error': f'Unsupported test framework: {framework}'}
+        # Extract test components from spec
+        module = spec.module if hasattr(spec, 'module') else spec.get('module', '')
+        name = spec.name if hasattr(spec, 'name') else spec.get('name', '')
+        scenario = spec.scenario if hasattr(spec, 'scenario') else spec.get('scenario', 'basic')
+        fixtures = spec.fixtures if hasattr(spec, 'fixtures') else spec.get('fixtures', [])
+        setup = spec.setup if hasattr(spec, 'setup') else spec.get('setup', [])
+        arrange = spec.arrange if hasattr(spec, 'arrange') else spec.get('arrange', [])
+        act = spec.act if hasattr(spec, 'act') else spec.get('act', [])
+        assertions = spec.assertions if hasattr(spec, 'assertions') else spec.get('assertions', [])
         
-    template = test_templates[language][framework]
-    
-    code = template.format(
-        module=spec['module'],
-        name=spec['name'],
-        description=spec.get('description', ''),
-        scenario=spec.get('scenario', 'basic'),
-        fixtures=_format_fixtures(spec.get('fixtures', []), language),
-        setup=_format_setup(spec.get('setup', []), language),
-        arrange=_format_arrange(spec.get('arrange', []), language),
-        act=_format_act(spec.get('act', []), language),
-        assert_block=_format_assertions(spec.get('assertions', []), language)
-    )
-    
-    return {
-        'code': code,
-        'language': language,
-        'framework': framework,
-        'type': 'test'
-    }
+        # Generate test code using template
+        code = template.format(
+            module=module,
+            name=name,
+            scenario=scenario,
+            fixtures=_format_fixtures(fixtures, language),
+            setup=_format_setup(setup, language),
+            arrange=_format_arrange(arrange, language),
+            act=_format_act(act, language),
+            assert_block=_format_assertions(assertions, language)
+        )
+        
+        return {
+            'code': code,
+            'language': language,
+            'framework': framework,
+            'type': 'test'
+        }
+    except Exception as e:
+        return {
+            'error': str(e),
+            'code': '',
+            'language': language,
+            'framework': framework,
+            'type': 'test'
+        }
 
 def _generate_docs(
     spec: Dict[str, Any],
