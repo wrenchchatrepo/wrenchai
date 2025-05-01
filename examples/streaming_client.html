@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WrenchAI Streaming Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #3498db;
+            margin-top: 25px;
+        }
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        label {
+            margin-right: 5px;
+            font-weight: bold;
+        }
+        .output {
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            font-family: monospace;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            margin: 10px 0;
+            height: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #2ecc71;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-bubble {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-idle {
+            background-color: #95a5a6;
+        }
+        .status-loading {
+            background-color: #f39c12;
+            animation: pulse 1.5s infinite;
+        }
+        .status-success {
+            background-color: #2ecc71;
+        }
+        .status-error {
+            background-color: #e74c3c;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .stat-value {
+            font-weight: bold;
+            font-size: 18px;
+            color: #3498db;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WrenchAI Streaming Demo</h1>
+        <p>This page demonstrates different types of streaming responses from the WrenchAI API.</p>
+        
+        <!-- Text Streaming Demo -->
+        <div class="demo-section">
+            <h2>Text Streaming</h2>
+            <div class="controls">
+                <label for="text-delay">Delay (s):</label>
+                <input type="number" id="text-delay" value="0.1" min="0.01" max="2" step="0.01">
+                
+                <label for="text-chunk-size">Chunk Size:</label>
+                <input type="number" id="text-chunk-size" value="5" min="1" max="50">
+                
+                <button id="start-text-stream">Start Stream</button>
+                <button id="stop-text-stream" disabled>Stop Stream</button>
+            </div>
+            <div class="progress-container">
+                <div id="text-progress" class="progress-bar">0%</div>
+            </div>
+            <div class="status">
+                Status: <span class="status-bubble status-idle"></span> <span id="text-status">Idle</span>
+            </div>
+            <div id="text-output" class="output"></div>
+        </div>
+        
+        <!-- JSON Streaming Demo -->
+        <div class="demo-section">
+            <h2>JSON Streaming</h2>
+            <div class="controls">
+                <label for="json-count">Items:</label>
+                <input type="number" id="json-count" value="10" min="1" max="50">
+                
+                <label for="json-delay">Delay (s):</label>
+                <input type="number" id="json-delay" value="0.5" min="0.1" max="5" step="0.1">
+                
+                <button id="start-json-stream">Start Stream</button>
+                <button id="stop-json-stream" disabled>Stop Stream</button>
+            </div>
+            <div class="progress-container">
+                <div id="json-progress" class="progress-bar">0%</div>
+            </div>
+            <div class="status">
+                Status: <span class="status-bubble status-idle"></span> <span id="json-status">Idle</span>
+            </div>
+            <div id="json-output" class="output"></div>
+        </div>
+        
+        <!-- SSE Streaming Demo -->
+        <div class="demo-section">
+            <h2>Server-Sent Events (SSE)</h2>
+            <div class="controls">
+                <label for="sse-count">Events:</label>
+                <input type="number" id="sse-count" value="10" min="1" max="30">
+                
+                <label for="sse-delay">Delay (s):</label>
+                <input type="number" id="sse-delay" value="1.0" min="0.1" max="5" step="0.1">
+                
+                <button id="start-sse-stream">Start Stream</button>
+                <button id="stop-sse-stream" disabled>Stop Stream</button>
+            </div>
+            <div class="progress-container">
+                <div id="sse-progress" class="progress-bar">0%</div>
+            </div>
+            <div class="status">
+                Status: <span class="status-bubble status-idle"></span> <span id="sse-status">Idle</span>
+            </div>
+            <div id="sse-output" class="output"></div>
+        </div>
+        
+        <!-- WebSocket Streaming Demo -->
+        <div class="demo-section">
+            <h2>WebSocket Streaming</h2>
+            <div class="controls">
+                <label for="ws-count">Items:</label>
+                <input type="number" id="ws-count" value="20" min="1" max="100">
+                
+                <label for="ws-delay">Delay (s):</label>
+                <input type="number" id="ws-delay" value="0.5" min="0.1" max="5" step="0.1">
+                
+                <button id="start-ws-stream">Start Stream</button>
+                <button id="stop-ws-stream" disabled>Stop Stream</button>
+            </div>
+            <div class="progress-container">
+                <div id="ws-progress" class="progress-bar">0%</div>
+            </div>
+            <div class="status">
+                Status: <span class="status-bubble status-idle"></span> <span id="ws-status">Idle</span>
+            </div>
+            <div id="ws-output" class="output"></div>
+        </div>
+        
+        <!-- Long Operation Demo -->
+        <div class="demo-section">
+            <h2>Long-running Operation</h2>
+            <div class="controls">
+                <label for="op-duration">Duration (s):</label>
+                <input type="number" id="op-duration" value="10" min="5" max="60">
+                
+                <button id="start-long-op">Start Operation</button>
+                <button id="stop-long-op" disabled>Stop Operation</button>
+            </div>
+            <div class="progress-container">
+                <div id="op-progress" class="progress-bar">0%</div>
+            </div>
+            <div class="status">
+                Status: <span class="status-bubble status-idle"></span> <span id="op-status">Idle</span>
+            </div>
+            <div id="op-output" class="output"></div>
+        </div>
+        
+        <!-- Dashboard -->
+        <div class="demo-section">
+            <h2>Streaming Dashboard</h2>
+            <button id="refresh-dashboard">Refresh Dashboard</button>
+            <div class="stats">
+                <div class="stat-item">
+                    <div>Active Workflows</div>
+                    <div id="stat-workflows" class="stat-value">0</div>
+                </div>
+                <div class="stat-item">
+                    <div>Active Streams</div>
+                    <div id="stat-streams" class="stat-value">0</div>
+                </div>
+                <div class="stat-item">
+                    <div>Overall Progress</div>
+                    <div id="stat-progress" class="stat-value">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div>Completed Items</div>
+                    <div id="stat-completed" class="stat-value">0</div>
+                </div>
+            </div>
+            <div id="dashboard-output" class="output"></div>
+        </div>
+    </div>
+
+    <script>
+        // Base API URL - change this to match your server
+        const BASE_URL = 'http://localhost:8000';
+        
+        // Utility to update status indicators
+        function updateStatus(demoId, status, message) {
+            const statusEl = document.getElementById(`${demoId}-status`);
+            const bubbleEl = statusEl.previousElementSibling;
+            
+            statusEl.textContent = message;
+            
+            bubbleEl.className = 'status-bubble';
+            if (status === 'idle') {
+                bubbleEl.classList.add('status-idle');
+            } else if (status === 'loading') {
+                bubbleEl.classList.add('status-loading');
+            } else if (status === 'success') {
+                bubbleEl.classList.add('status-success');
+            } else if (status === 'error') {
+                bubbleEl.classList.add('status-error');
+            }
+        }
+        
+        // Utility to update progress bar
+        function updateProgress(demoId, progress) {
+            const progressBar = document.getElementById(`${demoId}-progress`);
+            const percent = Math.min(100, Math.max(0, progress));
+            progressBar.style.width = `${percent}%`;
+            progressBar.textContent = `${percent.toFixed(1)}%`;
+        }
+        
+        // Utility to append to output
+        function appendOutput(demoId, text, isJson = false) {
+            const outputEl = document.getElementById(`${demoId}-output`);
+            
+            if (isJson) {
+                // Try to parse and format JSON
+                try {
+                    const json = JSON.parse(text);
+                    text = JSON.stringify(json, null, 2);
+                } catch (e) {
+                    // Not valid JSON, use as is
+                }
+            }
+            
+            outputEl.textContent += text + '\n';
+            outputEl.scrollTop = outputEl.scrollHeight;
+        }
+        
+        // Utility to clear output
+        function clearOutput(demoId) {
+            document.getElementById(`${demoId}-output`).textContent = '';
+        }
+        
+        // Abort controllers for each stream
+        const controllers = {
+            text: null,
+            json: null,
+            sse: null,
+            ws: null,
+            op: null
+        };
+        
+        // Text Streaming
+        document.getElementById('start-text-stream').addEventListener('click', async () => {
+            const delay = document.getElementById('text-delay').value;
+            const chunkSize = document.getElementById('text-chunk-size').value;
+            const url = `${BASE_URL}/stream/text?delay=${delay}&chunk_size=${chunkSize}`;
+            
+            controllers.text = new AbortController();
+            const startBtn = document.getElementById('start-text-stream');
+            const stopBtn = document.getElementById('stop-text-stream');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            clearOutput('text');
+            updateStatus('text', 'loading', 'Streaming...');
+            updateProgress('text', 0);
+            
+            try {
+                const response = await fetch(url, {
+                    signal: controllers.text.signal
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                let receivedLength = 0;
+                const contentLength = response.headers.get('Content-Length');
+                const totalLength = contentLength ? parseInt(contentLength) : null;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        updateStatus('text', 'success', 'Complete');
+                        updateProgress('text', 100);
+                        break;
+                    }
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    appendOutput('text', chunk);
+                    
+                    // Update progress if content length is known
+                    receivedLength += value.length;
+                    if (totalLength) {
+                        const progress = (receivedLength / totalLength) * 100;
+                        updateProgress('text', progress);
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateStatus('text', 'idle', 'Cancelled');
+                } else {
+                    console.error('Text stream error:', error);
+                    updateStatus('text', 'error', 'Error: ' + error.message);
+                }
+            } finally {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        });
+        
+        document.getElementById('stop-text-stream').addEventListener('click', () => {
+            if (controllers.text) {
+                controllers.text.abort();
+                controllers.text = null;
+            }
+        });
+        
+        // JSON Streaming
+        document.getElementById('start-json-stream').addEventListener('click', async () => {
+            const count = document.getElementById('json-count').value;
+            const delay = document.getElementById('json-delay').value;
+            const url = `${BASE_URL}/stream/json?count=${count}&delay=${delay}`;
+            
+            controllers.json = new AbortController();
+            const startBtn = document.getElementById('start-json-stream');
+            const stopBtn = document.getElementById('stop-json-stream');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            clearOutput('json');
+            updateStatus('json', 'loading', 'Streaming...');
+            updateProgress('json', 0);
+            
+            try {
+                const response = await fetch(url, {
+                    signal: controllers.json.signal
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        // Process any remaining buffer
+                        if (buffer.trim()) {
+                            try {
+                                const json = JSON.parse(buffer);
+                                appendOutput('json', JSON.stringify(json), true);
+                                if (json.progress) {
+                                    updateProgress('json', json.progress);
+                                }
+                            } catch (e) {
+                                appendOutput('json', buffer);
+                            }
+                        }
+                        
+                        updateStatus('json', 'success', 'Complete');
+                        updateProgress('json', 100);
+                        break;
+                    }
+                    
+                    // Decode chunk and add to buffer
+                    const chunk = decoder.decode(value, { stream: true });
+                    buffer += chunk;
+                    
+                    // Process complete JSON objects
+                    let newlineIndex;
+                    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                        const line = buffer.slice(0, newlineIndex).trim();
+                        buffer = buffer.slice(newlineIndex + 1);
+                        
+                        if (line) {
+                            try {
+                                const json = JSON.parse(line);
+                                appendOutput('json', JSON.stringify(json), true);
+                                if (json.progress) {
+                                    updateProgress('json', json.progress);
+                                }
+                            } catch (e) {
+                                appendOutput('json', line);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateStatus('json', 'idle', 'Cancelled');
+                } else {
+                    console.error('JSON stream error:', error);
+                    updateStatus('json', 'error', 'Error: ' + error.message);
+                }
+            } finally {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        });
+        
+        document.getElementById('stop-json-stream').addEventListener('click', () => {
+            if (controllers.json) {
+                controllers.json.abort();
+                controllers.json = null;
+            }
+        });
+        
+        // SSE Streaming
+        document.getElementById('start-sse-stream').addEventListener('click', () => {
+            const count = document.getElementById('sse-count').value;
+            const delay = document.getElementById('sse-delay').value;
+            const url = `${BASE_URL}/stream/sse?count=${count}&delay=${delay}`;
+            
+            const startBtn = document.getElementById('start-sse-stream');
+            const stopBtn = document.getElementById('stop-sse-stream');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            clearOutput('sse');
+            updateStatus('sse', 'loading', 'Connecting...');
+            updateProgress('sse', 0);
+            
+            const eventSource = new EventSource(url);
+            controllers.sse = eventSource;
+            
+            // Handle connection open
+            eventSource.onopen = () => {
+                updateStatus('sse', 'loading', 'Connected, waiting for events...');
+            };
+            
+            // Handle messages (default event)
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    appendOutput('sse', JSON.stringify(data), true);
+                    
+                    if (data.progress) {
+                        updateProgress('sse', data.progress);
+                    }
+                } catch (e) {
+                    appendOutput('sse', event.data);
+                }
+            };
+            
+            // Handle specific events
+            eventSource.addEventListener('started', (event) => {
+                updateStatus('sse', 'loading', 'Stream started');
+                try {
+                    const data = JSON.parse(event.data);
+                    appendOutput('sse', `Event: started\n${JSON.stringify(data)}`, true);
+                } catch (e) {
+                    appendOutput('sse', `Event: started\n${event.data}`);
+                }
+            });
+            
+            eventSource.addEventListener('chunk', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    appendOutput('sse', `Event: chunk\n${JSON.stringify(data)}`, true);
+                    
+                    if (data.progress) {
+                        updateProgress('sse', data.progress);
+                    }
+                } catch (e) {
+                    appendOutput('sse', `Event: chunk\n${event.data}`);
+                }
+            });
+            
+            eventSource.addEventListener('complete', (event) => {
+                updateStatus('sse', 'success', 'Complete');
+                updateProgress('sse', 100);
+                try {
+                    const data = JSON.parse(event.data);
+                    appendOutput('sse', `Event: complete\n${JSON.stringify(data)}`, true);
+                } catch (e) {
+                    appendOutput('sse', `Event: complete\n${event.data}`);
+                }
+                
+                // Close the connection
+                eventSource.close();
+                controllers.sse = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            });
+            
+            eventSource.addEventListener('error', (event) => {
+                updateStatus('sse', 'error', 'Error');
+                try {
+                    const data = JSON.parse(event.data);
+                    appendOutput('sse', `Event: error\n${JSON.stringify(data)}`, true);
+                } catch (e) {
+                    appendOutput('sse', `Event: error\n${event.data || 'Connection error'}`);
+                }
+                
+                // Close the connection
+                eventSource.close();
+                controllers.sse = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            });
+            
+            // Handle connection error
+            eventSource.onerror = (error) => {
+                console.error('SSE error:', error);
+                updateStatus('sse', 'error', 'Connection error');
+                eventSource.close();
+                controllers.sse = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            };
+        });
+        
+        document.getElementById('stop-sse-stream').addEventListener('click', () => {
+            if (controllers.sse) {
+                controllers.sse.close();
+                controllers.sse = null;
+                updateStatus('sse', 'idle', 'Disconnected');
+                document.getElementById('start-sse-stream').disabled = false;
+                document.getElementById('stop-sse-stream').disabled = true;
+            }
+        });
+        
+        // WebSocket Streaming
+        document.getElementById('start-ws-stream').addEventListener('click', () => {
+            const count = document.getElementById('ws-count').value;
+            const delay = document.getElementById('ws-delay').value;
+            const wsUrl = `${BASE_URL.replace('http', 'ws')}/ws/stream`;
+            
+            const startBtn = document.getElementById('start-ws-stream');
+            const stopBtn = document.getElementById('stop-ws-stream');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            clearOutput('ws');
+            updateStatus('ws', 'loading', 'Connecting...');
+            updateProgress('ws', 0);
+            
+            const socket = new WebSocket(wsUrl);
+            controllers.ws = socket;
+            
+            socket.onopen = () => {
+                updateStatus('ws', 'loading', 'Connected, starting stream...');
+                // Send parameters to start the stream
+                socket.send(JSON.stringify({
+                    count: parseInt(count),
+                    delay: parseFloat(delay)
+                }));
+            };
+            
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    appendOutput('ws', JSON.stringify(data), true);
+                    
+                    if (data.progress) {
+                        updateProgress('ws', data.progress);
+                    }
+                    
+                    if (data.event === 'complete') {
+                        updateStatus('ws', 'success', 'Complete');
+                        socket.close();
+                    } else if (data.event === 'error') {
+                        updateStatus('ws', 'error', 'Error: ' + (data.error || 'Unknown error'));
+                        socket.close();
+                    }
+                } catch (e) {
+                    appendOutput('ws', event.data);
+                }
+            };
+            
+            socket.onclose = (event) => {
+                updateStatus('ws', event.wasClean ? 'success' : 'error', 
+                             event.wasClean ? 'Disconnected' : `Connection closed: ${event.code}`);
+                controllers.ws = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            };
+            
+            socket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('ws', 'error', 'Connection error');
+                controllers.ws = null;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            };
+        });
+        
+        document.getElementById('stop-ws-stream').addEventListener('click', () => {
+            if (controllers.ws) {
+                controllers.ws.close();
+                controllers.ws = null;
+                updateStatus('ws', 'idle', 'Disconnected');
+                document.getElementById('start-ws-stream').disabled = false;
+                document.getElementById('stop-ws-stream').disabled = true;
+            }
+        });
+        
+        // Long Operation
+        document.getElementById('start-long-op').addEventListener('click', async () => {
+            const duration = document.getElementById('op-duration').value;
+            const url = `${BASE_URL}/stream/long-operation?duration=${duration}`;
+            
+            controllers.op = new AbortController();
+            const startBtn = document.getElementById('start-long-op');
+            const stopBtn = document.getElementById('stop-long-op');
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            clearOutput('op');
+            updateStatus('op', 'loading', 'Operation started...');
+            updateProgress('op', 0);
+            
+            try {
+                const response = await fetch(url, {
+                    signal: controllers.op.signal
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                let buffer = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        // Process any remaining buffer
+                        if (buffer.trim()) {
+                            try {
+                                const json = JSON.parse(buffer);
+                                appendOutput('op', JSON.stringify(json), true);
+                                if (json.progress) {
+                                    updateProgress('op', json.progress);
+                                }
+                                if (json.status === 'completed') {
+                                    updateStatus('op', 'success', 'Operation completed');
+                                }
+                            } catch (e) {
+                                appendOutput('op', buffer);
+                            }
+                        }
+                        
+                        updateProgress('op', 100);
+                        break;
+                    }
+                    
+                    // Decode chunk and add to buffer
+                    const chunk = decoder.decode(value, { stream: true });
+                    buffer += chunk;
+                    
+                    // Process complete JSON objects
+                    let newlineIndex;
+                    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                        const line = buffer.slice(0, newlineIndex).trim();
+                        buffer = buffer.slice(newlineIndex + 1);
+                        
+                        if (line) {
+                            try {
+                                const json = JSON.parse(line);
+                                appendOutput('op', JSON.stringify(json), true);
+                                
+                                if (json.progress) {
+                                    updateProgress('op', json.progress);
+                                }
+                                
+                                if (json.status) {
+                                    updateStatus('op', 
+                                                json.status === 'completed' ? 'success' : 'loading', 
+                                                json.message || json.status);
+                                }
+                            } catch (e) {
+                                appendOutput('op', line);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    updateStatus('op', 'idle', 'Operation cancelled');
+                } else {
+                    console.error('Operation error:', error);
+                    updateStatus('op', 'error', 'Error: ' + error.message);
+                }
+            } finally {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        });
+        
+        document.getElementById('stop-long-op').addEventListener('click', () => {
+            if (controllers.op) {
+                controllers.op.abort();
+                controllers.op = null;
+            }
+        });
+        
+        // Dashboard
+        async function refreshDashboard() {
+            try {
+                const response = await fetch(`${BASE_URL}/status/dashboard`);
+                const data = await response.json();
+                
+                // Update stats
+                document.getElementById('stat-workflows').textContent = 
+                    data.progress.root_items || 0;
+                    
+                document.getElementById('stat-streams').textContent = 
+                    data.streams.active_count || 0;
+                    
+                document.getElementById('stat-progress').textContent = 
+                    `${Math.round(data.progress.overall_progress || 0)}%`;
+                    
+                document.getElementById('stat-completed').textContent = 
+                    data.progress.completed_items || 0;
+                
+                // Show full data in output
+                document.getElementById('dashboard-output').textContent = 
+                    JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Dashboard refresh error:', error);
+                document.getElementById('dashboard-output').textContent = 
+                    `Error refreshing dashboard: ${error.message}`;
+            }
+        }
+        
+        document.getElementById('refresh-dashboard').addEventListener('click', refreshDashboard);
+        
+        // Auto-refresh dashboard periodically
+        setInterval(refreshDashboard, 5000);
+        
+        // Initial dashboard refresh
+        refreshDashboard();
+    </script>
+</body>
+</html>

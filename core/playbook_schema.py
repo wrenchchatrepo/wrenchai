@@ -5,11 +5,15 @@ validation and execution code. It uses Pydantic for validation and
 provides utilities for converting between different formats.
 """
 
-from typing import Dict, List, Union, Optional, Any, Literal
+from typing import Dict, List, Union, Optional, Any, Literal, Set
 from pydantic import BaseModel, Field, validator, root_validator
 from datetime import datetime
 import yaml
 from enum import Enum
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Define enums for constrained fields
 class StepType(str, Enum):
@@ -61,12 +65,31 @@ class ProcessOperation(BaseModel):
     operation: str
     condition: Optional[str] = None
     failure_action: Optional[str] = None
+    
+    @validator('condition')
+    def validate_condition(cls, v):
+        """Validate condition syntax if present."""
+        if v is not None:
+            from core.condition_evaluator import validate_condition
+            valid, error = validate_condition(v)
+            if not valid:
+                raise ValueError(f"Invalid condition syntax: {error}")
+        return v
 
 class HandoffCondition(BaseModel):
     """Condition for handoff steps."""
     condition: str
     target_agent: str
     operation: str
+    
+    @validator('condition')
+    def validate_condition(cls, v):
+        """Validate condition syntax."""
+        from core.condition_evaluator import validate_condition
+        valid, error = validate_condition(v)
+        if not valid:
+            raise ValueError(f"Invalid condition syntax: {error}")
+        return v
 
 class InputConfig(BaseModel):
     """Input configuration for steps."""
