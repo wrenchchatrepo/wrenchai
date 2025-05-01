@@ -170,6 +170,153 @@ class BrowserState:
 # Global browser state instance
 browser_state = BrowserState()
 
+class BrowserTools:
+    """Browser tools implementation for monitoring and interaction."""
+    
+    @staticmethod
+    async def get_console_logs() -> Dict[str, Any]:
+        """Get all console logs.
+        
+        Returns:
+            Dictionary containing console logs
+        """
+        try:
+            return {
+                "success": True,
+                "logs": browser_state.get_console_logs()
+            }
+        except Exception as e:
+            logger.error(f"Error getting console logs: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @staticmethod
+    async def get_console_errors() -> Dict[str, Any]:
+        """Get console error logs.
+        
+        Returns:
+            Dictionary containing console error logs
+        """
+        try:
+            return {
+                "success": True,
+                "errors": browser_state.get_console_errors()
+            }
+        except Exception as e:
+            logger.error(f"Error getting console errors: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @staticmethod
+    async def get_network_error_logs() -> Dict[str, Any]:
+        """Get failed network request logs.
+        
+        Returns:
+            Dictionary containing failed network requests
+        """
+        try:
+            return {
+                "success": True,
+                "errors": browser_state.get_network_error_logs()
+            }
+        except Exception as e:
+            logger.error(f"Error getting network error logs: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @staticmethod
+    async def get_network_success_logs() -> Dict[str, Any]:
+        """Get successful network request logs.
+        
+        Returns:
+            Dictionary containing successful network requests
+        """
+        try:
+            return {
+                "success": True,
+                "requests": browser_state.get_network_success_logs()
+            }
+        except Exception as e:
+            logger.error(f"Error getting network success logs: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @staticmethod
+    async def take_screenshot() -> Dict[str, Any]:
+        """Take a screenshot of the current browser tab.
+        
+        Returns:
+            Dictionary containing screenshot information
+        """
+        try:
+            # This would be implemented by the MCP server
+            # Here we just return a placeholder success response
+            return {
+                "success": True,
+                "message": "Screenshot captured",
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error taking screenshot: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @staticmethod
+    async def get_selected_element() -> Dict[str, Any]:
+        """Get the currently selected element.
+        
+        Returns:
+            Dictionary containing element information
+        """
+        try:
+            element = browser_state.get_selected_element()
+            if element is None:
+                return {
+                    "success": False,
+                    "error": "No element selected"
+                }
+            return {
+                "success": True,
+                "element": element
+            }
+        except Exception as e:
+            logger.error(f"Error getting selected element: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    @staticmethod
+    async def wipe_logs() -> Dict[str, Any]:
+        """Clear all browser logs.
+        
+        Returns:
+            Dictionary containing operation status
+        """
+        try:
+            browser_state.clear_logs()
+            return {
+                "success": True,
+                "message": "All logs cleared successfully"
+            }
+        except Exception as e:
+            logger.error(f"Error wiping logs: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+# Individual operation functions
 async def get_console_logs() -> Dict[str, Any]:
     """
     Retrieves all captured browser console logs.
@@ -177,17 +324,7 @@ async def get_console_logs() -> Dict[str, Any]:
     Returns:
         A dictionary with a success flag and a list of console log entries, or an error message if retrieval fails.
     """
-    try:
-        return {
-            "success": True,
-            "logs": browser_state.get_console_logs()
-        }
-    except Exception as e:
-        logger.error(f"Error getting console logs: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.get_console_logs()
 
 async def get_console_errors() -> Dict[str, Any]:
     """
@@ -196,17 +333,7 @@ async def get_console_errors() -> Dict[str, Any]:
     Returns:
         A dictionary with a success flag and a list of console error logs, or an error message if retrieval fails.
     """
-    try:
-        return {
-            "success": True,
-            "errors": browser_state.get_console_errors()
-        }
-    except Exception as e:
-        logger.error(f"Error getting console errors: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.get_console_errors()
 
 async def get_network_error_logs() -> Dict[str, Any]:
     """
@@ -215,17 +342,7 @@ async def get_network_error_logs() -> Dict[str, Any]:
     Returns:
         A dictionary with a success flag and a list of failed network requests, or an error message if retrieval fails.
     """
-    try:
-        return {
-            "success": True,
-            "errors": browser_state.get_network_error_logs()
-        }
-    except Exception as e:
-        logger.error(f"Error getting network error logs: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.get_network_error_logs()
 
 async def get_network_success_logs() -> Dict[str, Any]:
     """
@@ -234,17 +351,7 @@ async def get_network_success_logs() -> Dict[str, Any]:
     Returns:
         A dictionary with a success flag and a list of successful network requests, or an error message if retrieval fails.
     """
-    try:
-        return {
-            "success": True,
-            "requests": browser_state.get_network_success_logs()
-        }
-    except Exception as e:
-        logger.error(f"Error getting network success logs: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.get_network_success_logs()
 
 async def take_screenshot() -> Dict[str, Any]:
     """
@@ -253,20 +360,7 @@ async def take_screenshot() -> Dict[str, Any]:
     Returns:
         A dictionary indicating success and including a message and timestamp, or an error message if the operation fails.
     """
-    try:
-        # This would be implemented by the MCP server
-        # Here we just return a placeholder success response
-        return {
-            "success": True,
-            "message": "Screenshot captured",
-            "timestamp": datetime.utcnow().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error taking screenshot: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.take_screenshot()
 
 async def get_selected_element() -> Dict[str, Any]:
     """
@@ -276,23 +370,7 @@ async def get_selected_element() -> Dict[str, Any]:
         A dictionary with a success flag and the selected element's information if available,
         or an error message if no element is selected or an exception occurs.
     """
-    try:
-        element = browser_state.get_selected_element()
-        if element is None:
-            return {
-                "success": False,
-                "error": "No element selected"
-            }
-        return {
-            "success": True,
-            "element": element
-        }
-    except Exception as e:
-        logger.error(f"Error getting selected element: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.get_selected_element()
 
 async def wipe_logs() -> Dict[str, Any]:
     """
@@ -301,18 +379,7 @@ async def wipe_logs() -> Dict[str, Any]:
     Returns:
         A dictionary indicating whether the operation was successful. On success, includes a message; on failure, includes an error message.
     """
-    try:
-        browser_state.clear_logs()
-        return {
-            "success": True,
-            "message": "All logs cleared successfully"
-        }
-    except Exception as e:
-        logger.error(f"Error wiping logs: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e)
-        }
+    return await BrowserTools.wipe_logs()
 
 # Event handlers for browser events
 def handle_console_log(level: str, message: str, source: str, line_number: Optional[int] = None):
@@ -398,3 +465,53 @@ def handle_element_selected(element_info: Dict[str, Any]):
         element_info: A dictionary containing information about the selected DOM element.
     """
     browser_state.set_selected_element(element_info) 
+
+async def browser_operation(operation: str) -> Dict[str, Any]:
+    """Primary interface for browser operations.
+    
+    This function is the main entry point for the tool system to interact with browser
+    tools. It maps operations to the appropriate methods.
+    
+    Args:
+        operation: Operation to perform (get_console_logs, get_console_errors,
+                 get_network_error_logs, get_network_success_logs, take_screenshot,
+                 get_selected_element, wipe_logs)
+        
+    Returns:
+        Dictionary containing operation results
+    """
+    try:
+        # Map operations to methods
+        if operation == "get_console_logs":
+            return await get_console_logs()
+            
+        elif operation == "get_console_errors":
+            return await get_console_errors()
+            
+        elif operation == "get_network_error_logs":
+            return await get_network_error_logs()
+            
+        elif operation == "get_network_success_logs":
+            return await get_network_success_logs()
+            
+        elif operation == "take_screenshot":
+            return await take_screenshot()
+            
+        elif operation == "get_selected_element":
+            return await get_selected_element()
+            
+        elif operation == "wipe_logs":
+            return await wipe_logs()
+            
+        else:
+            return {
+                "success": False,
+                "error": f"Unknown operation: {operation}"
+            }
+            
+    except Exception as e:
+        logger.error(f"Browser operation failed: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
