@@ -1,6 +1,9 @@
 from typing import Dict, List, Optional, Any
 from uuid import uuid4
 from datetime import datetime
+import asyncio
+import json
+import time
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -16,6 +19,7 @@ from app.models.user import User
 from app.models.agent import Agent
 from app.models.task import Task, TaskStatus
 from app.schemas.task import TaskCreate
+from core.playbook_logger import playbook_logger, track_playbook_execution
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -119,31 +123,97 @@ async def execute_playbook_task(
         # Update task status to running
         task_statuses[task_id]["status"] = "running"
         task_statuses[task_id]["message"] = "Playbook execution in progress"
+        
+        # Track playbook execution using the logger
+        start_time = time.time()
+        with track_playbook_execution(
+            playbook_id=task_id,
+            playbook_name=config.name,
+            playbook_description=f"Execution of {config.name} playbook",
+            metadata={
+                "project": config.project.dict(),
+                "parameters": config.parameters,
+                "agents": config.agents
+            }
+        ) as execution_id:
+            # Log the initial setup
+            for agent_name, agent_instance in agents.items():
+                playbook_logger.log_agent_execution(
+                    execution_id=execution_id,
+                    agent_id=agent_name,
+                    agent_type=agent_name,
+                    action="initialize",
+                    input_data={"settings": str(settings)},
+                    output_data={"status": "initialized"}
+                )
 
-        # Execute playbook using SuperAgent
-        super_agent = agents.get("super")
-        if not super_agent:
-            raise ValueError("SuperAgent not initialized")
-
-        result = await super_agent.execute_playbook(
-            config.name,
-            config.project.dict(),
-            config.parameters
-        )
-
-        # Update task status based on execution result
-        task_statuses[task_id].update({
-            "status": "completed",
-            "message": "Playbook execution completed successfully",
-            "result": result
-        })
+            # Execute playbook using SuperAgent
+            super_agent = agents.get("super")
+            if not super_agent:
+                raise ValueError("SuperAgent not initialized")
+            
+            # Log playbook start step
+            playbook_logger.log_step_execution(
+                execution_id=execution_id,
+                step_id="playbook_start",
+                step_name=f"Start {config.name}",
+                step_type="playbook_start",
+                status="started"
+            )
+            
+            try:
+                # Execute the playbook
+                result = await super_agent.execute_playbook(
+                    config.name,
+                    config.project.dict(),
+                    config.parameters
+                )
+                
+                # Log successful execution
+                execution_time = time.time() - start_time
+                playbook_logger.log_step_execution(
+                    execution_id=execution_id,
+                    step_id="playbook_end",
+                    step_name=f"End {config.name}",
+                    step_type="playbook_end",
+                    status="completed",
+                    step_data={
+                        "result": result,
+                        "duration_seconds": execution_time
+                    }
+                )
+                
+                # Update task status based on execution result
+                task_statuses[task_id].update({
+                    "status": "completed",
+                    "message": "Playbook execution completed successfully",
+                    "result": result,
+                    "execution_time": execution_time
+                })
+                
+            except Exception as e:
+                # Log step failure
+                execution_time = time.time() - start_time
+                playbook_logger.log_step_execution(
+                    execution_id=execution_id,
+                    step_id="playbook_error",
+                    step_name=f"Error in {config.name}",
+                    step_type="playbook_error",
+                    status="failed",
+                    step_data={
+                        "error": str(e),
+                        "duration_seconds": execution_time
+                    }
+                )
+                raise
 
     except Exception as e:
         logger.error(f"Playbook execution failed: {str(e)}")
         task_statuses[task_id].update({
             "status": "failed",
             "message": f"Playbook execution failed: {str(e)}",
-            "error": str(e)
+            "error": str(e),
+            "execution_time": time.time() - start_time if 'start_time' in locals() else 0
         })
 
 @router.post(
@@ -359,4 +429,120 @@ async def execute_playbook(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to execute playbook: {str(e)}"
-        ) 
+        )
+
+@router.get(
+    "/logs/{execution_id}",
+    response_model=ResponseModel[Dict],
+    description="Get detailed logs for a playbook execution"
+)
+async def get_execution_logs(execution_id: str) -> ResponseModel[Dict]:
+    """
+    Retrieves detailed execution logs for a playbook execution identified by its execution ID.
+    
+    The logs include events, step details, agent actions, tool calls, and performance metrics.
+    
+    Args:
+        execution_id: The ID of the playbook execution
+        
+    Returns:
+        ResponseModel containing the detailed execution logs
+    
+    Raises:
+        HTTPException: If the execution logs could not be found
+    """
+    try:
+        # Fetch the execution logs
+        log_data = playbook_logger.get_playbook_execution(execution_id)
+        if not log_data:
+            # If not found with direct ID, try with playbook prefix
+            prefixed_id = f"playbook_{execution_id}"
+            log_data = playbook_logger.get_playbook_execution(prefixed_id)
+        
+        if not log_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Execution logs not found for ID {execution_id}"
+            )
+        
+        # Get metrics for the execution
+        metrics = playbook_logger.get_playbook_execution_metrics(execution_id)
+        
+        # Combine logs and metrics
+        result = {
+            "execution": log_data,
+            "metrics": metrics
+        }
+        
+        return ResponseModel(
+            success=True,
+            message="Execution logs retrieved successfully",
+            data=result
+        )
+        
+    except HTTPException:
+        raise
+        
+    except Exception as e:
+        logger.error(f"Failed to retrieve execution logs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve execution logs: {str(e)}"
+        )
+
+@router.get(
+    "/recent_executions",
+    response_model=ResponseModel[List[Dict]],
+    description="Get recent playbook executions"
+)
+async def get_recent_executions(
+    limit: int = 10,
+    status: Optional[str] = None
+) -> ResponseModel[List[Dict]]:
+    """
+    Retrieves a list of recent playbook executions, optionally filtered by status.
+    
+    Args:
+        limit: Maximum number of executions to return
+        status: Filter by execution status (e.g., "completed", "failed")
+        
+    Returns:
+        ResponseModel containing the list of execution summaries
+    
+    Raises:
+        HTTPException: If there was an error retrieving the executions
+    """
+    try:
+        # Query for recent executions
+        executions = playbook_logger.query_playbook_executions(
+            status=status,
+            limit=limit
+        )
+        
+        # Format the results
+        result = [
+            {
+                "execution_id": execution.get("execution_id"),
+                "name": execution.get("name"),
+                "status": execution.get("status"),
+                "start_time": execution.get("start_time"),
+                "end_time": execution.get("end_time"),
+                "duration_seconds": execution.get("duration_seconds"),
+                "steps_count": len(execution.get("steps", [])),
+                "errors_count": len(execution.get("errors", []))
+            }
+            for execution in executions
+        ]
+        
+        return ResponseModel(
+            success=True,
+            message="Recent executions retrieved successfully",
+            data=result
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to retrieve recent executions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve recent executions: {str(e)}"
+        )
