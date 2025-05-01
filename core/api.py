@@ -6,11 +6,13 @@ import logging
 from typing import Dict, List, Any, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import asyncio
 import json
 import time
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
+import uuid
 
 from core.agent_system import AgentManager
 from core.bayesian_engine import BayesianEngine
@@ -20,6 +22,26 @@ from core.agents.super_agent import SuperAgent, TaskRequest
 from core.agents.inspector_agent import InspectorAgent
 from core.agents.journey_agent import JourneyAgent, JourneyStep
 from core.tools.secrets_manager import secrets
+
+# Import standardized response and request schemas
+from core.schemas.responses import (
+    APIResponse, 
+    PaginatedResponse, 
+    create_response, 
+    error_response, 
+    paginated_response
+)
+from core.schemas.requests import (
+    PlaybookExecuteRequest,
+    TaskCreateRequest,
+    AgentCreateRequest,
+    ToolExecuteRequest,
+    ToolCategory,
+    AgentType
+)
+
+# Import standardized API routers
+from core.api_routes import agents_router, playbooks_router, tools_router
 
 # Configure logging
 logging.basicConfig(
@@ -42,6 +64,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add validation middleware and exception handlers
+from core.middleware.validation import add_validation_middleware
+from core.middleware.exception_handlers import add_exception_handlers
+
+add_validation_middleware(app)
+add_exception_handlers(app)
+
+# Include standardized routers
+app.include_router(agents_router)
+app.include_router(playbooks_router)
+app.include_router(tools_router)
 
 # Initialize systems
 CONFIG_DIR = os.getenv("CONFIG_DIR", "core/configs")
@@ -116,8 +150,8 @@ async def startup_event():
         logging.error(f"Error initializing system: {e}")
         raise
 
-@app.get("/health", tags=["System"])
-async def health_check() -> Dict[str, Any]:
+@app.get("/health", tags=["System"], response_model=Dict[str, Any])
+async def health_check() -> JSONResponse:
     """Check system health status."""
     try:
         # Implement health checks
@@ -131,36 +165,33 @@ async def health_check() -> Dict[str, Any]:
             }
         }
         
-        return {
-            "status": "healthy" if all(checks.values()) else "unhealthy",
-            "checks": checks,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        # Determine overall health status
+        is_healthy = all(checks.values()) and all(checks["agents"].values())
+        
+        return JSONResponse(
+            content=create_response(
+                success=is_healthy,
+                message="System health status",
+                data={
+                    "status": "healthy" if is_healthy else "unhealthy",
+                    "checks": checks,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            )
+        )
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Health check failed: {str(e)}"
+            content=error_response(
+                message="Health check failed",
+                code="HEALTH_CHECK_ERROR",
+                details={"error": str(e)}
+            )
         )
 
-@app.post("/api/agents/create")
-async def create_agent(data: Dict[str, Any]):
-    """Create a new agent with a specific role"""
-    try:
-        if 'role' not in data:
-            raise HTTPException(status_code=400, detail="Missing 'role' field")
-            
-        agent = agent_manager.initialize_agent(data['role'])
-        agent_id = get_agent_id(agent)
-        
-        # Assign tools if specified
-        if 'tools' in data and isinstance(data['tools'], list):
-            agent_manager.assign_tools_to_agent(agent_id, data['tools'])
-        
-        return {"status": "success", "agent_id": agent_id}
-    except Exception as e:
-        logging.error(f"Error creating agent: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# Keep backward compatibility with existing API endpoints
+# These can be gradually migrated to the new standardized routers
 
 @app.post("/api/agents/{agent_id}/process")
 async def process_with_agent(agent_id: str, data: Dict[str, Any]):
@@ -244,25 +275,62 @@ async def create_belief_model(data: Dict[str, Any]):
     """Create a new belief model in the Bayesian engine"""
     try:
         if 'model_name' not in data:
-            raise HTTPException(status_code=400, detail="Missing 'model_name' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing 'model_name' field",
+                    code="MISSING_FIELD"
+                )
+            )
         if 'variables' not in data or not isinstance(data['variables'], dict):
-            raise HTTPException(status_code=400, detail="Missing or invalid 'variables' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing or invalid 'variables' field",
+                    code="INVALID_FIELD"
+                )
+            )
             
         bayesian_engine.create_model(data['model_name'], data['variables'])
         
-        return {"status": "success", "model": data['model_name']}
+        return JSONResponse(
+            content=create_response(
+                success=True,
+                message="Belief model created successfully",
+                data={"model": data['model_name']}
+            )
+        )
     except Exception as e:
         logging.error(f"Error creating belief model: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=error_response(
+                message="Failed to create belief model",
+                code="MODEL_CREATION_ERROR",
+                details={"error": str(e)}
+            )
+        )
 
-@app.post("/api/reasoning/update")
-async def update_beliefs(data: Dict[str, Any]):
+@app.post("/api/reasoning/update", response_model=Dict[str, Any])
+async def update_beliefs(data: Dict[str, Any]) -> JSONResponse:
     """Update beliefs in the Bayesian model"""
     try:
         if 'model' not in data:
-            raise HTTPException(status_code=400, detail="Missing 'model' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing 'model' field",
+                    code="MISSING_FIELD"
+                )
+            )
         if 'evidence' not in data or not isinstance(data['evidence'], dict):
-            raise HTTPException(status_code=400, detail="Missing or invalid 'evidence' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing or invalid 'evidence' field",
+                    code="INVALID_FIELD"
+                )
+            )
             
         # Optional sampling parameters
         sample_kwargs = data.get('sample_kwargs', {})
@@ -271,21 +339,52 @@ async def update_beliefs(data: Dict[str, Any]):
             data['model'], data['evidence'], sample_kwargs
         )
         
-        return {"status": "success", "beliefs": updated_beliefs}
+        return JSONResponse(
+            content=create_response(
+                success=True,
+                message="Beliefs updated successfully",
+                data={"beliefs": updated_beliefs}
+            )
+        )
     except Exception as e:
         logging.error(f"Error updating beliefs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=error_response(
+                message="Failed to update beliefs",
+                code="BELIEF_UPDATE_ERROR",
+                details={"error": str(e)}
+            )
+        )
 
-@app.post("/api/reasoning/decide")
-async def make_decision(data: Dict[str, Any]):
+@app.post("/api/reasoning/decide", response_model=Dict[str, Any])
+async def make_decision(data: Dict[str, Any]) -> JSONResponse:
     """Make a decision based on current beliefs"""
     try:
         if 'model' not in data:
-            raise HTTPException(status_code=400, detail="Missing 'model' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing 'model' field",
+                    code="MISSING_FIELD"
+                )
+            )
         if 'options' not in data or not isinstance(data['options'], list):
-            raise HTTPException(status_code=400, detail="Missing or invalid 'options' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing or invalid 'options' field",
+                    code="INVALID_FIELD"
+                )
+            )
         if 'utility_function' not in data:
-            raise HTTPException(status_code=400, detail="Missing 'utility_function' field")
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=error_response(
+                    message="Missing 'utility_function' field",
+                    code="MISSING_FIELD"
+                )
+            )
             
         # Convert utility function from string to callable
         # WARNING: This is unsafe in production - use a safer approach
@@ -295,24 +394,26 @@ async def make_decision(data: Dict[str, Any]):
             data['model'], data['options'], utility_function
         )
         
-        return {
-            "status": "success", 
-            "decision": best_option,
-            "expected_utility": utility
-        }
+        return JSONResponse(
+            content=create_response(
+                success=True,
+                message="Decision made successfully",
+                data={
+                    "decision": best_option,
+                    "expected_utility": utility
+                }
+            )
+        )
     except Exception as e:
         logging.error(f"Error making decision: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/tools/list")
-async def list_tools():
-    """List all available tools"""
-    try:
-        tools = tool_registry.list_tools()
-        return {"status": "success", "tools": tools}
-    except Exception as e:
-        logging.error(f"Error listing tools: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=error_response(
+                message="Failed to make decision",
+                code="DECISION_ERROR",
+                details={"error": str(e)}
+            )
+        )
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
@@ -349,75 +450,135 @@ async def execute_workflow_and_log(run_id: str, playbook_name: str, input_data: 
         raise
 
 # Task endpoints
-@app.post("/tasks", tags=["Tasks"])
-async def create_task(task: TaskRequest) -> Dict[str, Any]:
+@app.post("/tasks", tags=["Tasks"], response_model=Dict[str, Any])
+async def create_task(task: TaskCreateRequest) -> JSONResponse:
     """Create and start a new task."""
     try:
-        result = await super_agent.orchestrate_task(task)
-        return result
+        # Convert TaskCreateRequest to TaskRequest for backward compatibility
+        task_request = TaskRequest(
+            title=task.title,
+            description=task.description,
+            priority=task.priority,
+            due_date=task.due_date,
+            assignee=task.assignee
+        )
+        
+        result = await super_agent.orchestrate_task(task_request)
+        
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content=create_response(
+                success=True,
+                message="Task created successfully",
+                data=result
+            )
+        )
     except Exception as e:
         logger.error(f"Task creation failed: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Task creation failed: {str(e)}"
+            content=error_response(
+                message="Task creation failed",
+                code="TASK_CREATION_ERROR",
+                details={"error": str(e)}
+            )
         )
 
-@app.get("/tasks/{task_id}", tags=["Tasks"])
-async def get_task_status(task_id: str) -> Dict[str, Any]:
+@app.get("/tasks/{task_id}", tags=["Tasks"], response_model=Dict[str, Any])
+async def get_task_status(task_id: str) -> JSONResponse:
     """Get status of a specific task."""
     try:
         # Implement task status retrieval
-        return {
+        # This is a mock implementation - in a real system, fetch from a database
+        task_data = {
             "task_id": task_id,
             "status": "running",  # Replace with actual status
             "timestamp": datetime.utcnow().isoformat()
         }
+        
+        return JSONResponse(
+            content=create_response(
+                success=True,
+                message="Task status retrieved successfully",
+                data=task_data
+            )
+        )
     except Exception as e:
         logger.error(f"Failed to get task status: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get task status: {str(e)}"
+            content=error_response(
+                message="Failed to get task status",
+                code="TASK_STATUS_ERROR",
+                details={"error": str(e)}
+            )
         )
 
 # Journey endpoints
-@app.post("/journeys", tags=["Journeys"])
+@app.post("/journeys", tags=["Journeys"], response_model=Dict[str, Any])
 async def create_journey(
     steps: List[JourneyStep],
     context: Dict[str, Any]
-) -> Dict[str, Any]:
+) -> JSONResponse:
     """Create and execute a new journey."""
     try:
         result = await journey_agent.execute_journey(steps, context)
-        return result
+        
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content=create_response(
+                success=True,
+                message="Journey created and executed successfully",
+                data=result
+            )
+        )
     except Exception as e:
         logger.error(f"Journey creation failed: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Journey creation failed: {str(e)}"
+            content=error_response(
+                message="Journey creation failed",
+                code="JOURNEY_CREATION_ERROR",
+                details={"error": str(e)}
+            )
         )
 
-@app.get("/journeys/{journey_id}", tags=["Journeys"])
-async def get_journey_status(journey_id: str) -> Dict[str, Any]:
+@app.get("/journeys/{journey_id}", tags=["Journeys"], response_model=Dict[str, Any])
+async def get_journey_status(journey_id: str) -> JSONResponse:
     """Get status of a specific journey."""
     try:
         if journey_id not in journey_agent.active_journeys:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Journey not found"
+                content=error_response(
+                    message="Journey not found",
+                    code="JOURNEY_NOT_FOUND"
+                )
             )
-        return journey_agent.active_journeys[journey_id]
-    except HTTPException:
-        raise
+            
+        journey_data = journey_agent.active_journeys[journey_id]
+        
+        return JSONResponse(
+            content=create_response(
+                success=True,
+                message="Journey status retrieved successfully",
+                data=journey_data
+            )
+        )
     except Exception as e:
         logger.error(f"Failed to get journey status: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get journey status: {str(e)}"
+            content=error_response(
+                message="Failed to get journey status",
+                code="JOURNEY_STATUS_ERROR",
+                details={"error": str(e)}
+            )
         )
 
 # Monitoring endpoints
-@app.get("/monitor/{task_id}", tags=["Monitoring"])
-async def monitor_task(task_id: str) -> Dict[str, Any]:
+@app.get("/monitor/{task_id}", tags=["Monitoring"], response_model=Dict[str, Any])
+async def monitor_task(task_id: str) -> JSONResponse:
     """Monitor a specific task."""
     try:
         execution_data = {
@@ -428,37 +589,64 @@ async def monitor_task(task_id: str) -> Dict[str, Any]:
             },
             "timestamp": datetime.utcnow().isoformat()
         }
+        
         result = await inspector_agent.monitor_execution(task_id, execution_data)
-        return result
+        
+        return JSONResponse(
+            content=create_response(
+                success=True,
+                message="Task monitoring completed successfully",
+                data=result
+            )
+        )
     except Exception as e:
         logger.error(f"Task monitoring failed: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Task monitoring failed: {str(e)}"
+            content=error_response(
+                message="Task monitoring failed",
+                code="MONITORING_ERROR",
+                details={"error": str(e)}
+            )
         )
 
 # Authentication endpoint
-@app.post("/token", tags=["Auth"])
-async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> Dict[str, str]:
+@app.post("/token", tags=["Auth"], response_model=Dict[str, Any])
+async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> JSONResponse:
     """Authenticate user and generate access token."""
     try:
         # Implement actual authentication logic
         if form_data.username == "test" and form_data.password == "test":
-            return {
+            token_data = {
                 "access_token": "dummy_token",
-                "token_type": "bearer"
+                "token_type": "bearer",
+                "expires_in": 3600  # 1 hour in seconds
             }
-        raise HTTPException(
+            
+            return JSONResponse(
+                content=create_response(
+                    success=True,
+                    message="Authentication successful",
+                    data=token_data
+                )
+            )
+            
+        return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            content=error_response(
+                message="Invalid credentials",
+                code="INVALID_CREDENTIALS"
+            )
         )
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Authentication failed: {str(e)}")
-        raise HTTPException(
+        return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Authentication failed: {str(e)}"
+            content=error_response(
+                message="Authentication failed",
+                code="AUTH_ERROR",
+                details={"error": str(e)}
+            )
         )
 
 # Shutdown event
