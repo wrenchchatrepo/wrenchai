@@ -122,10 +122,11 @@ class GitHubMCPServer:
             import psutil
             
             # Find and terminate server process
-            for proc in psutil.process_iteritems(['pid', 'name', 'cmdline']):
+            for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
                 if 'mcp-server-github' in str(proc.info.get('cmdline', '')):
-                    proc.terminate()
-                    proc.wait(timeout=5)
+                    process = psutil.Process(proc.info['pid'])
+                    process.terminate()
+                    process.wait(timeout=5)
                     return {
                         "success": True,
                         "message": "Server stopped successfully"
@@ -369,4 +370,61 @@ class GitHubMCPServer:
         )
 
 # Global server instance
-github_mcp_server = GitHubMCPServer() 
+github_mcp_server = GitHubMCPServer()
+
+async def github_mcp_operation(operation: str, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Primary interface for GitHub MCP operations.
+    
+    This function is the main entry point for the tool system to interact with the
+    GitHub MCP server. It maps operations to the appropriate server methods.
+    
+    Args:
+        operation: Operation to perform (start_server, stop_server, get_status,
+                  get_metrics, update_config, health_check)
+        config: Optional configuration for the server
+        
+    Returns:
+        Dictionary containing operation results
+    """
+    try:
+        # Convert config dict to MCPServerConfig if provided
+        server_config = None
+        if config:
+            server_config = MCPServerConfig(**config)
+        
+        # Map operations to server methods
+        if operation == "start_server":
+            return await github_mcp_server.start_server()
+            
+        elif operation == "stop_server":
+            return await github_mcp_server.stop_server()
+            
+        elif operation == "get_status":
+            return await github_mcp_server.get_status()
+            
+        elif operation == "get_metrics":
+            return await github_mcp_server.get_metrics()
+            
+        elif operation == "update_config":
+            if not server_config:
+                return {
+                    "success": False,
+                    "error": "Configuration required for update_config operation"
+                }
+            return await github_mcp_server.update_config(server_config)
+            
+        elif operation == "health_check":
+            return await github_mcp_server.health_check()
+            
+        else:
+            return {
+                "success": False,
+                "error": f"Unknown operation: {operation}"
+            }
+            
+    except Exception as e:
+        logger.error(f"GitHub MCP operation failed: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
