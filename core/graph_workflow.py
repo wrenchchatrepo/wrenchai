@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import traceback
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, TypeVar, Generic, Union, cast
 from enum import Enum
@@ -21,6 +22,13 @@ except ImportError:
     class GraphRunContext: pass
     
     def register_node(cls): return cls
+
+# Import recovery system
+from .recovery_system import (
+    RecoveryManager, RecoveryAction, with_recovery, ErrorCategory, 
+    init_recovery_manager
+)
+from .state_manager import state_manager as global_state_manager
 
 # Define state type
 T = TypeVar('T')
@@ -157,10 +165,20 @@ class ResponseSynthesisNode:
 class GraphWorkflow:
     """Workflow orchestrator using Pydantic AI Graph"""
     
-    def __init__(self):
-        """Initialize the graph workflow"""
+    def __init__(self, recovery_manager=None):
+        """Initialize the graph workflow
+        
+        Args:
+            recovery_manager: Optional recovery manager instance. If not provided,
+                              a global instance will be initialized.
+        """
         if not GRAPH_AVAILABLE:
             raise ImportError("Graph execution not available. Install with 'pip install pydantic-ai[graph]'")
+        
+        # Set up recovery manager
+        self.recovery_manager = recovery_manager
+        if self.recovery_manager is None:
+            self.recovery_manager = init_recovery_manager(global_state_manager)
             
         # Create the graph
         self.graph = Graph[WorkflowState]()
@@ -183,6 +201,71 @@ class GraphWorkflow:
         # Set initial node
         self.graph.set_initial_node(query_analysis)
         
+        # Set up workflow ID
+        self.workflow_id = f"graph_workflow_{id(self)}"
+        
+    async def _run_node_with_recovery(self, node, ctx):
+        """Run a node with error recovery
+        
+        Args:
+            node: The node to run
+            ctx: The graph run context
+            
+        Returns:
+            Result of the node execution
+        """
+        step_id = node.__class__.__name__
+        
+        # Create checkpoint before running the node
+        await self.recovery_manager.checkpoint_workflow(
+            self.workflow_id, 
+            step_id,
+            metadata={"node_type": step_id}
+        )
+        
+        try:
+            # Try to run the node inside a transaction
+            async with self.recovery_manager.step_transaction(self.workflow_id, step_id):
+                return await node.run(ctx)
+        except Exception as e:
+            # Record the error in state
+            if ctx.state.error is None:
+                ctx.state.error = str(e)
+            
+            # Handle the error with recovery system
+            action = await self.recovery_manager.handle_error(
+                e, 
+                self.workflow_id, 
+                step_id,
+                additional_info={
+                    "node_type": step_id,
+                    "state": {k: v for k, v in ctx.state.__dict__.items() 
+                             if not k.startswith("_") and k != "agent_outputs"}
+                }
+            )
+            
+            # If recovery action is retry, abort, or alternate path, we need to propagate
+            if action in (RecoveryAction.RETRY, RecoveryAction.ABORT):
+                raise
+                
+            # For skip action, return a default value based on node type
+            if action == RecoveryAction.SKIP:
+                if isinstance(node, QueryAnalysisNode):
+                    return ["research"]  # Default skill
+                elif isinstance(node, ResearchNode):
+                    return {"summary": "Research unavailable"}
+                elif isinstance(node, CodingNode):
+                    return {"code": "# Code generation failed", "language": "text"}
+                elif isinstance(node, WritingNode):
+                    return {"content": "Content generation unavailable"}
+                elif isinstance(node, ResponseSynthesisNode):
+                    return "The requested operation could not be completed."
+                else:
+                    return None
+            
+            # Re-raise for other actions
+            raise
+        
     async def run_workflow(self, user_query: str) -> Dict[str, Any]:
         """Run the workflow graph for a given user query
         
@@ -195,8 +278,36 @@ class GraphWorkflow:
         # Create initial state
         state = WorkflowState(user_query=user_query)
         
-        # Execute the graph
-        result = await self.graph.run(state)
+        # Patch the graph's _run_node method to use our recovery-wrapped version
+        original_run_node = self.graph._run_node
+        
+        async def wrapped_run_node(node, ctx):
+            return await self._run_node_with_recovery(node, ctx)
+        
+        try:
+            # Replace the method
+            self.graph._run_node = wrapped_run_node
+            
+            # Execute the graph with recovery
+            async with self.recovery_manager.recovery_context(self.workflow_id, "workflow_execution"):
+                result = await self.graph.run(state)
+        except Exception as e:
+            # Update state status
+            state.status = WorkflowStatus.FAILED
+            state.error = str(e)
+            
+            # Return partial results with error
+            return {
+                "response": "An error occurred during workflow execution: " + str(e),
+                "status": state.status,
+                "context": state.context,
+                "agent_outputs": state.agent_outputs,
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+        finally:
+            # Restore original method
+            self.graph._run_node = original_run_node
         
         # Return results
         return {
@@ -209,3 +320,11 @@ class GraphWorkflow:
     def get_graph_visualization(self) -> str:
         """Get a Mermaid diagram visualization of the graph"""
         return self.graph.to_mermaid()
+    
+    def get_recovery_history(self) -> List[Dict[str, Any]]:
+        """Get recovery event history for this workflow.
+        
+        Returns:
+            List of recovery event records
+        """
+        return self.recovery_manager.get_recovery_history(self.workflow_id)
