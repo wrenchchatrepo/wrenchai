@@ -3,7 +3,7 @@
 # repo_inventory.sh - Create a detailed inventory of repository files
 # chmod +x repo_inventory.sh
 # Set the maximum depth to explore
-MAX_DEPTH=5
+MAX_DEPTH=7
 
 # Output file
 OUTPUT_FILE="repo_inventory.txt"
@@ -36,9 +36,10 @@ echo "FORMAT: [LEVEL] [TYPE] [SIZE] [FILES] [PATH]" >> "$OUTPUT_FILE"
 echo "==================" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 
-# Create temporary files for directory statistics
-TEMP_DIR_STATS=$(mktemp)
+# Create temporary files for collecting data
 TEMP_FILE_LIST=$(mktemp)
+TEMP_FILE_SIZES=$(mktemp)
+TEMP_DIR_STATS=$(mktemp)
 
 # Function to get file type
 get_file_type() {
@@ -69,117 +70,150 @@ format_size() {
     fi
 }
 
-# First, collect all files and their info
+echo "Scanning files and directories..."
+
+# First pass: List all files and directories
 find "$REPO_DIR" -mindepth 1 -maxdepth "$MAX_DEPTH" | sort | while read -r item; do
-    # Skip sensitive files like .env
-    if [[ "$item" == *".env"* ]] || [[ "$item" == *"id_rsa"* ]] || [[ "$item" == *".pem"* ]] || [[ "$item" == *"secrets"* ]] || [[ "$item" == *"credential"* ]]; then
-        echo "[SENSITIVE FILE SKIPPED] $item" >> "$OUTPUT_FILE"
-        continue
+    # Flag sensitive files but still include them in inventory
+    if [[ "$item" == *".env"* ]] || [[ "$item" == *"id_rsa"* ]] || [[ "$item" == *".pem"* ]] || \
+       [[ "$item" == *"secrets"* ]] || [[ "$item" == *"credential"* ]]; then
+        sensitive_flag="[SENSITIVE]"
+    else
+        sensitive_flag=""
     fi
     
-    # Calculate the depth relative to REPO_DIR
+    # Calculate path info
     rel_path=${item#$REPO_DIR}
     rel_path=${rel_path#/}  # Remove leading slash if present
+    if [ -z "$rel_path" ]; then
+        rel_path="."
+    fi
+    
+    # Calculate depth
     depth=$(echo "$rel_path" | tr -cd '/' | wc -c)
     depth=$((depth + 1))
-    
-    # Skip if depth is greater than MAX_DEPTH
-    if [ "$depth" -gt "$MAX_DEPTH" ]; then
-        continue
-    fi
     
     # Get file type
     ftype=$(get_file_type "$item")
     
-    # Get file size (0 for directories)
-    if [ -d "$item" ]; then
-        size=0
-    else
+    # For files, get size and update directory stats
+    if [ -f "$item" ]; then
         size=$(stat -f "%z" "$item" 2>/dev/null || stat -c "%s" "$item" 2>/dev/null)
+        
+        # Save file info
+        echo "$item|$rel_path|$depth|$ftype|$size" >> "$TEMP_FILE_LIST"
+        
+        # Create file size entry for statistics
+        echo "$item|$size" >> "$TEMP_FILE_SIZES"
+        
+        # Add entry for each parent directory
+        current_dir=$(dirname "$item")
+        while [[ "$current_dir" != "." && "$current_dir" != "/" && "$current_dir" == *"$REPO_DIR"* ]]; do
+            # Extract relative path
+            rel_dir=${current_dir#$REPO_DIR}
+            rel_dir=${rel_dir#/}
+            if [ -z "$rel_dir" ]; then
+                rel_dir="."
+            fi
+            echo "$current_dir|$rel_dir|$size" >> "$TEMP_DIR_STATS"
+            current_dir=$(dirname "$current_dir")
+        done
+    else
+        # For directories, just save info
+        echo "$item|$rel_path|$depth|$ftype|0" >> "$TEMP_FILE_LIST"
     fi
-    
-    # Store the file info for processing directory stats
-    echo "$item|$rel_path|$depth|$ftype|$size" >> "$TEMP_FILE_LIST"
 done
 
-# Calculate stats for each directory
-GRAND_TOTAL_SIZE=0
-GRAND_TOTAL_FILES=0
+echo "Calculating directory statistics..."
 
-# Process all directories first
-grep "|dir|" "$TEMP_FILE_LIST" | while read -r line; do
+# Process directory statistics
+DIRECTORY_SUMMARY=$(mktemp)
+
+# For each directory, calculate total size and file count
+for dir in $(grep -v "|file|" "$TEMP_FILE_LIST" | cut -d'|' -f1); do
+    # Get relative path for directory
+    rel_dir=${dir#$REPO_DIR}
+    rel_dir=${rel_dir#/}
+    if [ -z "$rel_dir" ]; then
+        rel_dir="."
+    fi
+    
+    # Flag sensitive directories
+    if [[ "$dir" == *".env"* ]] || [[ "$dir" == *"id_rsa"* ]] || [[ "$dir" == *".pem"* ]] || \
+       [[ "$dir" == *"secrets"* ]] || [[ "$dir" == *"credential"* ]]; then
+        sensitive_flag="[SENSITIVE]"
+    else
+        sensitive_flag=""
+    fi
+    
+    # Calculate depth
+    depth=$(echo "$rel_dir" | tr -cd '/' | wc -c)
+    depth=$((depth + 1))
+    
+    # Calculate total size and file count for this directory
+    total_size=0
+    file_count=0
+    
+    # Sum all entries for this directory in the stats file
+    if grep -q "^$dir|" "$TEMP_DIR_STATS"; then
+        while read -r line; do
+            size=$(echo "$line" | cut -d'|' -f3)
+            total_size=$((total_size + size))
+            file_count=$((file_count + 1))
+        done < <(grep "^$dir|" "$TEMP_DIR_STATS")
+    fi
+    
+    # Save summary line
+    echo "$dir|$rel_dir|$depth|$total_size|$file_count|$sensitive_flag" >> "$DIRECTORY_SUMMARY"
+done
+
+echo "Generating inventory report..."
+
+# Write directory entries to output file
+while read -r line; do
     dir=$(echo "$line" | cut -d'|' -f1)
     rel_dir=$(echo "$line" | cut -d'|' -f2)
     depth=$(echo "$line" | cut -d'|' -f3)
+    total_size=$(echo "$line" | cut -d'|' -f4)
+    file_count=$(echo "$line" | cut -d'|' -f5)
+    sensitive_flag=$(echo "$line" | cut -d'|' -f6)
     
-    # Initialize directory stats
-    echo "$dir|$rel_dir|$depth|0|0" >> "$TEMP_DIR_STATS"
-done
+    # Format size
+    formatted_size=$(format_size "$total_size")
+    
+    # Write entry to output file
+    echo "[$depth] [dir] [$formatted_size] [$file_count] $sensitive_flag$rel_dir" >> "$OUTPUT_FILE"
+done < "$DIRECTORY_SUMMARY"
 
-# Process all files and update directory stats
-grep -v "|dir|" "$TEMP_FILE_LIST" | while read -r line; do
-    file=$(echo "$line" | cut -d'|' -f1)
-    size=$(echo "$line" | cut -d'|' -f5)
-    
-    # Increment grand total
-    GRAND_TOTAL_SIZE=$((GRAND_TOTAL_SIZE + size))
-    GRAND_TOTAL_FILES=$((GRAND_TOTAL_FILES + 1))
-    
-    # Update stats for all parent directories
-    dir=$(dirname "$file")
-    while [[ "$dir" != "." && "$dir" != "/" && "$dir" == *"$REPO_DIR"* ]]; do
-        # Find the directory in the stats file
-        if grep -q "^$dir|" "$TEMP_DIR_STATS"; then
-            # Get current stats
-            current_line=$(grep "^$dir|" "$TEMP_DIR_STATS")
-            current_size=$(echo "$current_line" | cut -d'|' -f4)
-            current_files=$(echo "$current_line" | cut -d'|' -f5)
-            
-            # Update stats
-            new_size=$((current_size + size))
-            new_files=$((current_files + 1))
-            
-            # Replace the line - using perl instead of sed for better compatibility
-            perl -i -pe "s|^\Q$dir\E\|.*|$dir|$(echo "$current_line" | cut -d'|' -f2)|$(echo "$current_line" | cut -d'|' -f3)|$new_size|$new_files|" "$TEMP_DIR_STATS"
-        fi
-        
-        # Move up to parent directory
-        dir=$(dirname "$dir")
-    done
-done
-
-# Now write the output file with detailed inventory
+# Write file entries to output file
 while read -r line; do
-    item=$(echo "$line" | cut -d'|' -f1)
+    # Skip directories, they're already processed
+    if echo "$line" | grep -q "|dir|"; then
+        continue
+    fi
+    
+    # Parse file info
     rel_path=$(echo "$line" | cut -d'|' -f2)
     depth=$(echo "$line" | cut -d'|' -f3)
     ftype=$(echo "$line" | cut -d'|' -f4)
     size=$(echo "$line" | cut -d'|' -f5)
     
-    # Get indentation based on depth
-    indent=$(printf "%${depth}s" "")
-    
     # Format size
-    if [ "$ftype" = "dir" ]; then
-        # For directories, get cumulative size and file count from stats
-        if grep -q "^$item|" "$TEMP_DIR_STATS"; then
-            dir_stats=$(grep "^$item|" "$TEMP_DIR_STATS")
-            cum_size=$(echo "$dir_stats" | cut -d'|' -f4)
-            file_count=$(echo "$dir_stats" | cut -d'|' -f5)
-            formatted_size=$(format_size "$cum_size")
-        else
-            formatted_size="-"
-            file_count=0
-        fi
-    else
-        formatted_size=$(format_size "$size")
-        file_count="-"
-    fi
+    formatted_size=$(format_size "$size")
     
-    # Write to output file
-    echo "[$depth] [$ftype] [$formatted_size] [$file_count] $rel_path" >> "$OUTPUT_FILE"
+    # Write entry to output file
+    echo "[$depth] [$ftype] [$formatted_size] [-] $sensitive_flag$rel_path" >> "$OUTPUT_FILE"
 done < "$TEMP_FILE_LIST"
 
+# Calculate grand totals
+GRAND_TOTAL_FILES=$(wc -l < "$TEMP_FILE_SIZES")
+GRAND_TOTAL_SIZE=0
+while read -r line; do
+    size=$(echo "$line" | cut -d'|' -f2)
+    GRAND_TOTAL_SIZE=$((GRAND_TOTAL_SIZE + size))
+done < "$TEMP_FILE_SIZES"
+
+# Write summary section
 echo "" >> "$OUTPUT_FILE"
 echo "SUMMARY STATISTICS" >> "$OUTPUT_FILE"
 echo "==================" >> "$OUTPUT_FILE"
@@ -187,37 +221,36 @@ echo "Total Files: $GRAND_TOTAL_FILES" >> "$OUTPUT_FILE"
 echo "Total Size: $(format_size $GRAND_TOTAL_SIZE)" >> "$OUTPUT_FILE"
 echo "" >> "$OUTPUT_FILE"
 
-# Directory summary
+# Write directory summary section (sorted by size)
 echo "DIRECTORY SUMMARY (sorted by size)" >> "$OUTPUT_FILE"
 echo "==================" >> "$OUTPUT_FILE"
 echo "[SIZE] [FILES] [DIRECTORY]" >> "$OUTPUT_FILE"
 
-# Sort directories by size and output
+# Process directories by size (only those with files)
 while read -r line; do
     dir=$(echo "$line" | cut -d'|' -f1)
     rel_dir=$(echo "$line" | cut -d'|' -f2)
-    if [ -z "$rel_dir" ]; then
-        rel_dir="."
-    fi
     size=$(echo "$line" | cut -d'|' -f4)
-    files=$(echo "$line" | cut -d'|' -f5)
+    file_count=$(echo "$line" | cut -d'|' -f5)
+    sensitive_flag=$(echo "$line" | cut -d'|' -f6)
     
     if [ "$size" -gt 0 ]; then
-        echo "$size|$files|$rel_dir"
+        echo "$size|$file_count|$rel_dir|$sensitive_flag"
     fi
-done < "$TEMP_DIR_STATS" | sort -nr | while read -r line; do
+done < "$DIRECTORY_SUMMARY" | sort -nr | while read -r line; do
     size=$(echo "$line" | cut -d'|' -f1)
-    files=$(echo "$line" | cut -d'|' -f2)
+    file_count=$(echo "$line" | cut -d'|' -f2)
     rel_dir=$(echo "$line" | cut -d'|' -f3)
+    sensitive_flag=$(echo "$line" | cut -d'|' -f4)
     
-    echo "[$(format_size $size)] [$files] $rel_dir" >> "$OUTPUT_FILE"
+    echo "[$(format_size $size)] [$file_count] $sensitive_flag$rel_dir" >> "$OUTPUT_FILE"
 done
 
 echo "" >> "$OUTPUT_FILE"
 echo "Inventory complete. Total items: $(grep -c '\[.*\]' "$OUTPUT_FILE")" >> "$OUTPUT_FILE"
 
 # Clean up temp files
-rm -f "$TEMP_FILE_LIST" "$TEMP_DIR_STATS"
+rm -f "$TEMP_FILE_LIST" "$TEMP_FILE_SIZES" "$TEMP_DIR_STATS" "$DIRECTORY_SUMMARY"
 
 echo "Repository inventory created at: $OUTPUT_FILE"
 echo "SECURITY REMINDER: Please review the inventory file before sharing to ensure no sensitive information is included."
