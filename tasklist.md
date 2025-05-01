@@ -57,9 +57,9 @@ This tasklist provides a structured approach to addressing the gaps identified i
 
 | Task | Description | Complexity | % Complete | Focus |
 |------|-------------|-----------|------------|-------|
-| **22. Real-time Progress Tracking** | Implement real-time progress tracking for workflow execution | Medium | 15% | Workflow System |
+| **22. Real-time Progress Tracking** | Implement real-time progress tracking for workflow execution | Medium | 80% | Workflow System |
 | **23. Streamlit Result Display** | Enhance Streamlit app to display execution results | Medium | 25% | Streamlit App |
-| **24. Implement Streaming Responses** | Add streaming response capability for long-running operations | High | 20% | FastAPI Endpoints |
+| **24. Implement Streaming Responses** | Add streaming response capability for long-running operations | High | 80% | FastAPI Endpoints |
 | **25. Add Execution Logging** | Create detailed logging system for playbook execution | Medium | 30% | Workflow System |
 
 ## Testing and Documentation
