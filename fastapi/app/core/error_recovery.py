@@ -16,7 +16,12 @@ class ErrorRecovery:
     """Handles task error recovery and cleanup."""
     
     def __init__(self, db: AsyncSession):
-        """Initialize error recovery."""
+        """
+        Initializes the ErrorRecovery instance with an asynchronous database session.
+        
+        Args:
+            db: An asynchronous SQLAlchemy session used for database operations.
+        """
         self.db = db
         
     async def recover_stuck_tasks(
@@ -24,7 +29,20 @@ class ErrorRecovery:
         max_age_minutes: int = 30,
         max_retries: int = 3
     ) -> List[Task]:
-        """Recover tasks stuck in running state."""
+        """
+        Attempts to recover tasks stuck in the "running" state beyond a specified age.
+        
+        Finds tasks that have been running longer than `max_age_minutes` and have not exceeded
+        the maximum number of retries. For each such task, increments the retry count and either
+        resets the task for another attempt or marks it as failed if the retry limit is reached.
+        
+        Args:
+            max_age_minutes: The minimum age in minutes for a task to be considered stuck.
+            max_retries: The maximum number of retry attempts allowed for a task.
+        
+        Returns:
+            A list of tasks that were recovered or marked as failed.
+        """
         try:
             # Find stuck tasks
             cutoff_time = datetime.utcnow() - timedelta(minutes=max_age_minutes)
@@ -70,7 +88,11 @@ class ErrorRecovery:
         self,
         agent_id: Optional[str] = None
     ) -> List[Task]:
-        """Clean up incomplete tasks after agent/system crash."""
+        """
+        Marks all tasks in "pending" or "running" states as failed due to a system or agent crash.
+        
+        If an agent ID is provided, only tasks associated with that agent are affected. Returns a list of tasks that were marked as failed, or an empty list if none were found or an error occurred.
+        """
         try:
             # Build query
             query = select(Task).where(
@@ -106,7 +128,17 @@ class ErrorRecovery:
             return []
             
     async def retry_failed_task(self, task_id: str) -> Optional[Task]:
-        """Retry a failed task."""
+        """
+        Attempts to retry a task that is currently in the "failed" state.
+        
+        If the specified task exists and is marked as "failed", its status is reset to "pending", progress is cleared, error information is removed, the retry count is incremented, and it is queued for another attempt. Returns the updated task on success, or None if the task does not exist, is not failed, or an error occurs.
+        
+        Args:
+            task_id: The unique identifier of the task to retry.
+        
+        Returns:
+            The updated Task object if the retry is queued successfully, or None otherwise.
+        """
         try:
             # Get task
             task = await self.db.get(Task, task_id)
@@ -139,7 +171,11 @@ class ErrorRecovery:
         max_age_minutes: int = 30,
         max_retries: int = 3
     ):
-        """Start background recovery monitor."""
+        """
+        Runs a background loop that periodically attempts to recover stuck tasks.
+        
+        Continuously calls the task recovery process at specified intervals, handling and logging any exceptions without stopping the monitoring loop.
+        """
         while True:
             try:
                 # Recover stuck tasks
