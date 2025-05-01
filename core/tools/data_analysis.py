@@ -34,15 +34,10 @@ def analyze_data(
     analysis_type: str, 
     params: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-    """Analyze data using various statistical and analytical methods.
+    """
+    Performs the specified statistical or analytical operation on input data.
     
-    Args:
-        data: Input data (can be JSON string, dictionary, or list)
-        analysis_type: Type of analysis to perform
-        params: Additional parameters for the analysis
-        
-    Returns:
-        Dict containing analysis results
+    Supports multiple analysis types, including descriptive statistics, correlation, hypothesis testing, time series analysis, clustering, feature importance, distribution analysis, and outlier detection. Accepts input as a JSON string, dictionary, or list, and returns a dictionary with results or error messages.
     """
     # Convert string input to Python object if needed
     if isinstance(data, str):
@@ -96,14 +91,17 @@ def analyze_data(
         return {'error': f'Analysis failed: {str(e)}'}
 
 def _descriptive_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Perform descriptive statistical analysis.
+    """
+    Computes descriptive statistics for numeric and categorical columns in a DataFrame.
+    
+    Numeric statistics include summary metrics (count, mean, std, min, max, etc.), skewness, and kurtosis. Optionally, quartiles (Q1, Q3) and interquartile range (IQR) are included if specified in params. Categorical statistics report value counts for each category. The result also includes missing value counts, row count, and column count.
     
     Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
+        df: The input DataFrame to analyze.
+        params: Dictionary of analysis parameters. Set 'include_quartiles' to True to include quartile statistics.
+    
     Returns:
-        Dict containing descriptive statistics
+        A dictionary containing descriptive statistics for numeric and categorical columns, missing value counts, and dataset dimensions.
     """
     numeric_cols = df.select_dtypes(include=[np.number]).columns
     categorical_cols = df.select_dtypes(exclude=[np.number]).columns
@@ -134,14 +132,18 @@ def _descriptive_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str,
     return results
 
 def _correlation_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Perform correlation analysis.
+    """
+    Computes the correlation matrix for numeric columns in the DataFrame.
+    
+    Supports selection of correlation method (e.g., 'pearson', 'spearman', 'kendall') and can optionally include p-values for each pairwise correlation using Pearson's test.
     
     Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
+        params: Dictionary with optional keys:
+            - 'method': Correlation method to use (default 'pearson').
+            - 'include_pvalues': If True, computes p-values for correlations.
+    
     Returns:
-        Dict containing correlation analysis results
+        Dictionary containing the correlation matrix, method used, and optionally p-values.
     """
     method = params.get('method', 'pearson')
     numeric_df = df.select_dtypes(include=[np.number])
@@ -164,14 +166,10 @@ def _correlation_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str,
     return results
 
 def _hypothesis_test(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Perform hypothesis testing.
+    """
+    Performs hypothesis testing (t-test or ANOVA) on grouped data.
     
-    Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
-    Returns:
-        Dict containing hypothesis test results
+    Requires specification of a grouping column and a value column. For t-tests, compares means between exactly two groups; for ANOVA, compares means across multiple groups. Returns the test statistic, p-value, test type, and group labels, or an error message if parameters are missing or invalid.
     """
     test_type = params.get('test_type', 'ttest')
     group_col = params.get('group_column')
@@ -214,14 +212,17 @@ def _hypothesis_test(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]
         return {'error': f'Hypothesis test failed: {str(e)}'}
 
 def _time_series_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Perform time series analysis.
+    """
+    Performs time series analysis on a DataFrame using specified time and value columns.
+    
+    Requires `time_column` and `value_column` in params. Computes total periods, start and end dates, mean, and standard deviation of the value column. Optionally includes rolling statistics and seasonal decomposition if requested in params.
     
     Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
+        df: Input DataFrame containing the time series data.
+        params: Dictionary with analysis parameters, including required keys 'time_column' and 'value_column'. Optional keys: 'include_rolling_stats', 'rolling_window', 'detect_seasonality', and 'seasonality_period'.
+    
     Returns:
-        Dict containing time series analysis results
+        Dictionary with computed time series metrics, and optionally rolling statistics and seasonality components. Returns an error message if required parameters are missing or analysis fails.
     """
     time_col = params.get('time_column')
     value_col = params.get('value_column')
@@ -272,14 +273,17 @@ def _time_series_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str,
         return {'error': f'Time series analysis failed: {str(e)}'}
 
 def _clustering_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Perform clustering analysis.
+    """
+    Performs clustering analysis on the input DataFrame using k-means or hierarchical methods.
+    
+    Supports feature selection and standardizes features before clustering. For k-means, returns cluster labels and statistics; for hierarchical, returns the linkage matrix. Returns an error message for unsupported methods or on failure.
     
     Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
+        df: Input DataFrame containing the data to cluster.
+        params: Dictionary specifying clustering parameters such as 'method', 'n_clusters', 'features', and 'linkage_method'.
+    
     Returns:
-        Dict containing clustering analysis results
+        A dictionary with clustering results, including method used, cluster labels or linkage matrix, cluster statistics, and features used, or an error message on failure.
     """
     method = params.get('method', 'kmeans')
     n_clusters = params.get('n_clusters', 3)
@@ -331,14 +335,10 @@ def _clustering_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, 
         return {'error': f'Clustering analysis failed: {str(e)}'}
 
 def _feature_importance_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Analyze feature importance using random forests.
+    """
+    Computes feature importances for numeric predictors using a random forest model.
     
-    Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
-    Returns:
-        Dict containing feature importance analysis results
+    Requires a specified target column. Selects a random forest regressor for numeric targets or a classifier otherwise, fits the model, and returns a dictionary of features ranked by importance along with the model type. Returns an error message if the target column is missing or no numeric features are found.
     """
     target_col = params.get('target_column')
     if not target_col:
@@ -379,14 +379,10 @@ def _feature_importance_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Di
         return {'error': f'Feature importance analysis failed: {str(e)}'}
 
 def _distribution_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Analyze data distributions.
+    """
+    Performs distribution analysis on specified or all numeric columns of a DataFrame.
     
-    Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
-    Returns:
-        Dict containing distribution analysis results
+    Calculates mean, median, standard deviation, skewness, kurtosis, percentiles, and performs a normality test (D’Agostino’s K-squared) for each column. Returns a dictionary with distribution statistics for each analyzed column, or an error message if analysis fails.
     """
     columns = params.get('columns', df.select_dtypes(include=[np.number]).columns.tolist())
     
@@ -425,14 +421,10 @@ def _distribution_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str
         return {'error': f'Distribution analysis failed: {str(e)}'}
 
 def _outlier_analysis(df: pd.DataFrame, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Detect and analyze outliers.
+    """
+    Detects outliers in specified or all numeric columns using IQR or z-score methods.
     
-    Args:
-        df: Input DataFrame
-        params: Analysis parameters
-        
-    Returns:
-        Dict containing outlier analysis results
+    Analyzes each column for outliers based on the chosen method and threshold, returning counts, percentages, outlier values, and bounds (for IQR). Returns an error message if the method is unsupported or analysis fails.
     """
     columns = params.get('columns', df.select_dtypes(include=[np.number]).columns.tolist())
     method = params.get('method', 'iqr')

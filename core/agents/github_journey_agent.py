@@ -29,11 +29,12 @@ class GitHubJourneyAgent(JourneyAgent):
     """Journey Agent specialized for GitHub project management."""
     
     def __init__(self, name: str, config_path: str):
-        """Initialize GitHub Journey Agent.
+        """
+        Initializes a GitHubJourneyAgent with repository and deployment management tools.
         
         Args:
-            name: Agent name
-            config_path: Path to agent configuration YAML
+            name: The name of the agent.
+            config_path: Path to the agent's configuration YAML file.
         """
         super().__init__(name, config_path)
         self.github = self._setup_github_tool()
@@ -41,10 +42,11 @@ class GitHubJourneyAgent(JourneyAgent):
         self.active_deployments: Dict[str, Any] = {}
         
     def _setup_github_tool(self) -> GitHubTool:
-        """Set up GitHub tool from configuration.
+        """
+        Initializes and returns a GitHubTool instance using credentials from the agent's configuration.
         
         Returns:
-            Configured GitHubTool instance
+            A configured GitHubTool instance for interacting with the specified GitHub repository.
         """
         return GitHubTool({
             'token': self.config.get('github_token'),
@@ -200,12 +202,13 @@ class GitHubJourneyAgent(JourneyAgent):
     def manage_labels(self,
                      labels: Optional[List[Dict]] = None,
                      updates: Optional[List[Dict]] = None) -> None:
-        """Manage repository labels.
-        
-        Args:
-            labels: List of new labels to create
-            updates: List of label updates
         """
+                     Creates new labels and updates existing labels in the GitHub repository.
+                     
+                     Args:
+                         labels: List of dictionaries specifying new labels to create, each with 'name', 'color', and optional 'description'.
+                         updates: List of dictionaries specifying label updates, each with 'old_name', and optionally 'new_name', 'color', and 'description'.
+                     """
         if labels:
             for label in labels:
                 self.github.create_label(
@@ -232,7 +235,19 @@ class GitHubJourneyAgent(JourneyAgent):
                 ])
 
     async def setup_repository(self, name: str, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Set up a new repository with initial configuration"""
+        """
+        Creates and initializes a new GitHub repository with branch protection and standard files.
+        
+        Args:
+            name: The name of the repository to create.
+            config: Repository configuration options, including description and privacy settings.
+        
+        Returns:
+            A dictionary containing details of the created repository.
+        
+        Raises:
+            HTTPException: If repository creation or initialization fails.
+        """
         try:
             # Create repository
             repo = await self.github_tool.create_repository(
@@ -257,7 +272,11 @@ class GitHubJourneyAgent(JourneyAgent):
             )
             
     async def setup_branch_protection(self, repo_name: str, branch: str) -> None:
-        """Configure branch protection rules"""
+        """
+        Applies branch protection rules to a specified branch in the repository.
+        
+        Configures required status checks, admin enforcement, and pull request review requirements for the given branch. Raises an HTTP 500 error if the operation fails.
+        """
         try:
             protection_rules = {
                 "required_status_checks": {
@@ -286,7 +305,11 @@ class GitHubJourneyAgent(JourneyAgent):
             )
             
     async def initialize_repository(self, repo_name: str, config: Dict[str, Any]) -> None:
-        """Initialize repository with necessary files and configurations"""
+        """
+        Initializes a repository with standard configuration files and workflows.
+        
+        Creates and pushes initial files such as CI/CD workflows, README, and Docusaurus configuration to the specified repository based on the provided configuration. Raises an HTTP 500 error if initialization fails.
+        """
         try:
             files = [
                 {
@@ -320,7 +343,12 @@ class GitHubJourneyAgent(JourneyAgent):
             )
             
     def _generate_ci_workflow(self) -> str:
-        """Generate GitHub Actions CI workflow"""
+        """
+        Generates the YAML definition for a GitHub Actions CI workflow.
+        
+        Returns:
+            A string containing the YAML configuration for running test, lint, and build jobs on pushes and pull requests to the main branch.
+        """
         return """
 name: CI
 
@@ -363,7 +391,13 @@ jobs:
 """
 
     def _generate_deploy_workflow(self) -> str:
-        """Generate GitHub Actions deployment workflow"""
+        """
+        Generates a GitHub Actions workflow YAML for deploying to GitHub Pages.
+        
+        Returns:
+            A string containing the YAML definition for a deployment workflow that builds
+            the project and publishes it to GitHub Pages on pushes to the main branch.
+        """
         return """
 name: Deploy
 
@@ -390,7 +424,15 @@ jobs:
 """
 
     def _generate_readme(self, config: Dict[str, Any]) -> str:
-        """Generate README content"""
+        """
+        Generates the content for a README.md file based on the provided repository configuration.
+        
+        Args:
+            config: A dictionary containing repository metadata such as name and description.
+        
+        Returns:
+            A formatted markdown string for the README file, including setup instructions, documentation info, contribution guidelines, and license details.
+        """
         return f"""
 # {config.get('name', 'Documentation')}
 
@@ -427,7 +469,15 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 """
 
     def _generate_docusaurus_config(self, config: Dict[str, Any]) -> str:
-        """Generate Docusaurus configuration"""
+        """
+        Generates a Docusaurus site configuration file based on the provided repository settings.
+        
+        Args:
+            config: Dictionary containing repository and documentation site settings.
+        
+        Returns:
+            A string representing the contents of a Docusaurus config file (config.js) with values populated from the input configuration.
+        """
         return f"""
 const config = {{
   title: '{config.get("name", "Documentation")}',
@@ -511,7 +561,18 @@ module.exports = config;
 """
 
     async def create_deployment(self, config: DeploymentConfig) -> Dict[str, Any]:
-        """Create and manage a new deployment"""
+        """
+        Creates a new deployment by generating a deployment branch, updating deployment configuration, and opening a pull request.
+        
+        Args:
+            config: Deployment configuration specifying environment, branch, domain, build command, and related options.
+        
+        Returns:
+            A dictionary containing the deployment ID, pull request number, and initial deployment status.
+        
+        Raises:
+            HTTPException: If deployment creation fails due to any error.
+        """
         try:
             deployment_id = f"deploy_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             
@@ -552,7 +613,15 @@ module.exports = config;
             )
             
     def _generate_deployment_pr_body(self, config: DeploymentConfig) -> str:
-        """Generate deployment pull request description"""
+        """
+        Generates the body text for a deployment pull request based on deployment configuration.
+        
+        Args:
+        	config: DeploymentConfig object specifying environment, domain, build command, and approval requirements.
+        
+        Returns:
+        	A formatted string describing the deployment, including configuration details and checklists for pre- and post-deployment steps.
+        """
         return f"""
 ## Deployment to {config.environment}
 
@@ -579,7 +648,16 @@ Please review and approve to proceed with deployment.
 """
 
     async def update_deployment_config(self, deployment_id: str, config: DeploymentConfig) -> None:
-        """Update deployment configuration files"""
+        """
+        Updates the deployment configuration file for a specific environment in the repository.
+        
+        Args:
+            deployment_id: Unique identifier for the deployment.
+            config: Deployment configuration details to be written to the environment-specific config file.
+        
+        Raises:
+            HTTPException: If the configuration update fails.
+        """
         try:
             files = [
                 {
@@ -600,7 +678,19 @@ Please review and approve to proceed with deployment.
             )
             
     async def monitor_deployment(self, deployment_id: str) -> Dict[str, Any]:
-        """Monitor deployment status and progress"""
+        """
+        Monitors the status and progress of an active deployment.
+        
+        Args:
+            deployment_id: The unique identifier of the deployment to monitor.
+        
+        Returns:
+            A dictionary containing the deployment ID, pull request status, deployment status,
+            deployment configuration, and creation timestamp.
+        
+        Raises:
+            HTTPException: If the deployment ID is not found or monitoring fails.
+        """
         try:
             if deployment_id not in self.active_deployments:
                 raise ValueError(f"Deployment {deployment_id} not found")

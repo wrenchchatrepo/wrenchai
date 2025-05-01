@@ -71,19 +71,42 @@ class StreamlitState:
     """Manages Streamlit application state."""
     
     def __init__(self):
+        """
+        Initializes the StreamlitState instance with empty component, session, cache, and layout storage.
+        """
         self.components: Dict[str, ComponentState] = {}
         self.session_state: Dict[str, Any] = {}
         self.cache: Dict[str, Any] = {}
         self._layout_stack: List[LayoutConfig] = []
 
     def register_component(self, config: ComponentConfig) -> ComponentState:
-        """Register a new component and initialize its state."""
+        """
+        Registers a new component and initializes its state.
+        
+        Args:
+            config: The configuration for the component to register.
+        
+        Returns:
+            The initialized state of the newly registered component.
+        """
         state = ComponentState(key=config.key, value=config.value)
         self.components[config.key] = state
         return state
 
     def update_component(self, key: str, value: Any) -> ComponentState:
-        """Update a component's state with a new value."""
+        """
+        Updates the state of a registered component with a new value.
+        
+        Args:
+            key: The unique identifier of the component to update.
+            value: The new value to assign to the component.
+        
+        Returns:
+            The updated ComponentState instance.
+        
+        Raises:
+            KeyError: If the specified component key does not exist.
+        """
         if key not in self.components:
             raise KeyError(f"Component {key} not found")
         
@@ -95,56 +118,116 @@ class StreamlitState:
         return state
 
     def get_component(self, key: str) -> Optional[ComponentState]:
-        """Get a component's current state."""
+        """
+        Retrieves the current state of a component by its key.
+        
+        Args:
+            key: The unique identifier of the component.
+        
+        Returns:
+            The ComponentState if the component exists, or None if not found.
+        """
         return self.components.get(key)
 
     def push_layout(self, layout: LayoutConfig):
-        """Push a new layout configuration onto the stack."""
+        """
+        Pushes a new layout configuration onto the layout stack.
+        
+        Args:
+            layout: The layout configuration to add to the stack.
+        """
         self._layout_stack.append(layout)
 
     def pop_layout(self) -> Optional[LayoutConfig]:
-        """Pop the current layout configuration from the stack."""
+        """
+        Removes and returns the most recent layout configuration from the stack.
+        
+        Returns:
+            The last pushed LayoutConfig if available, otherwise None.
+        """
         if self._layout_stack:
             return self._layout_stack.pop()
         return None
 
     def get_current_layout(self) -> Optional[LayoutConfig]:
-        """Get the current layout configuration."""
+        """
+        Returns the current layout configuration from the top of the layout stack.
+        
+        Returns:
+            The current LayoutConfig if the layout stack is not empty; otherwise, None.
+        """
         if self._layout_stack:
             return self._layout_stack[-1]
         return None
 
     def set_session_state(self, key: str, value: Any):
-        """Set a value in the session state."""
+        """
+        Sets a value for the specified key in the session state.
+        
+        Args:
+            key: The session state key to set.
+            value: The value to associate with the key.
+        """
         self.session_state[key] = value
 
     def get_session_state(self, key: str, default: Any = None) -> Any:
-        """Get a value from the session state."""
+        """
+        Retrieves a value from the session state by key.
+        
+        Args:
+            key: The key to look up in the session state.
+            default: The value to return if the key is not found.
+        
+        Returns:
+            The value associated with the key, or the default if the key does not exist.
+        """
         return self.session_state.get(key, default)
 
     def cache_data(self, key: str, value: Any):
-        """Cache data for reuse."""
+        """
+        Stores data in the cache with the current UTC timestamp for later retrieval.
+        
+        Args:
+            key: The unique identifier for the cached data.
+            value: The data to be cached.
+        """
         self.cache[key] = {
             'value': value,
             'timestamp': datetime.utcnow()
         }
 
     def get_cached_data(self, key: str) -> Optional[Any]:
-        """Get cached data if available."""
+        """
+        Retrieves cached data associated with the given key.
+        
+        Args:
+            key: The cache key to look up.
+        
+        Returns:
+            The cached value if present, otherwise None.
+        """
         if key in self.cache:
             return self.cache[key]['value']
         return None
 
     def clear_cache(self):
-        """Clear all cached data."""
+        """
+        Removes all entries from the cache.
+        """
         self.cache.clear()
 
     def clear_session_state(self):
-        """Clear all session state data."""
+        """
+        Clears all session state data.
+        
+        Removes all key-value pairs from the session state dictionary.
+        """
         self.session_state.clear()
 
     def clear_all(self):
-        """Clear all state, cache, and components."""
+        """
+        Removes all components, session state, cached data, and layout configurations from the application.
+        """
         self.components.clear()
         self.session_state.clear()
         self.cache.clear()
@@ -154,13 +237,10 @@ class StreamlitState:
 streamlit_state = StreamlitState()
 
 async def create_component(config: ComponentConfig) -> Dict[str, Any]:
-    """Create a new Streamlit component.
+    """
+    Registers a new Streamlit component with the given configuration.
     
-    Args:
-        config: Component configuration
-        
-    Returns:
-        Dictionary containing component information
+    Creates and stores the component's state, returning a dictionary with success status and component details. If registration fails, returns an error message.
     """
     try:
         state = streamlit_state.register_component(config)
@@ -180,14 +260,10 @@ async def create_component(config: ComponentConfig) -> Dict[str, Any]:
         }
 
 async def update_component_state(key: str, value: Any) -> Dict[str, Any]:
-    """Update a component's state.
+    """
+    Updates the state of a Streamlit component identified by its key.
     
-    Args:
-        key: Component key
-        value: New value
-        
-    Returns:
-        Dictionary containing updated state
+    Attempts to update the component's value and returns a dictionary indicating success and the updated state. If the component is not found or another error occurs, returns a dictionary with an error message.
     """
     try:
         state = streamlit_state.update_component(key, value)
@@ -208,13 +284,10 @@ async def update_component_state(key: str, value: Any) -> Dict[str, Any]:
         }
 
 async def get_component_state(key: str) -> Dict[str, Any]:
-    """Get a component's current state.
+    """
+    Retrieves the current state of a component by its key.
     
-    Args:
-        key: Component key
-        
-    Returns:
-        Dictionary containing component state
+    Returns a dictionary indicating success and the component's state if found, or an error message if the component does not exist or an exception occurs.
     """
     try:
         state = streamlit_state.get_component(key)
@@ -235,13 +308,14 @@ async def get_component_state(key: str) -> Dict[str, Any]:
         }
 
 async def set_layout(layout: LayoutConfig) -> Dict[str, Any]:
-    """Set the current layout configuration.
+    """
+    Pushes a new layout configuration onto the layout stack.
     
     Args:
-        layout: Layout configuration
-        
+        layout: The layout configuration to set as current.
+    
     Returns:
-        Dictionary containing layout information
+        A dictionary indicating success and the layout information, or an error message if the operation fails.
     """
     try:
         streamlit_state.push_layout(layout)
@@ -257,10 +331,12 @@ async def set_layout(layout: LayoutConfig) -> Dict[str, Any]:
         }
 
 async def get_layout() -> Dict[str, Any]:
-    """Get the current layout configuration.
+    """
+    Retrieves the current layout configuration from the layout stack.
     
     Returns:
-        Dictionary containing layout information
+        A dictionary with a success flag and the current layout configuration if available,
+        or an error message if no layout is set or an exception occurs.
     """
     try:
         layout = streamlit_state.get_current_layout()
@@ -281,14 +357,15 @@ async def get_layout() -> Dict[str, Any]:
         }
 
 async def set_session_data(key: str, value: Any) -> Dict[str, Any]:
-    """Set session state data.
+    """
+    Sets a key-value pair in the session state.
     
     Args:
-        key: Session state key
-        value: Value to store
-        
+        key: The session state key to set.
+        value: The value to associate with the key.
+    
     Returns:
-        Dictionary containing operation status
+        A dictionary indicating success status and a confirmation message, or an error message if the operation fails.
     """
     try:
         streamlit_state.set_session_state(key, value)
@@ -304,13 +381,10 @@ async def set_session_data(key: str, value: Any) -> Dict[str, Any]:
         }
 
 async def get_session_data(key: str) -> Dict[str, Any]:
-    """Get session state data.
+    """
+    Retrieves a value from the session state by key.
     
-    Args:
-        key: Session state key
-        
-    Returns:
-        Dictionary containing session state data
+    Returns a dictionary indicating success and the value if found, or an error message if the key does not exist or an exception occurs.
     """
     try:
         value = streamlit_state.get_session_state(key)
@@ -331,10 +405,12 @@ async def get_session_data(key: str) -> Dict[str, Any]:
         }
 
 async def clear_all_state() -> Dict[str, Any]:
-    """Clear all state data.
+    """
+    Clears all components, session state, cache, and layout configurations.
     
     Returns:
-        Dictionary containing operation status
+        A dictionary indicating whether the operation was successful and a confirmation
+        message or error details.
     """
     try:
         streamlit_state.clear_all()

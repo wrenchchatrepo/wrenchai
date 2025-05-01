@@ -47,10 +47,10 @@ class ToolDependencyManager:
     """System for managing tool dependencies."""
     
     def __init__(self, config_path: Optional[str] = None):
-        """Initialize the tool dependency manager.
+        """
+        Initializes the ToolDependencyManager with tool dependency configurations.
         
-        Args:
-            config_path: Path to dependency configuration file
+        If a configuration file path is provided, loads dependencies from that file; otherwise, uses the default configuration path. Initializes internal structures for managing tool dependencies and their statuses.
         """
         self.tool_dependencies: Dict[str, List[ToolDependency]] = {}
         self.dependency_status_cache: Dict[str, Dict[str, DependencyStatus]] = {}
@@ -58,7 +58,13 @@ class ToolDependencyManager:
         self._load_configuration()
         
     def _load_configuration(self):
-        """Load tool dependency configuration."""
+        """
+        Loads tool dependency configuration from the specified YAML file.
+        
+        If the configuration file does not exist or an error occurs during loading,
+        a default configuration is created instead. Parsed dependencies are stored
+        internally for each tool.
+        """
         try:
             config_path = Path(self.config_path)
             if not config_path.exists():
@@ -99,7 +105,11 @@ class ToolDependencyManager:
             self._create_default_config()
             
     def _create_default_config(self):
-        """Create a default configuration if none exists."""
+        """
+        Creates and writes a default tool dependency configuration file if none exists.
+        
+        Initializes the internal tool dependency mapping with predefined sample tools and their dependencies. Logs an error if the configuration file cannot be created.
+        """
         default_config = {
             'tools': [
                 {
@@ -194,13 +204,16 @@ class ToolDependencyManager:
             logger.error(f"Error creating default tool dependency config: {e}")
     
     def check_dependency_status(self, dependency: ToolDependency) -> DependencyStatus:
-        """Check the status of a single dependency.
+        """
+        Determines the availability and version compatibility of a single tool dependency.
+        
+        Checks whether the specified dependency is present and, if applicable, whether its version meets the defined constraints. Supports both Python module and binary dependencies. Returns the appropriate status based on the outcome of the checks.
         
         Args:
-            dependency: Tool dependency to check
-            
+        	dependency: The dependency to verify.
+        
         Returns:
-            Status of the dependency
+        	A DependencyStatus indicating if the dependency is satisfied, missing, has a version mismatch, or is unknown.
         """
         # Check Python module dependency
         if dependency.module_path:
@@ -279,13 +292,16 @@ class ToolDependencyManager:
         return DependencyStatus.UNKNOWN
     
     def check_tool_dependencies(self, tool_id: str) -> Dict[str, DependencyStatus]:
-        """Check all dependencies for a specific tool.
+        """
+        Checks and returns the status of all dependencies for a specified tool.
+        
+        For each dependency, determines if it is satisfied, missing, or has a version mismatch. If a dependency is unsatisfied and a fallback is specified, checks the fallback and marks the dependency as satisfied if the fallback is available. Results are cached for subsequent calls.
         
         Args:
-            tool_id: Tool identifier
-            
+            tool_id: The identifier of the tool whose dependencies are to be checked.
+        
         Returns:
-            Dictionary mapping dependency names to their status
+            A dictionary mapping each dependency name to its status.
         """
         # Return from cache if available
         if tool_id in self.dependency_status_cache:
@@ -318,13 +334,15 @@ class ToolDependencyManager:
         return result
     
     def can_tool_run(self, tool_id: str) -> Tuple[bool, Optional[str]]:
-        """Check if a tool can run based on its dependencies.
+        """
+        Determines if a tool can run by verifying that all required dependencies are satisfied.
         
         Args:
-            tool_id: Tool identifier
-            
+            tool_id: The identifier of the tool to check.
+        
         Returns:
-            Tuple of (can_run, reason)
+            A tuple where the first element is True if the tool can run, False otherwise.
+            The second element is a reason string if the tool cannot run, or None if it can.
         """
         # If no dependencies are registered, assume it can run
         if tool_id not in self.tool_dependencies:
@@ -346,13 +364,14 @@ class ToolDependencyManager:
         return True, None
     
     def get_limited_functionality(self, tool_id: str) -> List[str]:
-        """Get list of limited functionalities due to missing optional dependencies.
+        """
+        Returns a list of optional or enhanced dependencies that are missing for a given tool.
         
         Args:
-            tool_id: Tool identifier
-            
+            tool_id: The identifier of the tool to check.
+        
         Returns:
-            List of missing optional dependencies
+            A list of dependency names representing missing optional or enhanced dependencies, indicating limited functionality for the tool.
         """
         # If no dependencies are registered, return empty list
         if tool_id not in self.tool_dependencies:
@@ -371,13 +390,14 @@ class ToolDependencyManager:
         return missing_optional
     
     def verify_tools_availability(self, tool_ids: List[str]) -> Dict[str, bool]:
-        """Verify which tools are available based on their dependencies.
+        """
+        Checks the availability of multiple tools based on their dependency statuses.
         
         Args:
-            tool_ids: List of tool identifiers to check
-            
+            tool_ids: List of tool identifiers to check.
+        
         Returns:
-            Dictionary mapping tool IDs to availability status
+            A dictionary mapping each tool ID to a boolean indicating whether all required dependencies are satisfied.
         """
         result = {}
         for tool_id in tool_ids:
@@ -386,10 +406,13 @@ class ToolDependencyManager:
         return result
     
     def get_dependency_report(self) -> Dict[str, Any]:
-        """Generate a comprehensive dependency report for all tools.
+        """
+        Generates a detailed report on the dependency status of all registered tools.
         
         Returns:
-            Dictionary with dependency report
+            A dictionary containing, for each tool, its ability to run, reasons for any failure,
+            and the status of each dependency. Also includes aggregated lists of missing required
+            dependencies, missing optional dependencies, and version mismatches across all tools.
         """
         report = {
             "tools": {},
@@ -436,7 +459,11 @@ class ToolDependencyManager:
         return report
     
     def clear_cache(self):
-        """Clear the dependency status cache."""
+        """
+        Clears the cached dependency status results.
+        
+        Removes all entries from the internal cache, forcing future dependency checks to re-evaluate statuses.
+        """
         self.dependency_status_cache.clear()
 
 # Global instance for application-wide use

@@ -28,7 +28,11 @@ async def create_agent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[AgentResponse]:
-    """Create a new agent."""
+    """
+    Creates a new agent associated with the current authenticated user.
+    
+    The agent is initialized with the provided type and configuration, assigned an "inactive" status, and persisted to the database. Returns a response model containing the created agent's data.
+    """
     try:
         # Create agent instance
         agent = Agent(
@@ -66,7 +70,12 @@ async def list_agents(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[List[AgentResponse]]:
-    """Get all agents for the current user."""
+    """
+    Retrieves all agents belonging to the current authenticated user.
+    
+    Returns:
+        A response model containing a list of agent data for the user.
+    """
     try:
         # Query agents
         result = await db.execute(
@@ -97,7 +106,15 @@ async def get_agent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[AgentResponse]:
-    """Get agent by ID."""
+    """
+    Retrieves a specific agent by its UUID for the current authenticated user.
+    
+    Raises:
+        HTTPException: If the agent does not exist or does not belong to the user, a 404 error is raised. On unexpected errors, a 500 error is raised.
+    
+    Returns:
+        A response model containing the agent data if found.
+    """
     try:
         # Query agent
         result = await db.execute(
@@ -139,7 +156,11 @@ async def update_agent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[AgentResponse]:
-    """Update agent."""
+    """
+    Updates an existing agent for the current authenticated user.
+    
+    Attempts to update the agent identified by `agent_id` with the provided data. Only fields explicitly set in `agent_data` are modified. Returns the updated agent data on success. Raises a 404 error if the agent does not exist or is not owned by the user.
+    """
     try:
         # Query agent
         result = await db.execute(
@@ -188,7 +209,16 @@ async def delete_agent(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[bool]:
-    """Delete agent."""
+    """
+    Deletes an agent by its UUID if it belongs to the current authenticated user.
+    
+    Raises:
+        HTTPException: If the agent does not exist or does not belong to the user (404),
+            or if an unexpected error occurs during deletion (500).
+    
+    Returns:
+        ResponseModel[bool]: A response indicating whether the agent was successfully deleted.
+    """
     try:
         # Query agent
         result = await db.execute(
@@ -234,7 +264,15 @@ async def get_agent_tasks(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ResponseModel[List[TaskResponse]]:
-    """Get tasks for agent."""
+    """
+    Retrieves all tasks associated with a specific agent owned by the current user.
+    
+    Raises:
+        HTTPException: If the agent does not exist or does not belong to the user, a 404 error is raised. If an unexpected error occurs, a 500 error is raised.
+    
+    Returns:
+        A response model containing a list of tasks linked to the specified agent.
+    """
     try:
         # Verify agent exists and belongs to user
         result = await db.execute(
