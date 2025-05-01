@@ -4,10 +4,14 @@ import os
 import yaml
 import httpx
 import asyncio
+import json
 import streamlit as st
 from typing import Dict, Any, Optional
 from datetime import datetime
 from pathlib import Path
+
+from streamlit_app.components.task_monitor import render_task_monitor
+from streamlit_app.components.playbook_results import render_playbook_results
 
 class DocusaurusPlaybookExecutor:
     """Executes Docusaurus portfolio playbook via FastAPI."""
@@ -81,6 +85,43 @@ class DocusaurusPlaybookExecutor:
         finally:
             await self.session.aclose()
             
+    async def get_execution_results(self, playbook_id: str) -> Dict[str, Any]:
+        """
+        Fetches the latest execution results for a playbook from the API.
+        
+        Args:
+            playbook_id: The ID of the playbook execution to fetch results for.
+            
+        Returns:
+            A dictionary containing the execution results, or None if the fetch fails.
+        """
+        try:
+            response = await self.session.get(
+                f"{self.api_url}/api/playbooks/status/{playbook_id}",
+                timeout=10.0
+            )
+            response.raise_for_status()
+            
+            # Parse response
+            result = response.json()
+            if result.get("success"):
+                return result.get("data")
+            else:
+                st.error(f"Failed to fetch results: {result.get('error')}")
+                return None
+                
+        except httpx.TimeoutException:
+            st.error("API request timed out when fetching results")
+            return None
+            
+        except httpx.HTTPError as e:
+            st.error(f"HTTP error occurred when fetching results: {str(e)}")
+            return None
+            
+        except Exception as e:
+            st.error(f"Unexpected error when fetching results: {str(e)}")
+            return None
+            
 def main():
     """
     Runs the Streamlit user interface for uploading and executing a Docusaurus playbook.
@@ -130,8 +171,33 @@ def main():
                     playbook_id = result.get("playbook_id")
                     st.success(f"Playbook execution started! ID: {playbook_id}")
                     
-                    # Add execution details
-                    st.json(result)
+                    # Create tabs for different views
+                    result_tab, progress_tab, raw_tab = st.tabs(["Results", "Live Progress", "Raw Response"])
+                    
+                    with raw_tab:
+                        st.json(result)
+                        
+                    with progress_tab:
+                        # Start real-time progress tracking
+                        render_task_monitor(task_id=playbook_id)
+                        
+                    with result_tab:
+                        # Check if we have execution results
+                        if st.session_state.get("execution_results"):
+                            render_playbook_results(st.session_state.execution_results)
+                        else:
+                            st.info("Results will appear here once execution is complete")
+                            # Add a refresh button
+                            if st.button("Refresh Results"):
+                                # Fetch latest results from API
+                                st.info("Refreshing results...")
+                                executor = DocusaurusPlaybookExecutor(api_url)
+                                results = asyncio.run(executor.get_execution_results(playbook_id))
+                                if results:
+                                    # Store results in session state
+                                    st.session_state.execution_results = results
+                                    # Force rerun to update the UI
+                                    st.experimental_rerun()
                 else:
                     st.error("Failed to execute playbook")
                     st.json(result)

@@ -67,12 +67,24 @@ class ConnectionManager:
         progress: float,
         message: str = None,
         result: dict = None,
-        error: dict = None
+        error: dict = None,
+        step_details: dict = None,
+        timestamp: str = None
     ):
         """
         Broadcasts a task update to all connected clients.
         
         Constructs a task update message containing the task ID, status, progress, optional message, result, error, and a UTC timestamp, then sends it to every connected client.
+        
+        Args:
+            task_id: Unique identifier for the task
+            status: Current status of the task
+            progress: Progress percentage (0.0 to 100.0)
+            message: Optional status message
+            result: Optional result data
+            error: Optional error information
+            step_details: Optional detailed information about the current step
+            timestamp: Optional ISO format timestamp (if not provided, current time is used)
         """
         update = {
             "task_id": task_id,
@@ -81,7 +93,8 @@ class ConnectionManager:
             "message": message,
             "result": result,
             "error": error,
-            "timestamp": datetime.utcnow().isoformat()
+            "step_details": step_details,
+            "timestamp": timestamp if timestamp else datetime.utcnow().isoformat()
         }
         
         # Broadcast to all clients
@@ -104,6 +117,24 @@ class ConnectionManager:
             })
         except Exception as e:
             logger.error(f"Failed to send error message: {str(e)}")
+            
+    async def start_heartbeat(self, client_id: str, interval: float = 30.0):
+        """
+        Starts a heartbeat to keep the WebSocket connection alive.
+        
+        Args:
+            client_id: The client ID to send heartbeats to
+            interval: Time between heartbeats in seconds
+        """
+        while client_id in self.active_connections:
+            try:
+                # Send a ping message to client
+                await self.broadcast({"type": "ping", "timestamp": datetime.utcnow().isoformat()}, client_id)
+                await asyncio.sleep(interval)
+            except Exception as e:
+                logger.error(f"Heartbeat error for client {client_id}: {str(e)}")
+                # If error occurred, break the loop
+                break
 
 class WebSocketMessage(BaseModel):
     """WebSocket message schema.

@@ -39,8 +39,13 @@ async def websocket_task_endpoint(
                 task.progress,
                 task.message,
                 task.result,
-                task.error
+                task.error,
+                # Include detailed step information if available
+                step_details=task.input_data.get("step_details") if task.input_data else None
             )
+        
+        # Start heartbeat in background task
+        heartbeat_task = asyncio.create_task(manager.start_heartbeat(str(task_id), 30.0))
         
         try:
             while True:
@@ -49,9 +54,11 @@ async def websocket_task_endpoint(
                 
                 # Handle client messages if needed
                 if data.get("type") == "ping":
-                    await websocket.send_json({"type": "pong"})
+                    await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
                     
         except WebSocketDisconnect:
+            # Cancel heartbeat and clean up
+            heartbeat_task.cancel()
             await manager.disconnect(websocket, str(task_id))
             
     except Exception as e:
@@ -89,8 +96,13 @@ async def websocket_agent_tasks_endpoint(
                 task.progress,
                 task.message,
                 task.result,
-                task.error
+                task.error,
+                # Include detailed step information if available
+                step_details=task.input_data.get("step_details") if task.input_data else None
             )
+        
+        # Start heartbeat in background task
+        heartbeat_task = asyncio.create_task(manager.start_heartbeat(str(agent_id), 30.0))
         
         try:
             while True:
@@ -99,9 +111,11 @@ async def websocket_agent_tasks_endpoint(
                 
                 # Handle client messages if needed
                 if data.get("type") == "ping":
-                    await websocket.send_json({"type": "pong"})
+                    await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
                     
         except WebSocketDisconnect:
+            # Cancel heartbeat and clean up
+            heartbeat_task.cancel()
             await manager.disconnect(websocket, str(agent_id))
             
     except Exception as e:
