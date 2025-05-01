@@ -66,7 +66,7 @@ This tasklist provides a structured approach to addressing the gaps identified i
 
 | Task | Description | Complexity | % Complete | Focus |
 |------|-------------|-----------|------------|-------|
-| **26. Create Playbook Unit Tests** | Implement unit tests for playbook execution | Medium | 10% | Testing |
+| **26. Create Playbook Unit Tests** | Implement unit tests for playbook execution | Medium | 80% | Testing |
 | **27. Integration Tests** | Create integration tests for end-to-end playbook execution | High | 5% | Testing |
 | **28. API Documentation** | Create detailed API documentation for playbook-related endpoints | Low | 20% | Documentation |
 | **29. User Guide** | Create user guide for creating and executing playbooks | Medium | 10% | Documentation |
