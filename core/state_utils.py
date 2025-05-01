@@ -1,10 +1,11 @@
 """Utility functions for working with the state manager.
 
 This module provides helper functions to integrate the state manager with existing components
-and workflows in the WrenchAI system.
+and workflows in the WrenchAI system, including recovery capabilities.
 """
 
 import logging
+import asyncio
 from typing import Any, Dict, List, Optional, Union, Callable
 from datetime import datetime
 
@@ -15,6 +16,15 @@ from core.state_manager import (
     StateScope,
     StatePermission,
     state_manager
+)
+
+# Import recovery system
+from core.recovery_system import (
+    init_recovery_manager, 
+    RecoveryManager,
+    with_recovery,
+    CheckpointType,
+    recovery_manager as global_recovery_manager
 )
 
 # Import agent state for compatibility functions
@@ -361,3 +371,162 @@ def register_state_validation_hook(validation_function: Callable[[str, Any, str]
         True if registration was successful
     """
     return state_manager.add_hook("validation", validation_function)
+
+
+# Recovery system integration functions
+
+async def with_workflow_recovery(workflow_id: str, step_id: str, func, *args, **kwargs):
+    """Execute a function with workflow recovery.
+    
+    Args:
+        workflow_id: The workflow identifier
+        step_id: The step identifier
+        func: The function to execute
+        *args: Arguments for the function
+        **kwargs: Keyword arguments for the function
+        
+    Returns:
+        Result of the function execution
+    """
+    # Ensure recovery manager is initialized
+    rm = init_recovery_manager()
+    
+    # Update workflow step
+    update_workflow_step(workflow_id, step_id, "in_progress")
+    
+    try:
+        # Execute with recovery
+        result = await with_recovery(rm, workflow_id, step_id, func, *args, **kwargs)
+        
+        # Update workflow step on success
+        update_workflow_step(workflow_id, step_id, "completed")
+        
+        return result
+    except Exception as e:
+        # Update workflow step on failure
+        update_workflow_step(workflow_id, step_id, "failed")
+        
+        # Update context with error information
+        update_workflow_context(workflow_id, {
+            "errors": get_workflow_context(workflow_id).get("errors", []) + [
+                {
+                    "step": step_id,
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            ]
+        })
+        
+        # Re-raise the exception
+        raise
+
+
+async def create_workflow_checkpoint(workflow_id: str, step_id: str, metadata: Dict[str, Any] = None):
+    """Create a checkpoint for a workflow.
+    
+    Args:
+        workflow_id: The workflow identifier
+        step_id: The step identifier
+        metadata: Additional metadata for the checkpoint
+        
+    Returns:
+        The created checkpoint
+    """
+    # Ensure recovery manager is initialized
+    rm = init_recovery_manager()
+    
+    # Create checkpoint
+    checkpoint = await rm.checkpoint_workflow(
+        workflow_id, step_id, metadata=metadata
+    )
+    
+    # Update context with checkpoint information
+    update_workflow_context(workflow_id, {
+        "checkpoints": get_workflow_context(workflow_id).get("checkpoints", []) + [
+            {
+                "id": checkpoint.id,
+                "step": step_id,
+                "timestamp": checkpoint.timestamp.isoformat()
+            }
+        ]
+    })
+    
+    return checkpoint
+
+
+async def restore_workflow_checkpoint(workflow_id: str, checkpoint_id: str):
+    """Restore a workflow from a checkpoint.
+    
+    Args:
+        workflow_id: The workflow identifier
+        checkpoint_id: The checkpoint identifier
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    # Ensure recovery manager is initialized
+    rm = init_recovery_manager()
+    
+    # Restore checkpoint
+    success = await rm.restore_to_checkpoint(checkpoint_id)
+    
+    if success:
+        # Update workflow status
+        update_workflow_step(
+            workflow_id, 
+            "restored_from_checkpoint", 
+            "recovered"
+        )
+        
+        # Add recovery event to context
+        update_workflow_context(workflow_id, {
+            "recovery_events": get_workflow_context(workflow_id).get("recovery_events", []) + [
+                {
+                    "type": "checkpoint_restore",
+                    "checkpoint_id": checkpoint_id,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            ]
+        })
+    
+    return success
+
+
+async def execute_workflow_transaction(workflow_id: str, step_id: str, func, *args, **kwargs):
+    """Execute a function as a workflow transaction.
+    
+    Args:
+        workflow_id: The workflow identifier
+        step_id: The step identifier
+        func: The function to execute
+        *args: Arguments for the function
+        **kwargs: Keyword arguments for the function
+        
+    Returns:
+        Result of the function execution
+    """
+    # Ensure recovery manager is initialized
+    rm = init_recovery_manager()
+    
+    # Execute as transaction
+    async with rm.transaction_manager.transaction(workflow_id, step_id):
+        if asyncio.iscoroutinefunction(func):
+            return await func(*args, **kwargs)
+        else:
+            return func(*args, **kwargs)
+
+
+def get_workflow_recovery_history(workflow_id: str) -> List[Dict[str, Any]]:
+    """Get the recovery history for a workflow.
+    
+    Args:
+        workflow_id: The workflow identifier
+        
+    Returns:
+        List of recovery events
+    """
+    # Ensure recovery manager is initialized
+    rm = init_recovery_manager()
+    
+    # Get recovery history
+    return rm.get_recovery_history(workflow_id)
