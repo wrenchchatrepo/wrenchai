@@ -6,9 +6,13 @@ ensuring predictable and well-documented responses for consumers.
 """
 
 from typing import Generic, TypeVar, Optional, Dict, Any, List, Union
+<<<<<<< HEAD
 # Using field_validator from Pydantic v2 according to Pydantic AI guidelines
 # Reference: https://ai.pydantic.dev/agents/
 from pydantic import BaseModel, Field, create_model, field_validator
+=======
+from pydantic import BaseModel, Field, create_model, validator
+>>>>>>> update-mvp-implementation-plan
 from datetime import datetime
 
 # Type variable for response data
@@ -23,27 +27,36 @@ class ErrorDetails(BaseModel):
     path: Optional[str] = Field(None, description="Path where the error occurred")
 
 class ResponseMetadata(BaseModel):
+<<<<<<< HEAD
     """Metadata for API responses.
     
     Pydantic BaseModel for API response metadata with timestamp validation.
     Uses field_validator for Pydantic AI compatibility.
     Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
     """
+=======
+    """Metadata for API responses."""
+>>>>>>> update-mvp-implementation-plan
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
     version: str = Field("1.0", description="API version")
     trace_id: Optional[str] = Field(None, description="Trace ID for request tracking")
     request_id: Optional[str] = Field(None, description="Unique request identifier")
     server_id: Optional[str] = Field(None, description="Server identifier")
     
+<<<<<<< HEAD
     # Using field_validator instead of validator according to Pydantic AI guidelines
     # Reference: https://ai.pydantic.dev/agents/
     @field_validator('timestamp', mode='before')
+=======
+    @validator('timestamp', pre=True)
+>>>>>>> update-mvp-implementation-plan
     def ensure_utc(cls, v):
         """Ensure timestamp is in UTC."""
         if isinstance(v, datetime):
             return v.replace(microsecond=0)
         return v
 
+<<<<<<< HEAD
 class APIResponse(BaseModel, Generic[T]):
     """Standard API response model.
     
@@ -51,12 +64,17 @@ class APIResponse(BaseModel, Generic[T]):
     Uses correct order of inheritance (BaseModel first, then Generic) for Pydantic AI compatibility.
     Reference: https://ai.pydantic.dev/types/generics/
     """
+=======
+class APIResponse(Generic[T], BaseModel):
+    """Standard API response model."""
+>>>>>>> update-mvp-implementation-plan
     success: bool = Field(..., description="Whether the operation was successful")
     message: str = Field(..., description="Human-readable response message")
     data: Optional[T] = Field(None, description="Response data")
     error: Optional[ErrorDetails] = Field(None, description="Error details, if applicable")
     metadata: ResponseMetadata = Field(default_factory=ResponseMetadata, description="Response metadata")
     
+<<<<<<< HEAD
     # Using field_validator instead of validator according to Pydantic AI guidelines
     # Reference: https://ai.pydantic.dev/agents/
     @field_validator('error')
@@ -65,6 +83,13 @@ class APIResponse(BaseModel, Generic[T]):
         values = info.data
         if 'success' in values:
             if values.get('success') and v is not None:
+=======
+    @validator('error', always=True)
+    def validate_error_with_success(cls, v, values):
+        """Validate that error details are present only for failed operations."""
+        if 'success' in values:
+            if values['success'] and v is not None:
+>>>>>>> update-mvp-implementation-plan
                 raise ValueError("Error details should not be present for successful operations")
             if not values['success'] and v is None:
                 raise ValueError("Error details must be present for failed operations")
@@ -79,6 +104,7 @@ class PaginatedResponseMetadata(BaseModel):
     has_next: bool = Field(..., description="Whether there is a next page")
     has_prev: bool = Field(..., description="Whether there is a previous page")
 
+<<<<<<< HEAD
 class PaginatedResponse(APIResponse[List[T]], Generic[T]):
     """Paginated API response model.
     
@@ -86,6 +112,10 @@ class PaginatedResponse(APIResponse[List[T]], Generic[T]):
     Uses correct inheritance order for Pydantic AI compatibility.
     Reference: https://ai.pydantic.dev/types/generics/
     """
+=======
+class PaginatedResponse(Generic[T], APIResponse[List[T]]):
+    """Paginated API response model."""
+>>>>>>> update-mvp-implementation-plan
     pagination: PaginatedResponseMetadata = Field(..., description="Pagination metadata")
 
 def create_response(

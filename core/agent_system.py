@@ -730,6 +730,10 @@ class AgentManager:
         return results
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> update-mvp-implementation-plan
         """
         Safely evaluates a condition expression against a given context dictionary.
         

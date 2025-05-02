@@ -139,7 +139,11 @@ class TaskMonitor:
             st.error(f"Error rendering task progress: {str(e)}")
                     
     @with_error_handling()
+<<<<<<< HEAD
     async def monitor_task(self, task_id: str, max_retries: int = 3, retry_delay: float = 2.0):
+=======
+    async def monitor_task(self, task_id: str):
+>>>>>>> update-mvp-implementation-plan
         """
         Asynchronously monitors a single task, receiving real-time updates via WebSocket and rendering progress in the Streamlit UI.
         
@@ -147,6 +151,7 @@ class TaskMonitor:
         
         Args:
             task_id: The unique identifier of the task to monitor.
+<<<<<<< HEAD
             max_retries: Maximum number of reconnection attempts on failure
             retry_delay: Delay in seconds between reconnection attempts
         """
@@ -169,6 +174,10 @@ class TaskMonitor:
                     break
         
         while retries <= max_retries:
+=======
+        """
+        if await self.connect_task(task_id):
+>>>>>>> update-mvp-implementation-plan
             try:
                 if not self.ws or self.ws.closed:
                     if retries > 0:
@@ -231,11 +240,16 @@ class TaskMonitor:
         await self.disconnect()
                 
     @with_error_handling()
+<<<<<<< HEAD
     async def monitor_agent_tasks(self, agent_id: str, max_retries: int = 3, retry_delay: float = 2.0):
+=======
+    async def monitor_agent_tasks(self, agent_id: str):
+>>>>>>> update-mvp-implementation-plan
         """
         Monitors all tasks for a given agent in real time via WebSocket and updates the UI.
         
         Continuously receives task updates for the specified agent, maintains the latest state for each task, and renders their progress in the Streamlit interface. Handles connection closures with retry logic and ensures clean disconnection on exit.
+<<<<<<< HEAD
         
         Args:
             agent_id: The unique identifier of the agent whose tasks will be monitored.
@@ -262,6 +276,10 @@ class TaskMonitor:
                     break
         
         while retries <= max_retries:
+=======
+        """
+        if await self.connect_agent_tasks(agent_id):
+>>>>>>> update-mvp-implementation-plan
             try:
                 if not self.ws or self.ws.closed:
                     if retries > 0:
@@ -336,18 +354,25 @@ class TaskMonitor:
             ping_task.cancel()
         await self.disconnect()
 
+<<<<<<< HEAD
 def render_task_monitor(task_id: Optional[str] = None, agent_id: Optional[str] = None, max_retries: int = 3, retry_delay: float = 2.0):
+=======
+def render_task_monitor(task_id: Optional[str] = None, agent_id: Optional[str] = None):
+>>>>>>> update-mvp-implementation-plan
     """
     Renders the real-time task monitoring component in Streamlit for a specific task or agent.
     
     If a task ID is provided, displays live progress for that task. If an agent ID is provided,
     displays live progress for all tasks associated with the agent.
+<<<<<<< HEAD
     
     Args:
         task_id: The unique identifier of the task to monitor.
         agent_id: The unique identifier of the agent whose tasks will be monitored.
         max_retries: Maximum number of reconnection attempts on failure.
         retry_delay: Delay in seconds between reconnection attempts.
+=======
+>>>>>>> update-mvp-implementation-plan
     """
     monitor = TaskMonitor(st.session_state.get("api_url", "http://localhost:8000"))
     

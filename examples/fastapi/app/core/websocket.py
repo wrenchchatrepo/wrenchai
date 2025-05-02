@@ -75,6 +75,7 @@ class ConnectionManager:
         Broadcasts a task update to all connected clients.
         
         Constructs a task update message containing the task ID, status, progress, optional message, result, error, and a UTC timestamp, then sends it to every connected client.
+<<<<<<< HEAD:examples/fastapi/app/core/websocket.py
         
         Args:
             task_id: Unique identifier for the task
@@ -85,6 +86,8 @@ class ConnectionManager:
             error: Optional error information
             step_details: Optional detailed information about the current step
             timestamp: Optional ISO format timestamp (if not provided, current time is used)
+=======
+>>>>>>> update-mvp-implementation-plan:fastapi/app/core/websocket.py
         """
         update = {
             "task_id": task_id,
