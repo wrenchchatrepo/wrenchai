@@ -17,7 +17,7 @@ chromadb_env/
 
 # Environment variables
 .env
-
+*.env*
 # Project-specific
 archive/
 wrenchai_backup/
@@ -36,7 +36,10 @@ docs/
 Thumbs.db
 
 # Documentation/Temp
-docs/Bayes_Theorem.html
+docs/
+repo_mapper/
+secrets-manager/
+taskmaster/
 streamlit_app/Streamlit_UI.html
 .$*
 *.pdf
@@ -59,3 +62,27 @@ wrenchai_outline.md
 agenticFramework.drawio
 agenticFramework.pdf
 agenticFrameworkParts.pdf
+
+# Added by Claude Task Master
+# Logs
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+# Dependency directories
+node_modules/
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+tasks/
+
+**/.claude/settings.local.json

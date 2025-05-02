@@ -40,7 +40,7 @@ tools:
     description: |
       Interacts with GitHub repositories.
       Supports repository creation, file operations, and PRs.
-    implementation: core.tools.github_tool.github_operation
+    implementation: core.tools.github_tool.github_action
     parameters:
       operation:
         description: Operation to perform
@@ -78,7 +78,7 @@ tools:
     description: |
       Stores and retrieves information from memory.
       Use for maintaining context across interactions.
-    implementation: core.tools.memory.memory_operation
+    implementation: core.tools.memory.manage_memory
     parameters:
       operation:
         description: Operation to perform
@@ -100,7 +100,7 @@ tools:
     description: |
       Generates code based on requirements and constraints.
       Supports multiple programming languages and frameworks.
-    implementation: core.tools.code_generation.generate_code
+    implementation: core.tools.code_generation.generate
     parameters:
       requirements:
         description: Description of code requirements
@@ -150,7 +150,7 @@ tools:
   - name: secrets_manager
     description: |
       Manages and retrieves API keys and credentials securely.
-    implementation: core.tools.secrets_manager.secrets_operation
+    implementation: core.tools.secrets_manager.manage_secrets
     parameters:
       operation:
         description: Operation to perform
@@ -167,7 +167,7 @@ tools:
   - name: bayesian_update
     description: |
       Updates agent beliefs using Bayesian reasoning.
-    implementation: core.tools.bayesian_tools.bayesian_update
+    implementation: core.tools.bayesian_tools.update_beliefs
     parameters:
       model:
         description: Belief model name

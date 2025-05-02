@@ -10,6 +10,8 @@ import mimetypes
 
 # Try to import the Pydantic AI input types
 try:
+    # Import Pydantic AI's multimodal input types for rich agent interactions
+    # Reference: https://ai.pydantic.dev/types/
     from pydantic_ai.types import (
         ImageUrl, BinaryContent, VideoUrl, DocumentUrl,
         AudioUrl
@@ -189,7 +191,11 @@ class InputProcessor:
         )
 
 class MultimodalInput(BaseModel):
-    """Model for multimodal inputs to agents"""
+    """Model for multimodal inputs to agents
+    
+    A Pydantic BaseModel that represents multimodal inputs to be sent to LLMs using Pydantic AI.
+    Reference: https://ai.pydantic.dev/types/multimodal/
+    """
     text: str = ""
     images: List[Union[ImageUrl, BinaryContent, str]] = Field(default_factory=list)
     audio: List[Union[AudioUrl, BinaryContent, str]] = Field(default_factory=list)

@@ -25,6 +25,7 @@ This repository contains the code for Wrench AI, an open-source agentic AI frame
 - **Model Context Protocol**: Flexible context management across multiple backends
 - **Streaming Support**: Built-in streaming for real-time agent responses
 - **Type Safety**: Strong typing with generics for better code quality
+- **Taskmaster AI Integration**: Task management and orchestration capabilities through MCP
 
 ## Agent Interaction Patterns
 
@@ -51,6 +52,7 @@ The framework supports various agent interaction patterns:
     ```bash
     pip install -r requirements.txt
     pip install -r streamlit_app/requirements.txt
+    npm install task-master-ai # For Taskmaster AI integration
     ```
 
 3.  **Run the FastAPI Backend:**
@@ -68,6 +70,14 @@ The framework supports various agent interaction patterns:
     ```
 
     This will open the application in your web browser. The UI will connect to the backend API.
+
+5.  **Try Taskmaster AI Integration:**
+
+    ```bash
+    ./run_taskmaster.sh
+    ```
+
+    This will run the Taskmaster AI example to demonstrate task creation and management.
 
 ## Project Structure
 
@@ -115,6 +125,9 @@ wrenchai/
 │   │   └── ...  # Other tools
 │   ├── utils.py        # Utility functions (e.g., cost calculation, logging)
 │   └── __init__.py
+├── mcp_config.json     # MCP server configuration including Taskmaster AI
+├── run_taskmaster.sh   # Helper script to run Taskmaster AI MCP server
+├── TASKMASTER_AI.md    # Taskmaster AI documentation
 ├── docker/            # Docker-related files (future)
 │    └── ...
 └── tests/              # Unit tests (future)
@@ -132,7 +145,12 @@ wrenchai/
 *   **`core/playbooks/`**: Contains example playbooks in YAML format
 *   **`core/tools/`**: Implements tools that agents can use (web search, MCP, Bayesian reasoning, etc.)
 *   **`core/utils.py`**: Provides utility functions
+*   **`core/__init__.py`**: Package initialization file
 *   **`streamlit_app/`**: Contains the Streamlit user interface
+*   **`mcp_config.json`**: Configuration file for Model Context Protocol servers including Taskmaster AI
+*   **`run_taskmaster.sh`**: Script to start the Taskmaster AI MCP server
+*   **`start_taskmaster.py`**: Python helper for Taskmaster AI MCP server
+*   **`TASKMASTER_AI.md`**: Documentation for Taskmaster AI integration
 *   **`docker/`**:  Contains Docker-related files (future)
 *   **`tests/`**: Contains unit tests (future)
 
@@ -220,7 +238,12 @@ wrenchai/
    - Performance Monitoring
    - Automated Reports
 
-5. **Security Enhancements**
+5. **Task Management Integration**
+   - Taskmaster AI Integration
+   - Project Management Workflows
+   - Task Prioritization and Scheduling
+
+6. **Security Enhancements**
    - Content Security
    - Access Control
    - Audit Logging

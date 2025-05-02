@@ -1,0 +1,3 @@
+[submodule "wrenchai"]
+	path = wrenchai
+	url = https://github.com/wrenchchatrepo/wrenchai.git

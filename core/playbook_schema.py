@@ -6,6 +6,9 @@ provides utilities for converting between different formats.
 """
 
 from typing import Dict, List, Union, Optional, Any, Literal, Set
+# Import Pydantic model and validators for schema definition
+# Note: Should be updated to use field_validator and model_validator from Pydantic AI 
+# Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
 from pydantic import BaseModel, Field, validator, root_validator
 from datetime import datetime
 import yaml
@@ -66,6 +69,9 @@ class ProcessOperation(BaseModel):
     condition: Optional[str] = None
     failure_action: Optional[str] = None
     
+    # Using validator for condition validation
+    # Should be updated to field_validator for Pydantic AI compatibility
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
     @validator('condition')
     def validate_condition(cls, v):
         """Validate condition syntax if present."""
@@ -82,6 +88,9 @@ class HandoffCondition(BaseModel):
     target_agent: str
     operation: str
     
+    # Using validator for condition validation
+    # Should be updated to field_validator for Pydantic AI compatibility
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
     @validator('condition')
     def validate_condition(cls, v):
         """Validate condition syntax."""
@@ -236,6 +245,9 @@ class Playbook(BaseModel):
             }
         }
     
+    # Using root_validator for complex validation
+    # Should be updated to model_validator for Pydantic AI compatibility
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
     @root_validator(pre=True)
     def extract_metadata(cls, values):
         """

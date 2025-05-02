@@ -9,6 +9,8 @@ from typing import Dict, List, Any, Optional, Union, Callable
 
 # Try to import Pydantic AI MCP components
 try:
+    # Import Pydantic AI's MCP server components for multi-component processing
+    # Reference: https://ai.pydantic.dev/agents/#model-run-settings  
     from pydantic_ai.mcp import MCPServerHTTP, MCPServerStdio
     MCP_AVAILABLE = True
 except ImportError:

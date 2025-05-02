@@ -732,4 +732,94 @@ class DatabaseTool:
             return query_plan
         except Exception as e:
             self.logger.error(f"Error getting query plan: {str(e)}")
-            raise 
+            raise
+
+async def database_operation(operation: str, connection_string: str = None, query: str = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Performs database operations as a tool entry point.
+
+    Args:
+        operation: The database operation to perform (query, execute, list_tables, describe_table, connect, disconnect).
+        connection_string: The database connection string.
+        query: The SQL query to execute (for 'query' and 'execute'). Also used for table name in 'describe_table'.
+        params: Query parameters.
+
+    Returns:
+        A dictionary containing the result of the operation.
+    """
+    try:
+        if connection_string is None:\n            return {
+                "success": False,
+                "error": "connection_string is required"
+            }
+
+        # Instantiate DatabaseTool with the provided connection string
+        db_tool = DatabaseTool(connection_string=connection_string)
+
+        if operation == 'query':
+            if query is None:
+                 return {
+                    "success": False,
+                    "error": "query is required for 'query' operation"
+                }
+            # Assuming execute_query is suitable for general queries
+            results = await db_tool.execute_query(query=query, params=params)
+            return {
+                "success": True,
+                "data": results
+            }
+        elif operation == 'execute':
+             if query is None:
+                 return {
+                    "success": False,
+                    "error": "query is required for 'execute' operation"
+                }
+             # Assuming execute_query is also suitable for execution (e.g., INSERT, UPDATE)
+             results = await db_tool.execute_query(query=query, params=params)
+             return {
+                "success": True,
+                "data": results # May return affected row count or similar depending on execute_query implementation
+            }
+        elif operation == 'list_tables':
+            # Placeholder - DatabaseTool doesn't have a direct list_tables method in outline
+            return {
+                "success": True,
+                "message": "Listing tables functionality not fully implemented via this tool entry point.",
+                "data": [] # Return empty list as placeholder
+            }
+        elif operation == 'describe_table':
+            if query is None:
+                 return {
+                    "success": False,
+                    "error": "query (table name) is required for 'describe_table' operation"
+                }
+            # Assuming 'query' parameter is used for table name here
+            schema = await db_tool.get_table_schema(table_name=query)
+            return {
+                "success": True,
+                "data": schema
+            }
+        elif operation == 'connect':
+            # Connection is handled by DatabaseTool instantiation
+            return {
+                "success": True,
+                "message": "Connection handled during tool instantiation."
+            }
+        elif operation == 'disconnect':
+            # Disconnection may be handled internally by DatabaseTool or engine cleanup
+             return {
+                "success": True,
+                "message": "Disconnection handled internally or not needed as a separate step."
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Invalid operation: {operation}. Supported operations are: query, execute, list_tables, describe_table, connect, disconnect"
+            }
+
+    except Exception as e:
+        logging.error(f"Database operation failed: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }

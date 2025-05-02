@@ -17,13 +17,44 @@ from pydantic import BaseModel
 # Load environment variables
 load_dotenv()
 
+class ApiConfig(BaseModel):
+    """API Configuration."""
+    base_url: str
+    websocket_url: str
+    version: str
+    timeout: int
+
+class UiConfig(BaseModel):
+    """UI Configuration."""
+    page_title: str
+    page_icon: str
+    layout: str
+    initial_sidebar_state: str
+    theme: Dict[str, Any]
+
+class LoggingConfig(BaseModel):
+    """Logging Configuration."""
+    level: str
+    format: str
+    file: str
+
+class CacheConfig(BaseModel):
+    """Cache Configuration."""
+    ttl: int
+    max_entries: int
+
+class SessionConfig(BaseModel):
+    """Session Configuration."""
+    expire_after: int
+    max_size: int
+
 class Config(BaseModel):
     """Configuration model for the Streamlit app."""
-    api: Dict[str, Any]
-    ui: Dict[str, Any]
-    logging: Dict[str, Any]
-    cache: Dict[str, Any]
-    session: Dict[str, Any]
+    api: ApiConfig
+    ui: UiConfig
+    logging: LoggingConfig
+    cache: CacheConfig
+    session: SessionConfig
     features: Dict[str, bool]
 
 def load_config(config_path: str = "config.yaml") -> Config:

@@ -1,4 +1,7 @@
 # requirements.txt (core framework)
+aiohttp>=3.9.5
+aiohttp-pydantic
+
 PyYAML>=6.0.2
 requests>=2.32.3  # For making HTTP requests (e.g., web search, API calls)
 tiktoken>=0.6.0   # For token counting
@@ -24,7 +27,6 @@ pydantic-ai[cli]>=0.1.3      # For CLI support
 pydantic-ai-examples>=0.1.0  # Pydantic AI examples
 pydantic-evals>=0.1.0        # For evaluation framework
 pillow>=10.0.0               # For image processing
-deno>=1.40.0                # For Run Python MCP server
 
 # Additional tools for examples
 psycopg[binary]>=3.1.12      # PostgreSQL client for Python

@@ -2,8 +2,8 @@
 
 # API Settings
 api:
-  base_url: "http://localhost:8000"
-  websocket_url: "ws://localhost:8000/ws"
+  base_url: "http://localhost:9500"
+  websocket_url: "ws://localhost:9500/ws"
   version: "v1"
   timeout: 30
 

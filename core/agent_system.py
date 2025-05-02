@@ -6,12 +6,16 @@ import yaml
 import logging
 from typing import Dict, List, Any, Optional, Callable, TypeVar, Generic, Union
 from dataclasses import dataclass
+# Import Pydantic AI's Agent and RunContext for LLM agent functionality
+# Reference: https://ai.pydantic.dev/agents/
 from pydantic_ai import Agent as PydanticAgent, RunContext, Agent
 from typing import Optional, List
 import asyncio
 
 # Try to import MCP components
 try:
+    # Import Pydantic AI's MCP server interfaces for multi-component processing
+    # Reference: https://ai.pydantic.dev/agents/#agents-are-designed-for-reuse-like-fastapi-apps
     from pydantic_ai.mcp import MCPServerHTTP, MCPServerStdio
     MCP_AVAILABLE = True
 except ImportError:
@@ -34,7 +38,11 @@ class ToolSuccess(BaseModel, Generic[T]):
     data: Union[T, Dict[str, Any]]
 
 class ToolError(BaseModel):
-    """Error result from a tool execution"""
+    """Error result from a tool execution
+    
+    This is a Pydantic BaseModel representing an error returned by a tool.
+    See Pydantic AI tools documentation: https://ai.pydantic.dev/agents/#function-tool-tools
+    """
     error: str
     details: Optional[Dict[str, Any]] = None
 
@@ -722,7 +730,6 @@ class AgentManager:
         return results
     
     def _evaluate_condition(self, condition: str, context: Dict[str, Any]) -> bool:
-<<<<<<< HEAD
         """
         Safely evaluates a condition expression against a given context dictionary.
         

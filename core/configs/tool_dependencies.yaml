@@ -1,0 +1,30 @@
+tools:
+- dependencies:
+  - module_path: requests
+    name: requests
+    type: required
+  - module_path: bs4
+    name: beautifulsoup4
+    type: enhanced
+  id: web_search
+- dependencies:
+  - check_command: python --version
+    min_version: '3.8'
+    name: python
+    type: required
+  id: code_execution
+- dependencies:
+  - module_path: github
+    name: PyGithub
+    type: required
+  id: github_tool
+- dependencies:
+  - check_command: node --version
+    min_version: 14.0.0
+    name: nodejs
+    type: required
+  - check_command: npx puppeteer --version
+    min_version: 13.0.0
+    name: puppeteer
+    type: required
+  id: puppeteer

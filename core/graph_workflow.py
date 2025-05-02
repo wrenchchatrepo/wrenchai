@@ -10,6 +10,8 @@ from enum import Enum
 
 # Try to import graph execution components
 try:
+    # Import Pydantic AI's Graph components for workflow execution
+    # Reference: https://ai.pydantic.dev/agents/#iterating-over-an-agents-graph
     from pydantic_ai.graph import Graph, GraphState, GraphRunContext, register_node
     GRAPH_AVAILABLE = True
 except ImportError:

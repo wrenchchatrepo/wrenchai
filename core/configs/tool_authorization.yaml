@@ -1,0 +1,17 @@
+tools:
+- agent_roles:
+  - SuperAgent
+  - ResearchAgent
+  id: web_search
+  max_calls_per_minute: 10
+  permission_level: standard
+- agent_roles:
+  - CodeGeneratorAgent
+  - TestEngineerAgent
+  id: code_execution
+  permission_level: restricted
+  requires_approval: true
+- agent_roles:
+  - '*'
+  id: memory
+  permission_level: standard

@@ -6,7 +6,10 @@ ensuring proper data validation and helpful error messages.
 """
 
 from typing import Dict, List, Optional, Any, Union
-from pydantic import BaseModel, Field, validator, root_validator
+# Using Pydantic v2 validators according to Pydantic AI guidelines
+# Reference: https://ai.pydantic.dev/agents/
+from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import validator  # For backward compatibility
 from enum import Enum
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -41,7 +44,9 @@ class PlaybookStep(BaseModel):
     params: Dict[str, Any] = Field(default_factory=dict, description="Step parameters")
     condition: Optional[str] = Field(None, description="Optional condition for execution")
     
-    @validator('name')
+    # Using field_validator according to Pydantic AI's field validation pattern 
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('name')
     def validate_name(cls, v):
         """Validate step name."""
         if len(v.strip()) == 0:
@@ -60,7 +65,9 @@ class PlaybookAgent(BaseModel):
     type: AgentType = Field(..., description="Agent type")
     config: Dict[str, Any] = Field(default_factory=dict, description="Agent configuration")
     
-    @validator('type')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('type')
     def validate_agent_type(cls, v):
         """Validate agent type."""
         if v == AgentType.CUSTOM and 'implementation' not in cls.config:
@@ -74,7 +81,9 @@ class Project(BaseModel):
     repository_url: Optional[str] = Field(None, description="Git repository URL")
     branch: str = Field("main", description="Git branch to use")
     
-    @validator('name')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('name')
     def validate_name(cls, v):
         """Validate project name."""
         if len(v.strip()) == 0:
@@ -98,28 +107,34 @@ class PlaybookExecuteRequest(BaseModel):
     tools: List[str] = Field(default_factory=list, description="Tools to use during execution")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     
-    @validator('playbook_name')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('playbook_name')
     def validate_playbook_name(cls, v):
         """Validate playbook name."""
         if len(v.strip()) == 0:
             raise ValueError("Playbook name cannot be empty")
         return v
     
-    @validator('agents')
+    # Using field_validator instead of validator according to Pydantic AI guidelines
+    # Reference: https://ai.pydantic.dev/agents/
+    @field_validator('agents')
     def validate_agents(cls, v):
         """Validate agents list."""
         if len(v) == 0:
             return [PlaybookAgent(type=AgentType.SUPER)]  # Default to super agent
         return v
     
-    @root_validator
-    def validate_tools_and_agents(cls, values):
+    # Using model_validator according to Pydantic AI's model-level validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @model_validator(mode='after')
+    def validate_tools_and_agents(self) -> 'PlaybookExecuteRequest':
         """Validate tools and agents compatibility."""
-        if 'tools' in values and values['tools'] and 'agents' in values:
+        if hasattr(self, 'tools') and self.tools and hasattr(self, 'agents'):
             # Check if all tools are supported by at least one agent
             # This is a placeholder for more complex validation logic
             pass
-        return values
+        return self
 
 class TaskCreateRequest(BaseModel):
     """Request model for task creation."""
@@ -130,7 +145,9 @@ class TaskCreateRequest(BaseModel):
     assignee: Optional[str] = Field(None, description="Task assignee")
     tags: List[str] = Field(default_factory=list, description="Task tags")
     
-    @validator('title')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('title')
     def validate_title(cls, v):
         """Validate task title."""
         if len(v.strip()) == 0:
@@ -153,7 +170,9 @@ class AgentCreateRequest(BaseModel):
     config: Dict[str, Any] = Field(default_factory=dict, description="Agent configuration")
     tools: List[str] = Field(default_factory=list, description="Tools for the agent to use")
     
-    @validator('name')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('name')
     def validate_name(cls, v):
         """Validate agent name."""
         if len(v.strip()) == 0:
@@ -175,7 +194,9 @@ class ToolCreateRequest(BaseModel):
     implementation: str = Field(..., description="Tool implementation path")
     config: Dict[str, Any] = Field(default_factory=dict, description="Tool configuration")
     
-    @validator('name')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('name')
     def validate_name(cls, v):
         """Validate tool name."""
         if len(v.strip()) == 0:
@@ -196,7 +217,9 @@ class ToolExecuteRequest(BaseModel):
     context: Optional[Dict[str, Any]] = Field(None, description="Execution context")
     timeout: Optional[int] = Field(None, description="Execution timeout in seconds")
     
-    @validator('tool_name')
+    # Using field_validator according to Pydantic AI's field validation pattern
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @field_validator('tool_name')
     def validate_tool_name(cls, v):
         """Validate tool name."""
         if len(v.strip()) == 0:

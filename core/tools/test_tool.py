@@ -201,10 +201,10 @@ class TestTool:
             
         return "\n".join(content)
         
-    async def run_tests(self, suite_name: Optional[str] = None) -> List[TestResult]:
-        """Run tests for a specific suite or all suites"""
+    async def _run_tests_internal(self, suite_name: Optional[str] = None) -> List[TestResult]:
+        """Internal method to run tests for a specific suite or all suites"""
         results = []
-        
+
         if suite_name and suite_name in self.test_suites:
             results.extend(await self._run_suite(self.test_suites[suite_name]))
         elif not suite_name:
@@ -216,9 +216,32 @@ class TestTool:
             suite_results = await asyncio.gather(*tasks)
             for suite_result in suite_results:
                 results.extend(suite_result)
-                
+
         return results
         
+async def run_tests(test_suite: Optional[str] = None, environment: Optional[Any] = None, parallel: bool = False) -> List[Dict[str, Any]]:
+    """
+    Runs tests for a specific suite or all suites as a tool entry point.
+
+    Args:
+        test_suite: The name of the test suite to run. If None, all suites are run.
+        environment: Test environment configuration (usage unclear from existing code).
+        parallel: Whether to run tests in parallel (usage unclear from existing code).
+
+    Returns:
+        A list of dictionaries representing the test results.
+    """
+    # Instantiate TestTool. How test suites are provided to this instance
+    # is not fully clear from the current code, assuming default behavior.
+    # The 'environment' and 'parallel' parameters from tools.yaml are not
+    # directly used by _run_tests_internal and may require further
+    # integration into the TestTool class or this function if needed.
+    test_tool_instance = TestTool()
+    results = await test_tool_instance._run_tests_internal(suite_name=test_suite)
+
+    # Convert TestResult objects to dictionaries for tool response
+    return [r.dict() for r in results]
+
     async def _run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite"""
         results = []

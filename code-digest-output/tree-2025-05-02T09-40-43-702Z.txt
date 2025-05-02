@@ -1,0 +1,341 @@
+Directory structure:
+└── wrenchai/
+    ├── Dockerfile
+    ├── Dockerfile.streamlit
+    ├── LICENSE
+    ├── README.md
+    ├── __pycache__/
+    ├── alembic/
+    │   ├── env.py
+    │   └── versions/
+    │       └── 001_initial.py
+    ├── alembic.ini
+    ├── archive/
+    ├── chromadb_env/
+    ├── cli.py
+    ├── core/
+    │   ├── README_streaming.md
+    │   ├── __init__.py
+    │   ├── __pycache__/
+    │   ├── agent_system.py
+    │   ├── agents/
+    │   │   ├── MIGRATION_GUIDE.md
+    │   │   ├── __init__.py
+    │   │   ├── __pycache__/
+    │   │   ├── agent_adapters.py
+    │   │   ├── agent_definitions.py
+    │   │   ├── agent_factory.py
+    │   │   ├── agent_llm_mapping.py
+    │   │   ├── agent_state.py
+    │   │   ├── agent_state_enhanced.py
+    │   │   ├── agent_state_migration.py
+    │   │   ├── base.py
+    │   │   ├── code_generator_agent.py
+    │   │   ├── codifier_agent.py
+    │   │   ├── communication_patterns.py
+    │   │   ├── comptroller_agent.py
+    │   │   ├── data_scientist_agent.py
+    │   │   ├── dba_agent.py
+    │   │   ├── devops_agent.py
+    │   │   ├── gcp_architect_agent.py
+    │   │   ├── github_journey_agent.py
+    │   │   ├── infosec_agent.py
+    │   │   ├── inspector_agent.py
+    │   │   ├── journey_agent.py
+    │   │   ├── messaging.py
+    │   │   ├── paralegal_agent.py
+    │   │   ├── super_agent.py
+    │   │   ├── test_engineer_agent.py
+    │   │   ├── uat_agent.py
+    │   │   ├── ux_designer_agent.py
+    │   │   ├── web_researcher_agent.py
+    │   │   └── zerokproof_agent.py
+    │   ├── api.py
+    │   ├── api_routes/
+    │   │   ├── __init__.py
+    │   │   ├── __pycache__/
+    │   │   ├── agents.py
+    │   │   ├── playbooks.py
+    │   │   └── tools.py
+    │   ├── bayesian_engine.py
+    │   ├── condition_evaluator.py
+    │   ├── config_loader.py
+    │   ├── configs/
+    │   │   ├── agents.yaml
+    │   │   ├── docs/
+    │   │   ├── examples/
+    │   │   │   ├── simple_research_playbook.yaml
+    │   │   │   └── web_research_playbook.yaml
+    │   │   ├── inspector_agent_config.yaml
+    │   │   ├── journey_agent_template.yaml
+    │   │   ├── playbook_template.yaml
+    │   │   ├── playbooks/
+    │   │   │   └── example_playbook.yaml
+    │   │   ├── playbooks.yaml
+    │   │   ├── pricing_data.yaml
+    │   │   ├── super_agent_config.yaml
+    │   │   ├── tool_authorization.yaml
+    │   │   ├── tool_dependencies.yaml
+    │   │   ├── tools.yaml
+    │   │   └── web_researcher_config.yaml
+    │   ├── db/
+    │   │   ├── config.py
+    │   │   ├── models.py
+    │   │   ├── operations.py
+    │   │   ├── repositories.py
+    │   │   ├── services.py
+    │   │   ├── session.py
+    │   │   └── utils.py
+    │   ├── evaluation.py
+    │   ├── execution_logger.py
+    │   ├── graph_workflow.py
+    │   ├── inputs.py
+    │   ├── middleware/
+    │   │   ├── __init__.py
+    │   │   ├── __pycache__/
+    │   │   ├── exception_handlers.py
+    │   │   └── validation.py
+    │   ├── playbook_logger.py
+    │   ├── playbook_schema.py
+    │   ├── playbook_validator.py
+    │   ├── playbooks/
+    │   │   ├── docusaurus_portfolio_playbook.yaml
+    │   │   └── test_agent_llm_mapping.yaml
+    │   ├── progress_tracker.py
+    │   ├── recovery_system.py
+    │   ├── retry_system.py
+    │   ├── schemas/
+    │   │   ├── __init__.py
+    │   │   ├── __pycache__/
+    │   │   ├── requests.py
+    │   │   └── responses.py
+    │   ├── state_manager.py
+    │   ├── state_utils.py
+    │   ├── streaming.py
+    │   ├── tool_system.py
+    │   ├── tools/
+    │   │   ├── __init__.py
+    │   │   ├── __pycache__/
+    │   │   ├── agent_logger.py
+    │   │   ├── base_logger.py
+    │   │   ├── bayesian_tools.py
+    │   │   ├── browser_tools.py
+    │   │   ├── code_execution.py
+    │   │   ├── code_generation.py
+    │   │   ├── data_analysis.py
+    │   │   ├── database_tool.py
+    │   │   ├── document_analyzer.py
+    │   │   ├── documentation_tools.py
+    │   │   ├── game_theory.py
+    │   │   ├── gcp_tool.py
+    │   │   ├── github_mcp.py
+    │   │   ├── github_tool.py
+    │   │   ├── github_tools.py
+    │   │   ├── logger.py
+    │   │   ├── logging_config.py
+    │   │   ├── mcp.py
+    │   │   ├── mcp_client.py
+    │   │   ├── mcp_server.py
+    │   │   ├── mcp_servers.py
+    │   │   ├── memory.py
+    │   │   ├── memory_manager.py
+    │   │   ├── memory_store/
+    │   │   ├── message_broker.py
+    │   │   ├── message_queue.py
+    │   │   ├── monitoring_tool.py
+    │   │   ├── puppeteer.py
+    │   │   ├── run_python.py
+    │   │   ├── secrets_audit.py
+    │   │   ├── secrets_manager.py
+    │   │   ├── streamlit_test_tools.py
+    │   │   ├── streamlit_tools.py
+    │   │   ├── system_logger.py
+    │   │   ├── test_tool.py
+    │   │   ├── tool_authorization.py
+    │   │   ├── tool_dependency.py
+    │   │   ├── tool_registry.py
+    │   │   ├── tool_response.py
+    │   │   ├── validate_conditions.py
+    │   │   ├── validate_playbook.py
+    │   │   └── web_search.py
+    │   └── utils.py
+    ├── data/
+    │   └── agent_states/
+    │       ├── snapshots/
+    │       ├── transactions/
+    │       └── workflows/
+    ├── docker/
+    │   └── Docker_and_GitHub.md
+    ├── docker-compose.yml
+    ├── docs/
+    ├── examples/
+    │   ├── __init__.py
+    │   ├── chat_app.py
+    │   ├── fastapi/
+    │   │   ├── app/
+    │   │   │   ├── api/
+    │   │   │   │   └── v1/
+    │   │   │   │       ├── api.py
+    │   │   │   │       └── endpoints/
+    │   │   │   │           ├── agents.py
+    │   │   │   │           ├── auth.py
+    │   │   │   │           ├── playbooks.py
+    │   │   │   │           ├── tasks.py
+    │   │   │   │           ├── users.py
+    │   │   │   │           └── websocket.py
+    │   │   │   ├── core/
+    │   │   │   │   ├── config.py
+    │   │   │   │   ├── error_recovery.py
+    │   │   │   │   ├── security.py
+    │   │   │   │   └── websocket.py
+    │   │   │   ├── crud/
+    │   │   │   │   └── agent.py
+    │   │   │   ├── db/
+    │   │   │   │   ├── base_class.py
+    │   │   │   │   ├── models/
+    │   │   │   │   │   ├── agent.py
+    │   │   │   │   │   ├── base.py
+    │   │   │   │   │   └── user.py
+    │   │   │   │   └── session.py
+    │   │   │   ├── main.py
+    │   │   │   ├── middleware/
+    │   │   │   │   ├── logging.py
+    │   │   │   │   └── rate_limiter.py
+    │   │   │   ├── models/
+    │   │   │   │   ├── agent.py
+    │   │   │   │   └── task.py
+    │   │   │   └── schemas/
+    │   │   │       ├── agent.py
+    │   │   │       ├── base.py
+    │   │   │       ├── task.py
+    │   │   │       ├── token.py
+    │   │   │       └── user.py
+    │   │   └── nginx/
+    │   │       ├── Dockerfile
+    │   │       ├── conf.d/
+    │   │       │   └── default.conf
+    │   │       └── ssl/
+    │   ├── graph_recovery_example.py
+    │   ├── question_graph.py
+    │   ├── rag.py
+    │   ├── recovery_example.py
+    │   ├── sql_generator.py
+    │   ├── state_manager_example.py
+    │   ├── streaming.py
+    │   ├── streaming_api.py
+    │   ├── streaming_client.html
+    │   └── streaming_llm_workflow.py
+    ├── fastapi.pid
+    ├── install_cli.sh
+    ├── mcp_config.json
+    ├── migrations/
+    │   ├── __pycache__/
+    │   ├── env.py
+    │   ├── script.py.mako
+    │   └── versions/
+    │       ├── 20240320_initial_schema.py
+    │       ├── 20240328_update_schema.py
+    │       └── __pycache__/
+    ├── nginx/
+    │   ├── Dockerfile
+    │   └── conf.d/
+    │       └── default.conf
+    ├── old_.env
+    ├── path/
+    │   └── to/
+    │       └── venv/
+    ├── pymc/
+    │   ├── GLM_linear.ipynb
+    │   ├── Gaussian_Processes.rst
+    │   ├── dimensionality.ipynb
+    │   ├── posterior_predictive.ipynb
+    │   └── pymc_pytensor.ipynb
+    ├── pytest.ini
+    ├── repo_mapper/
+    ├── requirements.txt
+    ├── run_migrations.py
+    ├── scripts/
+    │   ├── example_prd.txt
+    │   ├── init_db.py
+    │   ├── start.sh
+    │   ├── start_streamlit.sh
+    │   └── wait_for_db.py
+    ├── secrets-manager/
+    ├── setup.py
+    ├── streamlit.pid
+    ├── streamlit_app/
+    │   ├── Streamlit_UI.md
+    │   ├── agent_communication.py
+    │   ├── app.py
+    │   ├── components/
+    │   │   ├── error_handler.py
+    │   │   ├── playbook_results.py
+    │   │   └── task_monitor.py
+    │   ├── components.py
+    │   ├── config.yaml
+    │   ├── pages/
+    │   │   ├── agent_manager.py
+    │   │   ├── metrics_dashboard.py
+    │   │   └── playbook_executor.py
+    │   ├── portfolio_generator.py
+    │   └── requirements.txt
+    ├── taskmaster/
+    ├── tasks/
+    ├── tests/
+    │   ├── README.md
+    │   ├── __init__.py
+    │   ├── __pycache__/
+    │   ├── conftest.py.bak
+    │   ├── core/
+    │   │   └── test_state_manager.py
+    │   ├── test_agent_communication.py
+    │   ├── test_agent_definitions.py
+    │   ├── test_agent_endpoints.py
+    │   ├── test_agent_llm_mapping.py
+    │   ├── test_agent_state_enhanced.py
+    │   ├── test_agents.py
+    │   ├── test_api_endpoints.py
+    │   ├── test_base_agent.py
+    │   ├── test_code_generation/
+    │   │   ├── __pycache__/
+    │   │   ├── conftest.py
+    │   │   └── test_code_generation.py
+    │   ├── test_codifier_agent.py
+    │   ├── test_configs/
+    │   │   ├── agents.yaml
+    │   │   ├── database.yaml
+    │   │   └── test_config.yaml
+    │   ├── test_db_integration.py
+    │   ├── test_error_recovery.py
+    │   ├── test_evaluations.py
+    │   ├── test_graph.py
+    │   ├── test_inputs.py
+    │   ├── test_integration.py
+    │   ├── test_mcp.py
+    │   ├── test_memory_manager/
+    │   │   ├── __pycache__/
+    │   │   ├── conftest.py
+    │   │   └── test_memory_manager.py
+    │   ├── test_playbook_api.py
+    │   ├── test_playbook_execution.py
+    │   ├── test_recovery_system.py
+    │   ├── test_streamlit_ui.py
+    │   ├── test_task_monitor.py
+    │   ├── test_tools/
+    │   │   ├── test_bayesian_tools.py
+    │   │   ├── test_browser_tools.py
+    │   │   ├── test_code_execution.py
+    │   │   ├── test_data_analysis.py
+    │   │   ├── test_game_theory.py
+    │   │   ├── test_github_mcp.py
+    │   │   ├── test_github_tools.py
+    │   │   ├── test_puppeteer.py
+    │   │   ├── test_streamlit_test_tools.py
+    │   │   └── test_streamlit_tools.py
+    │   ├── test_tools.py
+    │   ├── test_websocket.py
+    │   └── test_workflows.py
+    ├── venv/
+    ├── wrenchai.egg-info/
+    ├── wrenchai_cli.py
+    └── wrenchai_examples.py

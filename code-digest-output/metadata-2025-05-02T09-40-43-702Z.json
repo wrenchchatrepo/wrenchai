@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-05-02T09:40:43.702Z",
+  "executionTime": "69 ms",
+  "stats": {
+    "filesProcessed": 263,
+    "filesSkipped": 224,
+    "totalSize": 5324552,
+    "errors": []
+  }
+}

@@ -11,7 +11,9 @@ This module provides improved functionality to:
 import logging
 import asyncio
 from typing import Dict, Any, Optional, List, Set, Union, Tuple
-from pydantic import BaseModel, Field, create_model, validator, root_validator
+# Using Pydantic v2 validators according to Pydantic AI guidelines
+# Reference: https://ai.pydantic.dev/agents/
+from pydantic import BaseModel, Field, create_model, validator, model_validator
 from datetime import datetime
 import json
 from pathlib import Path
@@ -54,15 +56,17 @@ class AgentStateEntry(BaseModel):
             serialized = base64.b64encode(pickle.dumps(v)).decode('utf-8')
             return {"__serialized__": True, "data": serialized, "format": "pickle"}
     
-    @root_validator
-    def compute_checksum(cls, values):
+    # Using model_validator according to Pydantic AI guidelines for model-level validation
+    # Reference: https://ai.pydantic.dev/agents/#type-safe-by-design
+    @model_validator(mode='after')
+    def compute_checksum(self) -> 'AgentStateEntry':
         """Compute checksum for integrity verification."""
-        if values.get('checksum') is None:
+        if self.checksum is None:
             # Create a checksum of the key and serialized value
-            value_str = str(values.get('value', ''))
-            combined = f"{values.get('key', '')}{value_str}{values.get('version', 1)}"
-            values['checksum'] = hashlib.sha256(combined.encode()).hexdigest()
-        return values
+            value_str = str(self.value or '')
+            combined = f"{self.key or ''}{value_str}{self.version or 1}"
+            self.checksum = hashlib.sha256(combined.encode()).hexdigest()
+        return self
     
     def deserialize_value(self) -> Any:
         """Deserialize the value if it's a complex type."""

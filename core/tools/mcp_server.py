@@ -8,6 +8,8 @@ import asyncio
 # Try to import MCP components
 try:
     from mcp.server.fastmcp import FastMCP
+    # Import Pydantic AI Agent for integration with MCP server
+    # Reference: https://ai.pydantic.dev/agents/
     from pydantic_ai import Agent
     MCP_SERVER_AVAILABLE = True
 except ImportError:

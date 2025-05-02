@@ -1,0 +1,112 @@
+{
+  "project_links": [
+    {
+      "name": "Pydantic - Documentation",
+      "url": "https://ai.pydantic.dev/"
+    },
+    {
+      "name": "Pydantic - GitHub Repository",
+      "url": "https://github.com/pydantic/pydantic-ai"
+    },
+    {
+      "name": "PyMC - API Reference",
+      "url": "https://www.pymc.io/projects/docs/en/stable/api.html"
+    },
+    {
+      "name": "PyMC - API Directory",
+      "url": "https://www.pymc.io/projects/docs/en/stable/api/"
+    },
+    {
+      "name": "PyMC - Media Mix Modeling Blog",
+      "url": "https://www.pymc-labs.com/blog-posts/bayesian-media-mix-modeling-for-marketing-optimization/"
+    },
+    {
+      "name": "PyMC - Glossary",
+      "url": "https://www.pymc.io/projects/docs/en/stable/glossary.html"
+    },
+    {
+      "name": "FastAPI - First Steps",
+      "url": "https://fastapi.tiangolo.com/tutorial/first-steps"
+    },
+    {
+      "name": "FastAPI - Tutorial",
+      "url": "https://fastapi.tiangolo.com/tutorial/"
+    },
+    {
+      "name": "FastAPI - Advanced Path Operations",
+      "url": "https://fastapi.tiangolo.com/advanced/path-operation-advanced-configuration"
+    },
+    {
+      "name": "FastAPI - Advanced Topics",
+      "url": "https://fastapi.tiangolo.com/advanced/"
+    },
+    {
+      "name": "FastAPI - Deployment Versions",
+      "url": "https://fastapi.tiangolo.com/deployment/versions"
+    },
+    {
+      "name": "FastAPI - Deployment Guide",
+      "url": "https://fastapi.tiangolo.com/deployment/"
+    },
+    {
+      "name": "FastAPI - How-to General",
+      "url": "https://fastapi.tiangolo.com/how-to/general"
+    },
+    {
+      "name": "FastAPI - How-to Guides",
+      "url": "https://fastapi.tiangolo.com/how-to/"
+    },
+    {
+      "name": "FastAPI - API Reference",
+      "url": "https://fastapi.tiangolo.com/reference/fastapi"
+    },
+    {
+      "name": "FastAPI - Reference Docs",
+      "url": "https://fastapi.tiangolo.com/reference/"
+    },
+    {
+      "name": "Docusaurus - Documentation",
+      "url": "https://docusaurus.io/docs"
+    },
+    {
+      "name": "Docusaurus - Easy Dates Example",
+      "url": "https://easy-dates.dev/"
+    },
+    {
+      "name": "Docusaurus - Easy Dates GitHub",
+      "url": "https://github.com/sandypockets/easy-dates/tree/main/docs"
+    },
+    {
+      "name": "Streamlit - Installation",
+      "url": "https://docs.streamlit.io/get-started/installation"
+    },
+    {
+      "name": "Streamlit - Getting Started",
+      "url": "https://docs.streamlit.io/get-started/"
+    },
+    {
+      "name": "Streamlit - Concepts",
+      "url": "https://docs.streamlit.io/develop/concepts"
+    },
+    {
+      "name": "Streamlit - Deployment",
+      "url": "https://docs.streamlit.io/deploy/"
+    },
+    {
+      "name": "Streamlit - Usage Guide",
+      "url": "https://docs.streamlit.io/knowledge-base/using-streamlit"
+    },
+    {
+      "name": "Streamlit - Knowledge Base",
+      "url": "https://docs.streamlit.io/knowledge-base/"
+    },
+    {
+      "name": "Streamlit - Pydantic Integration",
+      "url": "https://github.com/lukasmasuch/streamlit-pydantic"
+    },
+    {
+      "name": "Streamlit - Synthia Library",
+      "url": "https://github.com/dlopezyse/synthia"
+    }
+  ]
+}

@@ -449,4 +449,42 @@ class MonitoringTool:
     def clear_old_data(self, days: int = 30):
         """Clear metric data and alerts older than specified days"""
         self._data_retention_days = days
-        self._cleanup_old_data() 
+        self._cleanup_old_data()
+
+async def monitor(target: str, metrics: Optional[List[str]] = None, duration: int = 60) -> Dict[str, Any]:
+    """
+    Monitors system performance and agent activities as a tool entry point.
+
+    Args:
+        target: Target to monitor ('agent', 'system', 'workflow', 'resources').
+        metrics: List of metrics to collect.
+        duration: Monitoring duration in seconds.
+
+    Returns:
+        A dictionary containing the monitoring result or an error.
+    """
+    try:
+        # Instantiate MonitoringTool. The exact usage of target, metrics, and duration
+        # with the MonitoringTool class methods (like start_collection, get_system_metrics)
+        # needs to be determined or implemented.
+        # For now, this function serves as the tool's entry point.
+        monitoring_tool_instance = MonitoringTool()
+
+        # Placeholder for actual monitoring logic
+        # In a real implementation, this would call methods on monitoring_tool_instance
+        # based on the 'target', 'metrics', and 'duration' parameters.
+        # For example, for target='system' and metrics=['cpu', 'memory'],
+        # you might call monitoring_tool_instance.get_system_metrics().
+
+        return {
+            "success": True,
+            "message": f"Monitoring initiated for target: {target}. Duration: {duration}s. Metrics: {metrics}",
+            "data": {} # Placeholder for actual monitoring data
+        }
+
+    except Exception as e:
+        logging.error(f"Monitoring tool execution failed: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        } 

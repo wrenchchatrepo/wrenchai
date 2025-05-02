@@ -24,7 +24,7 @@ from .agent_llm_mapping import agent_llm_manager
 # Import specialized agent classes
 from .codifier_agent import CodifierAgent, Codifier
 from .ux_designer_agent import UXDesignerAgent, UXDesigner
-from .uat_agent import UATAgent, UAT
+from .uat_agent import UAT
 
 __all__ = [
     # Agent definitions
@@ -50,6 +50,5 @@ __all__ = [
     'Codifier',
     'UXDesignerAgent',
     'UXDesigner',
-    'UATAgent',
     'UAT'
 ]
