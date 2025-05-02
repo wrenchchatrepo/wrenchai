@@ -216,7 +216,7 @@ async def print_audit_results(results: Dict) -> None:
     if results['missing_required']:
         print("\nMissing Required Credentials:")
         for name in results['missing_required']:
-            print(f"❌ {name}: [Description Redacted]")
+            print(f"❌ [Credential Name Redacted]: [Description Redacted]")
     
     print("\nOptional Credentials:")
     for name, info in results['optional_credentials'].items():
