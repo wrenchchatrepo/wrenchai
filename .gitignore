@@ -86,3 +86,6 @@ tasks.json
 tasks/
 
 **/.claude/settings.local.json
+
+# Exclude generated code digest files
+code-digest-output/
