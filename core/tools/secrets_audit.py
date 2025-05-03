@@ -211,17 +211,17 @@ async def print_audit_results(results: Dict) -> None:
     print("Required Credentials:")
     for name, info in results['required_credentials'].items():
         status = "✅" if info['valid_format'] else "⚠️"
-        print(f"{status} {name}: {info['description']}")
+        print(f"{status} {name}: [Description Redacted]")
     
     if results['missing_required']:
         print("\nMissing Required Credentials:")
         for name in results['missing_required']:
-            print(f"❌ {name}: {REQUIRED_CREDENTIALS[name]['description']}")
+            print(f"❌ [Credential Name Redacted]: [Description Redacted]")
     
     print("\nOptional Credentials:")
     for name, info in results['optional_credentials'].items():
         status = "✅" if info['valid_format'] else "⚠️"
-        print(f"{status} {name}: {info['description']}")
+        print(f"{status} {name}: [Description Redacted]")
     
     if results['deprecated_credentials']:
         print("\nDeprecated Credentials (Should be removed):")
