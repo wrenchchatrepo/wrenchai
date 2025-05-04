@@ -1,21 +1,38 @@
-# Example Playbook
+# Example Playbook for WrenchAI CLI testing
 
-# This playbook demonstrates the standardized format for WrenchAI playbooks
+id: example
+title: Example Playbook
+description: A simple example playbook for testing the WrenchAI CLI
 
-name: example_playbook
-description: "An example playbook that demonstrates the standardized format"
-tools:
-  - web_search
-  - code_generation
-  - memory
 agents:
   - SuperAgent
   - CodeGeneratorAgent
   - InspectorAgent
+
 agent_llms:
-  SuperAgent: "claude-3.5-sonnet"
-  CodeGeneratorAgent: "claude-3.5-sonnet"
-  InspectorAgent: "claude-3.5-sonnet"
+  SuperAgent: claude-3.5-sonnet-20240229
+  CodeGeneratorAgent: claude-3.5-sonnet-20240229
+  InspectorAgent: claude-3.5-sonnet-20240229
+
+mcp_servers:
+  - context7
+  - python_exec
+
+parameters:
+  - name: project_name
+    type: string
+    description: Name of the project
+    required: true
+  - name: language
+    type: string
+    description: Programming language to use
+    required: true
+    default: python
+  - name: include_tests
+    type: boolean
+    description: Whether to include tests
+    required: false
+    default: true
 
 steps:
   - step_id: gather_requirements
@@ -27,30 +44,22 @@ steps:
       - web_search
       - memory
     next: generate_code
-
+    
   - step_id: generate_code
     type: standard
-    description: "Generate code based on requirements"
+    description: "Generate code for the project"
     agent: CodeGeneratorAgent
     operation: "generate_code"
     tools:
-      - code_generation
-    parameters:
-      language: "python"
-      framework: "fastapi"
-    next: review_code
+      - code_generator
+      - file_manager
+    next: inspect_code
     
-  - step_id: review_code
-    type: partner_feedback_loop
-    description: "Review and improve code quality"
-    agents:
-      creator: CodeGeneratorAgent
-      reviewer: InspectorAgent
-    operations:
-      - role: creator
-        name: "prepare_code_for_review"
-      - role: reviewer
-        name: "review_code"
-      - role: creator
-        name: "implement_feedback"
-    iterations: 2
+  - step_id: inspect_code
+    type: standard
+    description: "Inspect code for issues"
+    agent: InspectorAgent
+    operation: "inspect_code"
+    tools:
+      - code_analyzer
+    next: null

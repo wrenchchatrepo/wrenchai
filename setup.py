@@ -10,4 +10,9 @@ setup(
         "pytest>=8.3.5",
         "pytest-asyncio>=0.23.5",
     ],
+    entry_points={
+        "console_scripts": [
+            "wai=wrenchai.wai_cli:main",
+        ],
+    },
 ) 
