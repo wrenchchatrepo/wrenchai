@@ -204,7 +204,6 @@ class TestTool:
     async def _run_tests_internal(self, suite_name: Optional[str] = None) -> List[TestResult]:
         """Internal method to run tests for a specific suite or all suites"""
         results = []
-
         if suite_name and suite_name in self.test_suites:
             results.extend(await self._run_suite(self.test_suites[suite_name]))
         elif not suite_name:
@@ -216,9 +215,8 @@ class TestTool:
             suite_results = await asyncio.gather(*tasks)
             for suite_result in suite_results:
                 results.extend(suite_result)
-
         return results
-        
+
 async def run_tests(test_suite: Optional[str] = None, environment: Optional[Any] = None, parallel: bool = False) -> List[Dict[str, Any]]:
     """
     Runs tests for a specific suite or all suites as a tool entry point.
@@ -231,17 +229,26 @@ async def run_tests(test_suite: Optional[str] = None, environment: Optional[Any]
     Returns:
         A list of dictionaries representing the test results.
     """
-    # Instantiate TestTool. How test suites are provided to this instance
-    # is not fully clear from the current code, assuming default behavior.
-    # The 'environment' and 'parallel' parameters from tools.yaml are not
-    # directly used by _run_tests_internal and may require further
-    # integration into the TestTool class or this function if needed.
-    test_tool_instance = TestTool()
-    results = await test_tool_instance._run_tests_internal(suite_name=test_suite)
+    # Note: This function needs a proper TestTool instance setup or a way to load tests.
+    # The current implementation below is a placeholder based on the provided arguments.
+    logger.warning("run_tests needs proper TestTool instantiation/management and test loading.")
 
-    # Convert TestResult objects to dictionaries for tool response
-    return [r.dict() for r in results]
+    try:
+        test_tool_instance = TestTool()
+        # Load test suites into test_tool_instance if not done automatically
+        # test_tool_instance.load_suites() # Example placeholder
 
+        # The 'environment' and 'parallel' parameters might need to be passed differently
+        # or handled within the TestTool methods called by _run_tests_internal.
+        results = await test_tool_instance._run_tests_internal(suite_name=test_suite)
+
+        # Convert TestResult objects to dictionaries for tool response
+        return [r.dict(exclude_none=True) for r in results]
+
+    except Exception as e:
+        logging.error(f"Test execution failed: {str(e)}")
+        # Return a consistent error structure if possible
+        return [{"status": "error", "error_message": str(e)}]
     async def _run_suite(self, suite: TestSuite) -> List[TestResult]:
         """Run all tests in a suite"""
         results = []

@@ -1,13 +1,13 @@
-## Docusaurus Portfolio Playbook
+# Docusaurus Portfolio Playbook
 
-### Workflow Types:
-#### standard: Sequential step executed by a single agent
-#### work_in_parallel: Multiple operations executed concurrently
-#### self_feedback_loop: Agent iteratively improves its own work
-#### partner_feedback_loop: Two agents collaborating in a review cycle
-#### process: Structured sequence with conditional branching
-#### versus: Two agents working competitively on same task
-#### handoff: Specialized task delegation based on conditions
+# Workflow Types:
+# - standard: Sequential step executed by a single agent
+# - work_in_parallel: Multiple operations executed concurrently
+# - self_feedback_loop: Agent iteratively improves its own work
+# - partner_feedback_loop: Two agents collaborating in a review cycle
+# - process: Structured sequence with conditional branching
+# - versus: Two agents working competitively on same task
+# - handoff: Specialized task delegation based on conditions
 
 - step_id: metadata
   type: standard

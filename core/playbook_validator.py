@@ -273,12 +273,6 @@ def check_condition_expressions(playbook: Playbook) -> Tuple[bool, Optional[str]
     valid, error = check_condition_expressions(playbook)
     if not valid:
         return False, error
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> a78a8a8 (feat: complete Task #15 - enhance condition evaluation for workflow branching)
->>>>>>> update-mvp-implementation-plan
     return True, None
 
 def perform_full_validation(playbook_path: str) -> Tuple[bool, Optional[str], Optional[Playbook]]:

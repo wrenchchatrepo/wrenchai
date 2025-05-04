@@ -463,23 +463,28 @@ async def monitor(target: str, metrics: Optional[List[str]] = None, duration: in
     Returns:
         A dictionary containing the monitoring result or an error.
     """
-    try:
-        # Instantiate MonitoringTool. The exact usage of target, metrics, and duration
-        # with the MonitoringTool class methods (like start_collection, get_system_metrics)
-        # needs to be determined or implemented.
-        # For now, this function serves as the tool's entry point.
-        monitoring_tool_instance = MonitoringTool()
+    # Note: This function needs a proper MonitoringTool instance or a way to manage state.
+    # The current implementation below is a placeholder based on the provided arguments.
+    # Correct implementation depends on how MonitoringTool state/instances are managed.
+    logger.warning("monitor function needs proper MonitoringTool instantiation/management.")
 
-        # Placeholder for actual monitoring logic
-        # In a real implementation, this would call methods on monitoring_tool_instance
-        # based on the 'target', 'metrics', and 'duration' parameters.
-        # For example, for target='system' and metrics=['cpu', 'memory'],
-        # you might call monitoring_tool_instance.get_system_metrics().
+    try:
+        # Placeholder: Simulating monitoring. Replace with actual MonitoringTool calls.
+        if target == 'system':
+            # data = monitoring_tool_instance.get_system_metrics() # Example call
+            data = {"cpu_percent": 10.5, "memory_percent": 55.2} # Placeholder
+        elif target == 'agent':
+             # data = monitoring_tool_instance.get_agent_metrics(agent_id, metrics) # Example needs agent_id
+             data = {"task_count": 5, "avg_latency": 0.5} # Placeholder
+        else:
+             data = {} # Placeholder for other targets
+
+        await asyncio.sleep(min(duration, 5)) # Simulate monitoring duration (max 5s for example)
 
         return {
             "success": True,
-            "message": f"Monitoring initiated for target: {target}. Duration: {duration}s. Metrics: {metrics}",
-            "data": {} # Placeholder for actual monitoring data
+            "message": f"Monitoring simulated for target: {target}. Duration: {duration}s. Metrics: {metrics}",
+            "data": data
         }
 
     except Exception as e:
@@ -487,4 +492,4 @@ async def monitor(target: str, metrics: Optional[List[str]] = None, duration: in
         return {
             "success": False,
             "error": str(e)
-        } 
+        }

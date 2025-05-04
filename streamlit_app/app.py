@@ -56,7 +56,6 @@ class Config(BaseModel):
     cache: CacheConfig
     session: SessionConfig
     features: Dict[str, bool]
-
 def load_config(config_path: str = "config.yaml") -> Config:
     """
     Load configuration from YAML file.

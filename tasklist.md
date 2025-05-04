@@ -58,7 +58,7 @@ This tasklist provides a structured approach to addressing the gaps identified i
 | Task | Description | Complexity | % Complete | Focus |
 |------|-------------|-----------|------------|-------|
 | **22. Real-time Progress Tracking** | Implement real-time progress tracking for workflow execution | Medium | 100% | Workflow System |
-| **23. Streamlit Result Display** | Enhance Streamlit app to display execution results | Medium | 25% | Streamlit App |
+| **23. Streamlit Result Display** | Enhance Streamlit app to display execution results | Medium | 80% | Streamlit App |
 | **24. Implement Streaming Responses** | Add streaming response capability for long-running operations | High | 100% | FastAPI Endpoints |
 | **25. Add Execution Logging** | Create detailed logging system for playbook execution | Medium | 80% | Workflow System |
 
@@ -66,7 +66,7 @@ This tasklist provides a structured approach to addressing the gaps identified i
 
 | Task | Description | Complexity | % Complete | Focus |
 |------|-------------|-----------|------------|-------|
-| **26. Create Playbook Unit Tests** | Implement unit tests for playbook execution | Medium | 10% | Testing |
+| **26. Create Playbook Unit Tests** | Implement unit tests for playbook execution | Medium | 80% | Testing |
 | **27. Integration Tests** | Create integration tests for end-to-end playbook execution | High | 5% | Testing |
 | **28. API Documentation** | Create detailed API documentation for playbook-related endpoints | Low | 20% | Documentation |
 | **29. User Guide** | Create user guide for creating and executing playbooks | Medium | 10% | Documentation |

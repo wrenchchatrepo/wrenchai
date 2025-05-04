@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional, Union
 from .agent_definitions import Agent, get_agent, LLMProvider
 from .codifier_agent import CodifierAgent, Codifier
 from .ux_designer_agent import UXDesignerAgent, UXDesigner
-from .uat_agent import UAT
+from .uat_agent import UATAgent, UAT
 from .agent_llm_mapping import agent_llm_manager
 from .agent_state import agent_state_manager
 
@@ -29,7 +29,7 @@ class AgentFactory:
         tools: List[str],
         playbook_path: str,
         context: Optional[Dict[str, Any]] = None
-    ) -> Union[CodifierAgent, UXDesignerAgent, UAT, Any]:
+    ) -> Union[CodifierAgent, UXDesignerAgent, UATAgent, Any]:
         """
         Create a specialized agent instance based on the agent name.
 
@@ -76,7 +76,7 @@ class AgentFactory:
                 doc_standards=doc_standards,
                 templates=templates
             )
-        elif agent_role == "UAT":
+        elif agent_role == "UATAgent":
             acceptance_criteria_template = context.get("acceptance_criteria_template")
             stakeholders = context.get("stakeholders")
             return UAT(
