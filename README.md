@@ -22,6 +22,7 @@ This repository contains the code for Wrench AI, an open-source agentic AI frame
 - **Dynamic Tool Registry**: Plug-and-play tools with dependency resolution
 - **FastAPI Backend**: Performant API with websocket support
 - **Streamlit UI**: User-friendly interface for interacting with agents
+- **Command-Line Interface**: Discover and execute playbooks directly from the terminal
 - **Model Context Protocol**: Flexible context management across multiple backends
 - **Streaming Support**: Built-in streaming for real-time agent responses
 - **Type Safety**: Strong typing with generics for better code quality
@@ -71,7 +72,22 @@ The framework supports various agent interaction patterns:
 
     This will open the application in your web browser. The UI will connect to the backend API.
 
-5.  **Try Taskmaster AI Integration:**
+5.  **Install and Use the CLI:**
+
+    ```bash
+    # Install the CLI
+    ./install_wai_cli.sh
+    
+    # List available playbooks
+    wai list
+    
+    # Run a playbook
+    wai run <playbook_id>
+    ```
+    
+    See [CLI Usage Documentation](docs/cli_usage.md) for more details.
+
+6.  **Try Taskmaster AI Integration:**
 
     ```bash
     ./run_taskmaster.sh
@@ -89,6 +105,8 @@ wrenchai/
 ├── LICENSE             # Project license (MIT License)
 ├── README.md           # Project description and instructions
 ├── requirements.txt    # Python dependencies for the core framework
+├── wai_cli.py          # CLI for discovering and executing playbooks
+├── install_wai_cli.sh  # Installation script for the CLI
 ├── streamlit_app/      # Directory for the Streamlit UI
 │   ├── app.py          # Main Streamlit application file
 │   └── requirements.txt# Python dependencies for the Streamlit app
@@ -104,6 +122,10 @@ wrenchai/
 │   ├── bayesian_engine.py # PyMC-based Bayesian reasoning engine
 │   ├── config_loader.py  # Configuration loading and validation
 │   ├── tool_system.py    # Tool registry and management
+│   ├── pydantic_integration.py # Pydantic AI integration for CLI
+│   ├── mcp_server.py    # MCP server configuration for CLI
+│   ├── playbook_discovery.py # Playbook discovery for CLI
+│   ├── super_agent.py    # SuperAgent implementation for CLI
 │   ├── configs/        # YAML configuration files
 │   │   ├── agents.yaml   # Agent role definitions
 │   │   ├── tools.yaml    # Tool definitions with dependencies
@@ -141,6 +163,10 @@ wrenchai/
 *   **`core/bayesian_engine.py`**: Implements the PyMC-based Bayesian reasoning engine
 *   **`core/config_loader.py`**: Handles configuration loading and validation
 *   **`core/tool_system.py`**: Manages the tool registry and dependencies
+*   **`core/pydantic_integration.py`**: Handles integration with Pydantic AI for the CLI
+*   **`core/mcp_server.py`**: Manages MCP server configuration for the CLI
+*   **`core/playbook_discovery.py`**: Provides playbook discovery for the CLI
+*   **`core/super_agent.py`**: Implements SuperAgent for CLI playbook execution
 *   **`core/configs/`**: Stores YAML configuration files for agents, playbooks, and tools
 *   **`core/playbooks/`**: Contains example playbooks in YAML format
 *   **`core/tools/`**: Implements tools that agents can use (web search, MCP, Bayesian reasoning, etc.)
@@ -148,6 +174,8 @@ wrenchai/
 *   **`core/__init__.py`**: Package initialization file
 *   **`streamlit_app/`**: Contains the Streamlit user interface
 *   **`mcp_config.json`**: Configuration file for Model Context Protocol servers including Taskmaster AI
+*   **`wai_cli.py`**: Main entry point for the CLI
+*   **`install_wai_cli.sh`**: Installation script for the CLI
 *   **`run_taskmaster.sh`**: Script to start the Taskmaster AI MCP server
 *   **`start_taskmaster.py`**: Python helper for Taskmaster AI MCP server
 *   **`TASKMASTER_AI.md`**: Documentation for Taskmaster AI integration
@@ -209,12 +237,27 @@ wrenchai/
    - Authentication flow ✅
    - WebSocket integration ✅
 
-5. **Documentation**
+5. **CLI Implementation**
+   - CLI Entry Point Structure ✅
+   - Pydantic AI Integration ✅
+   - MCP Server Configuration ✅
+   - Playbook Discovery ✅
+   - Basic Commands (`list`, `select`, `describe`, `run`) ✅
+   - SuperAgent Integration ✅
+   - Parameter Overrides ✅
+   - Installation Script ✅
+   - MCP Server Lifecycle Management 🚧
+   - Enhanced Error Handling 🚧
+   - Advanced Progress Tracking 🚧
+   - Comprehensive Testing 🚧
+
+6. **Documentation**
    - Basic API documentation ✅
    - Code documentation ✅
    - Type hints ✅
    - OpenAPI schema ✅
    - Architecture documentation ✅
+   - CLI usage documentation ✅
 
 ### Post-MVP Implementation
 
@@ -283,6 +326,7 @@ wrenchai/
 For detailed implementation plans and timelines, see:
 - [MVP Implementation Plan](MVP_IMPLEMENTATION_PLAN.md)
 - [Post-MVP Implementation Plan](POST_MVP_IMPLEMENTATION_PLAN.md)
+- [CLI Development Plan](docs/cli_development_plan.md)
 
 ## Contributing
 
