@@ -14,6 +14,13 @@ from dotenv import load_dotenv
 from httpx import AsyncClient
 from pydantic import BaseModel
 
+# Import the Midnight theme and components
+from streamlit_app.components.midnight_theme import apply_midnight_theme, highlight_card, neon_metric, status_indicator
+from streamlit_app.components.streaming_output import create_streaming_output
+from streamlit_app.components.chat_file_upload import chat_file_uploader, display_file_message
+from streamlit_app.components.log_viewer import log_viewer
+from streamlit_app.components.progress_indicators import progress_bar
+
 # Load environment variables
 load_dotenv()
 
@@ -56,6 +63,7 @@ class Config(BaseModel):
     cache: CacheConfig
     session: SessionConfig
     features: Dict[str, bool]
+
 def load_config(config_path: str = "config.yaml") -> Config:
     """
     Load configuration from YAML file.
@@ -95,6 +103,8 @@ def initialize_session_state():
         st.session_state.chat_history = []
     if 'current_agent' not in st.session_state:
         st.session_state.current_agent = None
+    if 'task_progress' not in st.session_state:
+        st.session_state.task_progress = 0.0
 
 def setup_page_config():
     """Configure Streamlit page settings."""
@@ -106,23 +116,14 @@ def setup_page_config():
     )
 
 def apply_custom_css():
-    """Apply custom CSS styling."""
-    st.markdown("""
-        <style>
-        .stApp {
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-        .sidebar .sidebar-content {
-            background-color: var(--secondary-background-color);
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    """Apply custom CSS styling and Midnight UI theme."""
+    # Apply the Midnight UI theme
+    apply_midnight_theme()
 
 def sidebar_navigation():
     """Render sidebar navigation menu."""
     with st.sidebar:
-        st.title("🔧 WrenchAI")
+        st.title("ud83dudd27 WrenchAI")
         st.markdown("---")
         
         # Agent Selection
@@ -142,6 +143,12 @@ def sidebar_navigation():
                     key=f"feature_{feature}"
                 )
         
+        # Logs Section
+        st.markdown("---")
+        st.subheader("Logs")
+        if st.button("View Application Logs"):
+            st.session_state.show_logs = not st.session_state.get("show_logs", False)
+        
         # Session Info
         st.markdown("---")
         st.caption("Session Information")
@@ -149,25 +156,95 @@ def sidebar_navigation():
 
 def main_content():
     """Render main content area."""
-    st.title("WrenchAI Interface")
+    st.title("ud83dudd27 WrenchAI Interface")
     
-    # Chat Interface
+    # Welcome card using themed component
+    highlight_card(
+        "Welcome to WrenchAI", 
+        "An intelligent toolbox for streamlining your development workflow. Select an agent from the sidebar to get started.",
+        icon="u2728",
+        border_color="#7B42F6"
+    )
+    
+    # Show some metrics with neon styling
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        neon_metric("Active Agents", 3, delta=1)
+    with col2:
+        neon_metric("Tasks Completed", 42, delta=7)
+    with col3:
+        neon_metric("API Calls", 156, delta=-12, delta_color="inverse")
+    
+    # Status indicators
+    st.subheader("System Status")
+    col1, col2 = st.columns(2)
+    with col1:
+        status_indicator("success", "API Connected")
+    with col2:
+        status_indicator("info", "Models Loaded")
+    
+    # Progress Tracking
+    st.subheader("Current Task Progress")
+    progress_bar(st.session_state.task_progress, "Processing task...")
+    
+    # Show logs if requested
+    if st.session_state.get("show_logs", False):
+        st.subheader("Application Logs")
+        log_files = {
+            "Streamlit": "wrenchai/streamlit.log",
+            "WrenchAI": "wrenchai/wrenchai-ui.log",
+            "FastAPI": "wrenchai/fastapi.log"
+        }
+        log_viewer("wrenchai/streamlit.log")
+    
+    # Chat Interface with Streaming Output
+    st.markdown("---")
     st.subheader("Chat with Agent")
+    
+    # Output display area for streaming responses
+    st.markdown("### Agent Output")
+    update_output = create_streaming_output(height=200, key="agent_output")
+    
+    # File upload for chat
+    uploaded_files = chat_file_uploader(allowed_types=["txt", "py", "js", "html", "css", "json", "yaml", "yml", "md", "jpg", "png", "pdf"])
+    
+    # Input area
     user_input = st.text_area("Enter your message:", key="user_input")
     
     if st.button("Send"):
-        if user_input:
+        if user_input or uploaded_files:
             # Add user message to chat history
-            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            st.session_state.chat_history.append({"role": "user", "content": user_input, "files": uploaded_files})
+            
+            # Show "thinking" status
+            update_output("Processing your request...")
             
             # TODO: Implement agent communication
-            # response = await communicate_with_agent(user_input)
-            # st.session_state.chat_history.append({"role": "assistant", "content": response})
+            # Simulated response for demonstration
+            import time
+            for i in range(5):
+                time.sleep(0.5)
+                update_output(f"Step {i+1}: Analyzing input...")
+                st.session_state.task_progress = (i + 1) / 5
+            
+            # Add simulated response to chat history
+            response = "I've analyzed your input and prepared a response. Let me know if you need any clarification!"
+            st.session_state.chat_history.append({"role": "assistant", "content": response})
+            update_output(response, append=True)
+            
+            # Reset progress
+            st.session_state.task_progress = 0.0
     
     # Display chat history
+    st.markdown("### Chat History")
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.write(message["content"])
+            
+            # Display files if present
+            if message.get("files"):
+                for file in message.get("files", []):
+                    display_file_message(file)
 
 def main():
     """Main application entry point."""

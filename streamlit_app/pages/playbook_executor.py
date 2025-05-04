@@ -6,12 +6,18 @@ import httpx
 import asyncio
 import json
 import streamlit as st
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from pathlib import Path
 
 from streamlit_app.components.task_monitor import render_task_monitor
 from streamlit_app.components.playbook_results import render_playbook_results
+from streamlit_app.components.midnight_theme import apply_midnight_theme
+from streamlit_app.components.ui_components import code_block
+from streamlit_app.components.progress_indicators import progress_bar
+
+# Apply the midnight theme
+apply_midnight_theme()
 
 class DocusaurusPlaybookExecutor:
     """Executes Docusaurus portfolio playbook via FastAPI."""
@@ -121,16 +127,97 @@ class DocusaurusPlaybookExecutor:
         except Exception as e:
             st.error(f"Unexpected error when fetching results: {str(e)}")
             return None
+
+
+def get_playbooks_from_directory(directory_path: str) -> List[Dict[str, Any]]:
+    """
+    Get all playbook files from a directory with their metadata.
+    
+    Args:
+        directory_path: The path to the directory containing playbook files
+        
+    Returns:
+        A list of dictionaries containing playbook information
+    """
+    playbooks = []
+    
+    try:
+        # Ensure the directory exists
+        if not os.path.exists(directory_path):
+            st.warning(f"Directory not found: {directory_path}")
+            return playbooks
+        
+        # Iterate through files in the directory
+        for filename in os.listdir(directory_path):
+            file_path = os.path.join(directory_path, filename)
             
+            # Check if it's a YAML file
+            if os.path.isfile(file_path) and (filename.endswith(".yaml") or filename.endswith(".yml")):
+                try:
+                    # Read YAML content
+                    with open(file_path, 'r') as f:
+                        content = yaml.safe_load(f)
+                    
+                    # Extract basic metadata
+                    playbook_info = {
+                        "filename": filename,
+                        "path": file_path,
+                        "name": content.get("name", filename),
+                        "description": content.get("description", "No description available"),
+                        "content": content
+                    }
+                    
+                    playbooks.append(playbook_info)
+                except Exception as e:
+                    st.warning(f"Error reading {filename}: {str(e)}")
+    except Exception as e:
+        st.error(f"Error accessing playbooks directory: {str(e)}")
+    
+    return playbooks
+
+
+def display_playbook_content(playbook: Dict[str, Any]):
+    """
+    Display the content of a playbook.
+    
+    Args:
+        playbook: Dictionary containing playbook information
+    """
+    # Display basic metadata
+    st.subheader(playbook["name"])
+    st.write(playbook["description"])
+    
+    # Display file info
+    st.caption(f"File: {playbook['filename']}")
+    
+    # Display YAML content
+    with st.expander("View Playbook Content", expanded=True):
+        yaml_content = yaml.dump(playbook["content"], sort_keys=False, default_flow_style=False)
+        code_block(yaml_content, language="yaml")
+    
+    # Display additional metadata if available
+    if "agents" in playbook["content"]:
+        st.write("**Agents:**")
+        for agent in playbook["content"]["agents"]:
+            agent_type = agent.get("type", "Unknown")
+            st.markdown(f"- {agent_type}")
+    
+    if "steps" in playbook["content"]:
+        st.write("**Steps:**")
+        for i, step in enumerate(playbook["content"]["steps"]):
+            step_name = step.get("name", f"Step {i+1}")
+            step_action = step.get("action", "Unknown action")
+            st.markdown(f"- {step_name} ({step_action})")
+
+
 def main():
     """
-    Runs the Streamlit user interface for uploading and executing a Docusaurus playbook.
+    Runs the Streamlit user interface for selecting and executing a Docusaurus playbook.
     
-    Provides configuration for the FastAPI backend URL, file upload for playbook YAML files,
-    and controls to trigger playbook execution. Displays progress, results, and example
-    playbook format for user guidance.
+    Provides configuration for the FastAPI backend URL, playbook selection from a directory,
+    and controls to trigger playbook execution. Displays progress, results, and playbook details.
     """
-    st.title("Docusaurus Portfolio Playbook Executor")
+    st.title("ud83dudcc2 Docusaurus Portfolio Playbook Executor")
     
     # Sidebar configuration
     st.sidebar.header("Configuration")
@@ -140,94 +227,132 @@ def main():
         help="URL of the FastAPI backend"
     )
     
-    # Main content
-    st.write("Execute your Docusaurus portfolio playbook")
-    
-    # File uploader for playbook
-    playbook_file = st.file_uploader(
-        "Upload Playbook YAML",
-        type=["yaml", "yml"],
-        help="Upload your Docusaurus portfolio playbook YAML file"
+    playbooks_directory = st.sidebar.text_input(
+        "Playbooks Directory",
+        value="/Users/dionedge/dev/wrenchai/core/playbooks",
+        help="Path to the directory containing playbook files"
     )
     
-    if playbook_file:
-        # Save uploaded file temporarily
-        temp_path = Path("temp_playbook.yaml")
-        temp_path.write_bytes(playbook_file.getvalue())
+    # Load playbooks from directory
+    playbooks = get_playbooks_from_directory(playbooks_directory)
+    
+    # Main content
+    if not playbooks:
+        st.warning("No playbooks found in the specified directory.")
         
-        # Execute button
-        if st.button("Execute Playbook"):
-            executor = DocusaurusPlaybookExecutor(api_url)
+        # File uploader as fallback
+        st.write("Upload a playbook file instead:")
+        playbook_file = st.file_uploader(
+            "Upload Playbook YAML",
+            type=["yaml", "yml"],
+            help="Upload your Docusaurus portfolio playbook YAML file"
+        )
+        
+        if playbook_file:
+            # Save uploaded file temporarily
+            temp_path = Path("temp_playbook.yaml")
+            temp_path.write_bytes(playbook_file.getvalue())
             
-            # Create progress bar
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Execute playbook
-            with st.spinner("Executing playbook..."):
-                result = asyncio.run(executor.execute_playbook(str(temp_path)))
+            selected_playbook_path = str(temp_path)
+            try:
+                # Display content of uploaded playbook
+                with open(selected_playbook_path, 'r') as f:
+                    content = yaml.safe_load(f)
                 
-                if result.get("success"):
-                    playbook_id = result.get("playbook_id")
-                    st.success(f"Playbook execution started! ID: {playbook_id}")
-                    
-                    # Create tabs for different views
-                    result_tab, progress_tab, raw_tab = st.tabs(["Results", "Live Progress", "Raw Response"])
-                    
-                    with raw_tab:
-                        st.json(result)
-                        
-                    with progress_tab:
-                        # Start real-time progress tracking
-                        render_task_monitor(task_id=playbook_id)
-                        
-                    with result_tab:
-                        # Check if we have execution results
-                        if st.session_state.get("execution_results"):
-                            render_playbook_results(st.session_state.execution_results)
-                        else:
-                            st.info("Results will appear here once execution is complete")
-                            # Add a refresh button
-                            if st.button("Refresh Results"):
-                                # Fetch latest results from API
-                                st.info("Refreshing results...")
-                                executor = DocusaurusPlaybookExecutor(api_url)
-                                results = asyncio.run(executor.get_execution_results(playbook_id))
-                                if results:
-                                    # Store results in session state
-                                    st.session_state.execution_results = results
-                                    # Force rerun to update the UI
-                                    st.experimental_rerun()
-                else:
-                    st.error("Failed to execute playbook")
+                playbook_info = {
+                    "filename": playbook_file.name,
+                    "path": selected_playbook_path,
+                    "name": content.get("name", playbook_file.name),
+                    "description": content.get("description", "No description available"),
+                    "content": content
+                }
+                
+                display_playbook_content(playbook_info)
+            except Exception as e:
+                st.error(f"Error reading playbook: {str(e)}")
+    else:
+        # Display playbook selection
+        st.write(f"Found {len(playbooks)} playbooks in the directory.")
+        
+        # Create a selection box with playbook names
+        playbook_names = [p["name"] for p in playbooks]
+        selected_name = st.selectbox("Select a playbook to execute", playbook_names)
+        
+        # Find the selected playbook
+        selected_playbook = next((p for p in playbooks if p["name"] == selected_name), None)
+        selected_playbook_path = selected_playbook["path"]
+        
+        # Display playbook details
+        if selected_playbook:
+            display_playbook_content(selected_playbook)
+    
+    # Execution section
+    st.markdown("---")
+    st.subheader("Execute Playbook")
+    
+    if st.button("Execute Selected Playbook", key="execute_button", type="primary"):
+        executor = DocusaurusPlaybookExecutor(api_url)
+        
+        # Show progress
+        st.markdown("### Execution Progress")
+        execution_progress = st.empty()
+        with execution_progress.container():
+            progress_value = 0.1  # Start with 10% to show something is happening
+            progress_bar(progress_value, "Initializing execution...")
+        
+        # Execute playbook
+        with st.spinner("Executing playbook..."):
+            result = asyncio.run(executor.execute_playbook(selected_playbook_path))
+            
+            if result.get("success"):
+                playbook_id = result.get("playbook_id")
+                st.success(f"Playbook execution started! ID: {playbook_id}")
+                
+                # Update progress
+                with execution_progress.container():
+                    progress_bar(0.3, "Playbook submitted successfully")
+                
+                # Create tabs for different views
+                result_tab, progress_tab, raw_tab = st.tabs(["Results", "Live Progress", "Raw Response"])
+                
+                with raw_tab:
                     st.json(result)
                     
-        # Cleanup temp file
-        if temp_path.exists():
-            temp_path.unlink()
-            
-    # Display example playbook format
-    with st.expander("Show Example Playbook Format"):
-        st.code("""
-name: Docusaurus Portfolio
-description: Generate a Docusaurus portfolio site
-agents:
-  - type: ux_designer
-    config:
-      style: modern
-  - type: code_generator
-    config:
-      framework: docusaurus
-steps:
-  - name: Initialize Project
-    action: init_docusaurus
-    params:
-      template: portfolio
-  - name: Generate Content
-    action: generate_content
-    params:
-      sections: [about, projects, blog]
-""", language="yaml")
+                with progress_tab:
+                    # Start real-time progress tracking
+                    with execution_progress.container():
+                        progress_bar(0.5, "Monitoring execution progress...")
+                    render_task_monitor(task_id=playbook_id)
+                    
+                with result_tab:
+                    # Check if we have execution results
+                    if st.session_state.get("execution_results"):
+                        with execution_progress.container():
+                            progress_bar(1.0, "Execution complete")
+                        render_playbook_results(st.session_state.execution_results)
+                    else:
+                        st.info("Results will appear here once execution is complete")
+                        # Add a refresh button
+                        if st.button("Refresh Results"):
+                            # Fetch latest results from API
+                            st.info("Refreshing results...")
+                            executor = DocusaurusPlaybookExecutor(api_url)
+                            results = asyncio.run(executor.get_execution_results(playbook_id))
+                            if results:
+                                # Store results in session state
+                                st.session_state.execution_results = results
+                                # Update progress
+                                with execution_progress.container():
+                                    progress_bar(1.0, "Results updated")
+                                # Force rerun to update the UI
+                                st.rerun()
+            else:
+                st.error("Failed to execute playbook")
+                st.json(result)
+                # Update progress
+                with execution_progress.container():
+                    progress_bar(1.0, "Execution failed", color="#FF453A")
+
 
 if __name__ == "__main__":
-    main() 
+    main()
