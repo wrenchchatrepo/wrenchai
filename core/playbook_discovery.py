@@ -20,7 +20,7 @@ class PlaybookManager:
             playbook_dirs: Optional list of directories to search for playbooks
         """
         self.playbook_dirs = playbook_dirs or [
-            os.path.join(os.path.dirname(__file__), "..", "core", "configs", "playbooks"),
+            os.path.join(os.path.dirname(__file__), "..", "core", "playbooks"),
             os.path.expanduser("~/.wrenchai/playbooks")
         ]
         self.playbooks = {}
@@ -63,10 +63,36 @@ class PlaybookManager:
         # Add source path to the playbook
         playbook["source_path"] = path
         
-        # Generate ID from filename if not specified
+        # Extract ID from the first step's metadata if it exists
+        if isinstance(playbook, list) and len(playbook) > 0:
+            for step in playbook:
+                if isinstance(step, dict) and "step_id" in step and step["step_id"] == "metadata":
+                    if "metadata" in step and "name" in step["metadata"]:
+                        playbook = {
+                            "id": step["metadata"]["name"],
+                            "title": step["metadata"].get("description", "Unnamed Playbook"),
+                            "description": step["metadata"].get("description", "No description"),
+                            "steps": playbook,
+                            "source_path": path
+                        }
+                        return playbook
+        
+        # If we couldn't extract metadata, generate ID from filename
         if "id" not in playbook:
             basename = os.path.basename(path)
-            playbook["id"] = os.path.splitext(basename)[0]
+            playbook_id = os.path.splitext(basename)[0]
+            
+            # If playbook is a list (steps), create a wrapper structure
+            if isinstance(playbook, list):
+                playbook = {
+                    "id": playbook_id,
+                    "title": playbook_id.replace('_', ' ').title(),
+                    "description": "No description",
+                    "steps": playbook,
+                    "source_path": path
+                }
+            else:
+                playbook["id"] = playbook_id
             
         return playbook
     
