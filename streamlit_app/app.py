@@ -1,153 +1,60 @@
-"""
-WrenchAI Streamlit Application
-
-This module implements the main Streamlit interface for the WrenchAI framework.
-It provides a user interface for interacting with the AI agents and managing workflows.
-"""
-
-import os
-import asyncio
-from typing import Any, Dict, Optional, List, Tuple
-from datetime import datetime
+"""WrenchAI Streamlit Application main entry point."""
 
 import streamlit as st
-from httpx import AsyncClient
+from typing import Dict, List, Any, Optional
 
-# Import the initializer, which handles all setup tasks
-from streamlit_app.utils.initializer import initialize_app, display_messages
-
-# Import session state utilities
-from streamlit_app.utils.session_state import StateKey, get_state, set_state, PlaybookExecutionState
+# Import utility functions 
+from wrenchai.streamlit_app.utils.session_state import (
+    StateKey, 
+    get_state, 
+    set_state, 
+    initialize_session_state, 
+    display_messages
+)
+from wrenchai.streamlit_app.utils.logger import get_logger
+from wrenchai.streamlit_app.utils.config import load_config, initialize_app
+from wrenchai.streamlit_app.utils.ui_components import status_indicator
+from wrenchai.streamlit_app.agent_communication import ensure_api_connection
 
 # Import components
-from streamlit_app.components.midnight_theme import (
-    apply_midnight_theme, highlight_card, neon_metric, status_indicator, themed_container
-)
-from streamlit_app.components.ui_components import (
-    code_block, info_card, warning_card, error_card, success_card,
-    searchable_selectbox, toggle_button, progress_tracker
-)
-from streamlit_app.components.streaming_output import create_streaming_output
-from streamlit_app.components.chat_file_upload import chat_file_uploader, display_file_message
-from streamlit_app.components.log_viewer import log_viewer
-from streamlit_app.components.progress_indicators import progress_bar
-from streamlit_app.components.playbook_components import playbook_card, playbook_detail_view
-
-# Import services
-from streamlit_app.services import (
-    create_api_client, create_websocket_client,
-    PlaybookService, ExecutionService
-)
-from streamlit_app.services.websocket_subscriptions import (
-    subscribe_to_execution, setup_websocket_handler
+from wrenchai.streamlit_app.components import (
+    hero_section,
+    quick_action_card,
+    section_container,
+    feature_card
 )
 
-# Import models
-from streamlit_app.models.playbook_config import (
-    PlaybookConfig, PlaybookType, PlaybookCategory, 
-    ExecutionState, DocusaurusConfig
-)
-
-# Import logger
-from streamlit_app.utils.logger import get_logger
-
-# Set up module logger
+# Setup logging
 logger = get_logger(__name__)
 
+# Configure page
+st.set_page_config(
+    page_title="WrenchAI",
+    page_icon="ud83dudd27",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Define the main navigation structure using the new Streamlit multipage app pattern
+pg = st.navigation([
+    st.Page("wrenchai/streamlit_app/app.py", title="Home", icon="ud83cudfe0", default=True),
+    st.Page("wrenchai/streamlit_app/pages/playbooks.py", title="Playbooks", icon="ud83euddf0"), 
+    st.Page("wrenchai/streamlit_app/pages/portfolio_generator.py", title="Portfolio Generator", icon="ud83dudc68u200dud83dudcbb"),
+    st.Page("wrenchai/streamlit_app/pages/docusaurus_portfolio.py", title="Docusaurus Portfolio", icon="ud83dudcd6"),
+    st.Page("wrenchai/streamlit_app/pages/documentation.py", title="Documentation", icon="ud83dudcda"),
+    st.Page("wrenchai/streamlit_app/pages/settings.py", title="Settings", icon="u2699ufe0f")
+])
 
 def sidebar_navigation():
-    """Render sidebar navigation menu."""
+    """Render sidebar navigation menu with additional context-dependent options."""
     with st.sidebar:
-        st.title("🔧 WrenchAI")
+        st.title("ud83dudd27 WrenchAI")
         st.markdown("---")
         
         # Get configuration from session state
         config = get_state(StateKey.CONFIG)
         
-        # Main navigation sections
-        st.subheader("Navigation")
-        nav_options = ["Home", "Playbooks", "Portfolio Generator", "Documentation", "Settings"]
-        
-        selected_nav = st.radio("Go To", nav_options, index=0, key="nav_radio")
-        if selected_nav != get_state(StateKey.CURRENT_PAGE, "Home"):
-            # Update current page
-            set_state(StateKey.CURRENT_PAGE, selected_nav)
-            # Update breadcrumbs
-            set_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}] if selected_nav == "Home" else 
-                                          [{"name": "Home", "path": "/"}, {"name": selected_nav, "path": f"/{selected_nav.lower()}"}])
-            # Schedule a rerun to update content
-            st.rerun()
-        
-        st.markdown("---")
-        
-        # Conditional section based on current page
-        current_page = get_state(StateKey.CURRENT_PAGE, "Home")
-        
-        if current_page == "Playbooks":
-            # Playbook categories
-            st.subheader("Playbook Categories")
-            categories = list(config.playbooks.categories.keys())
-            category_names = list(config.playbooks.categories.values())
-            selected_category = st.selectbox(
-                "Filter by Category",
-                categories,
-                format_func=lambda x: config.playbooks.categories.get(x, x),
-                index=0,
-                key="playbook_category"
-            )
-            # Store selected category in session state
-            set_state(StateKey.PLAYBOOK_FILTER, {"category": selected_category, "search": get_state([StateKey.PLAYBOOK_FILTER, "search"], "")})
-            
-            # Recent playbooks section if any
-            execution_history = get_state(StateKey.EXECUTION_HISTORY, [])
-            if execution_history:
-                st.subheader("Recent Playbooks")
-                # Show last 3 unique playbooks from execution history
-                unique_playbooks = []
-                for execution in reversed(execution_history):
-                    playbook_id = execution.get("playbook_id")
-                    if playbook_id and playbook_id not in [p.get("id") for p in unique_playbooks] and len(unique_playbooks) < 3:
-                        # Find playbook details from playbook list
-                        playbook_list = get_state(StateKey.PLAYBOOK_LIST, [])
-                        for playbook in playbook_list:
-                            if playbook.get("id") == playbook_id:
-                                unique_playbooks.append(playbook)
-                                break
-                
-                # Show recent playbooks as buttons
-                for playbook in unique_playbooks:
-                    if st.button(f"📋 {playbook.get('name', 'Unknown Playbook')}", key=f"recent_{playbook.get('id')}"):
-                        set_state(StateKey.SELECTED_PLAYBOOK, playbook.get("id"))
-                        st.rerun()
-        
-        elif current_page == "Portfolio Generator":
-            # Portfolio generator options
-            st.subheader("Portfolio Options")
-            themes = list(config.docusaurus.themes.keys())
-            selected_theme = st.selectbox(
-                "Theme",
-                themes,
-                format_func=lambda x: config.docusaurus.themes.get(x, x),
-                index=themes.index(config.docusaurus.default_theme) if config.docusaurus.default_theme in themes else 0,
-                key="portfolio_theme"
-            )
-            # Store selected theme in session state
-            set_state(StateKey.PORTFOLIO_THEME, selected_theme)
-            
-            # Portfolio sections selection
-            default_sections = config.docusaurus.default_sections
-            available_sections = ["introduction", "skills", "projects", "experience", "education", "contact", "blog"]
-            selected_sections = st.multiselect(
-                "Sections",
-                available_sections,
-                default=default_sections,
-                key="portfolio_sections"
-            )
-            # Store selected sections in session state
-            set_state(StateKey.PORTFOLIO_SECTIONS, selected_sections)
-        
         # Feature Toggles for all pages
-        st.markdown("---")
         st.subheader("Features")
         for feature, enabled in config.features.items():
             if enabled:
@@ -180,254 +87,138 @@ def sidebar_navigation():
         else:
             status_indicator("error", "API Disconnected")
 
-
 def render_home_page():
     """Render the home page content."""
-    st.title("ud83dudd27 WrenchAI Interface")
-    
-    # Welcome card using themed component
-    highlight_card(
-        "Welcome to WrenchAI", 
-        "An intelligent toolbox for streamlining your development workflow. Select an option from the sidebar to get started.",
-        icon="u2728",
-        border_color="#7B42F6"
+    # Hero section with title and subtitle
+    hero_section(
+        title="Welcome to WrenchAI", 
+        subtitle="Your AI-powered development assistant", 
+        image_path="https://via.placeholder.com/1200x600?text=WrenchAI+Hero+Image"
     )
     
-    # Quick action buttons
-    st.subheader("ud83dudcc3 Quick Actions")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("ud83dudcd6 Browse Playbooks", use_container_width=True):
-            set_state(StateKey.CURRENT_PAGE, "Playbooks")
-            set_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}, {"name": "Playbooks", "path": "/playbooks"}])
-            st.rerun()
-    with col2:
-        if st.button("ud83dudcbb Create Portfolio", use_container_width=True):
-            set_state(StateKey.CURRENT_PAGE, "Portfolio Generator")
-            set_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}, {"name": "Portfolio Generator", "path": "/portfolio"}])
-            st.rerun()
-    with col3:
-        if st.button("u2699ufe0f Settings", use_container_width=True):
-            set_state(StateKey.CURRENT_PAGE, "Settings")
-            set_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}, {"name": "Settings", "path": "/settings"}])
-            st.rerun()
+    # Quick action cards
+    st.subheader("Quick Actions")
+    cols = st.columns(3)
     
-    # Show some metrics with neon styling
-    st.subheader("ud83dudcca System Overview")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        neon_metric("Available Playbooks", get_state("playbook_count", 12), delta=2)
-    with col2:
-        neon_metric("Completed Executions", get_state("execution_count", 42), delta=7)
-    with col3:
-        neon_metric("API Calls Today", get_state("api_call_count", 156), delta=-12, delta_color="inverse")
+    with cols[0]:
+        quick_action_card(
+            title="Browse Playbooks", 
+            description="Explore automation playbooks for common development tasks", 
+            icon="ud83euddf0", 
+            button_text="Go to Playbooks", 
+            on_click=lambda: st.switch_page("wrenchai/streamlit_app/pages/playbooks.py")
+        )
     
-    # Status indicators
-    st.subheader("ud83dudcc8 System Status")
-    col1, col2 = st.columns(2)
-    with col1:
-        api_state = get_state(StateKey.API_STATUS)
-        if isinstance(api_state, dict):
-            connected = api_state.get("connected", False)
-        else:
-            connected = getattr(api_state, "connected", False)
+    with cols[1]:
+        quick_action_card(
+            title="Create Portfolio", 
+            description="Generate a professional portfolio website with Docusaurus", 
+            icon="ud83dudc68u200dud83dudcbb", 
+            button_text="Start Now", 
+            on_click=lambda: st.switch_page("wrenchai/streamlit_app/pages/docusaurus_portfolio.py")
+        )
+    
+    with cols[2]:
+        quick_action_card(
+            title="Read Documentation", 
+            description="Learn how to use WrenchAI and its features", 
+            icon="ud83dudcda", 
+            button_text="View Docs", 
+            on_click=lambda: st.switch_page("wrenchai/streamlit_app/pages/documentation.py")
+        )
+    
+    # Feature overview
+    with section_container("What can WrenchAI do?"):
+        st.write("WrenchAI is your AI-powered development assistant, helping you automate common tasks and create professional portfolio websites.")
+        
+        # Feature rows
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            feature_card(
+                title="Automation Playbooks", 
+                description="Execute pre-configured playbooks for common development tasks, from project setup to deployment.",
+                icon="ud83euddf0"
+            )
             
-        if connected:
-            status_indicator("success", "API Connected")
-        else:
-            status_indicator("error", "API Disconnected")
-    with col2:
-        ws_state = get_state(StateKey.WS_CONNECTION, {"connected": False})
-        if ws_state.get("connected", False):
-            status_indicator("success", "WebSocket Connected")
-        else:
-            status_indicator("warning", "WebSocket Disconnected")
+            feature_card(
+                title="Portfolio Generation", 
+                description="Create a professional portfolio website using Docusaurus with just a few clicks.",
+                icon="ud83dudc68u200dud83dudcbb"
+            )
+        
+        with col2:
+            feature_card(
+                title="API Integration", 
+                description="Connect to external services and APIs to extend functionality.",
+                icon="ud83dudd17"
+            )
+            
+            feature_card(
+                title="Customization", 
+                description="Tailor WrenchAI to your needs with a wide range of configuration options.",
+                icon="ud83dudcdd"
+            )
     
     # Recent activity
-    st.subheader("ud83dudcc5 Recent Activity")
-    execution_history = get_state(StateKey.EXECUTION_HISTORY, [])
-    if execution_history:
-        # Create a table with recent executions
-        data = []
-        for execution in execution_history[:5]:  # Show last 5
-            timestamp = execution.get("timestamp", "")
-            if isinstance(timestamp, str):
-                try:
-                    dt = datetime.fromisoformat(timestamp)
-                    timestamp = dt.strftime("%Y-%m-%d %H:%M")
-                except ValueError:
-                    pass
+    with section_container("Recent Activity"):
+        # Check if we have any execution history
+        execution_history = get_state(StateKey.EXECUTION_HISTORY, [])
+        
+        if execution_history:
+            # Display recent executions
+            st.subheader("Recent Playbook Executions")
             
-            data.append({
-                "Time": timestamp,
-                "Playbook": execution.get("playbook_id", "Unknown"),
-                "Status": execution.get("state", "unknown"),
-                "Success": "u2705" if execution.get("success", False) else "u274c" if execution.get("state") in ["completed", "failed", "canceled"] else "u23f3"
-            })
-        
-        # Display data as a DataFrame
-        if data:
-            import pandas as pd
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
-    else:
-        info_card("No recent activity", "Execute a playbook to see activity here.")
-
-
-def render_playbooks_page():
-    """Render the playbooks page content."""
-    st.title("ud83dudcd6 Playbooks")
-    
-    # To be implemented
-    st.info("Playbooks page will be implemented in Task 9: Develop Playbook Browser and Execution UI")
-
-
-def render_portfolio_generator_page():
-    """Render the portfolio generator page content."""
-    st.title("ud83dudcbc Portfolio Generator")
-    
-    # To be implemented
-    st.info("Portfolio Generator page will be implemented in Task 10: Implement Docusaurus Portfolio Playbook Specialized UI")
-
-
-def render_documentation_page():
-    """Render the documentation page content."""
-    st.title("ud83dudcd6 Documentation")
-    
-    # To be implemented
-    st.info("Documentation page is under construction")
-
-
-def render_settings_page():
-    """Render the settings page content."""
-    st.title("u2699ufe0f Settings")
-    
-    # To be implemented
-    st.info("Settings page is under construction")
-
-
-def render_breadcrumbs():
-    """Render breadcrumb navigation."""
-    breadcrumbs = get_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}])
-    
-    # Create columns for each breadcrumb plus spacers
-    cols = st.columns([1 if i % 2 == 0 else 0.2 for i in range(len(breadcrumbs) * 2 - 1)])
-    
-    # Fill breadcrumb columns
-    for i, breadcrumb in enumerate(breadcrumbs):
-        with cols[i * 2]:  # Every other column (0, 2, 4, ...)
-            # Make the last breadcrumb non-clickable
-            if i == len(breadcrumbs) - 1:
-                st.markdown(f"<span style='color: #00CCFF;'>{breadcrumb['name']}</span>", unsafe_allow_html=True)
-            else:
-                # Create a button for the breadcrumb
-                if st.button(f"{breadcrumb['name']}", key=f"breadcrumb_{i}"):
-                    set_state(StateKey.CURRENT_PAGE, breadcrumb['name'])
-                    # Update breadcrumbs to this level
-                    set_state(StateKey.BREADCRUMBS, breadcrumbs[:i+1])
-                    st.rerun()
-        
-        # Add separator between breadcrumbs
-        if i < len(breadcrumbs) - 1:
-            with cols[i * 2 + 1]:  # Separator columns (1, 3, 5, ...)
-                st.markdown("<span style='color: #7B42F6;'>/</span>", unsafe_allow_html=True)
-
+            # Create a dataframe for recent executions
+            recent_executions = []
+            
+            # Get playbook list for reference
+            playbook_list = get_state(StateKey.PLAYBOOK_LIST, [])
+            playbook_map = {playbook.get("id"): playbook for playbook in playbook_list}
+            
+            # Get the last 5 executions
+            for execution in reversed(execution_history[:5]):
+                playbook_id = execution.get("playbook_id")
+                playbook = playbook_map.get(playbook_id, {})
+                
+                recent_executions.append({
+                    "Playbook": playbook.get("name", "Unknown Playbook"),
+                    "Status": execution.get("status", "Unknown"),
+                    "Time": execution.get("timestamp", "Unknown"),
+                    "Duration": execution.get("duration", "N/A")
+                })
+            
+            # Display as a dataframe
+            st.dataframe(recent_executions, use_container_width=True)
+            
+            # Link to view all executions
+            st.markdown("[View all playbook executions](/)")
+        else:
+            st.info("No recent activity. Start by running a playbook or generating a portfolio!")
 
 def main_content():
-    """Render main content area based on current page."""
-    # Get current page from session state
-    current_page = get_state(StateKey.CURRENT_PAGE, "Home")
-    
-    # Render breadcrumb navigation
-    render_breadcrumbs()
-    
-    # Render content based on current page
-    if current_page == "Home":
-        render_home_page()
-    elif current_page == "Playbooks":
-        render_playbooks_page()
-    elif current_page == "Portfolio Generator":
-        render_portfolio_generator_page()
-    elif current_page == "Documentation":
-        render_documentation_page()
-    elif current_page == "Settings":
-        render_settings_page()
-    else:
-        # Unknown page, redirect to home
-        st.error(f"Unknown page: {current_page}")
-        if st.button("Go to Home"):
-            set_state(StateKey.CURRENT_PAGE, "Home")
-            set_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}])
-            st.rerun()
-    
-    # Show logs if requested
-    if get_state("show_logs", False) or st.session_state.get("show_logs", False):
-        st.subheader("Application Logs")
-        log_viewer("wrenchai/streamlit.log")
-    
-    # Chat Interface with Streaming Output
-    st.markdown("---")
-    st.subheader("Chat with Agent")
-    
-    # Output display area for streaming responses
-    st.markdown("### Agent Output")
-    update_output = create_streaming_output(height=200, key="agent_output")
-    
-    # File upload for chat
-    uploaded_files = chat_file_uploader(allowed_types=["txt", "py", "js", "html", "css", "json", "yaml", "yml", "md", "jpg", "png", "pdf"])
-    
-    # Input area
-    user_input = st.text_area("Enter your message:", key="user_input")
-    
-    if st.button("Send"):
-        if user_input or uploaded_files:
-            # Add user message to chat history
-            chat_history = get_state("chat_history", [])
-            chat_history.append({"role": "user", "content": user_input, "files": uploaded_files})
-            set_state("chat_history", chat_history)
-            
-            # Show "thinking" status
-            update_output("Processing your request...")
-            
-            # TODO: Implement agent communication
-            # Simulated response for demonstration
-            import time
-            for i in range(5):
-                time.sleep(0.5)
-                update_output(f"Step {i+1}: Analyzing input...")
-                set_state("task_progress", (i + 1) / 5)
-            
-            # Add simulated response to chat history
-            response = "I've analyzed your input and prepared a response. Let me know if you need any clarification!"
-            chat_history.append({"role": "assistant", "content": response})
-            set_state("chat_history", chat_history)
-            update_output(response, append=True)
-            
-            # Reset progress
-            set_state("task_progress", 0.0)
-    
-    # Display chat history
-    st.markdown("### Chat History")
-    chat_history = get_state("chat_history", [])
-    for message in chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-            
-            # Display files if present
-            if message.get("files"):
-                for file in message.get("files", []):
-                    display_file_message(file)
+    """Render the page content based on the current page selection."""
+    # Include additional page-specific content here if needed
+    # The main page rendering is handled by the st.navigation system
+    pass
 
-
-def initialize_client() -> AsyncClient:
+def initialize_client():
     """Initialize the API client."""
+    # Get API configuration from session state
     config = get_state(StateKey.CONFIG)
-    return AsyncClient(
-        base_url=config.api.base_url,
-        timeout=config.api.timeout,
-        verify=config.api.verify_ssl
-    )
-
+    api_config = config.api if hasattr(config, "api") else {}
+    
+    # Initialize API client (placeholder)
+    client = {
+        "api_url": api_config.get("url", "https://api.example.com"),
+        "version": api_config.get("version", "v1"),
+        "initialized": True
+    }
+    
+    # Ensure API connection
+    ensure_api_connection(client)
+    
+    return client
 
 def main():
     """Main application entry point."""
@@ -451,24 +242,20 @@ def main():
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
             
-        # Initialize current page if not present
-        if StateKey.CURRENT_PAGE.value not in st.session_state:
-            set_state(StateKey.CURRENT_PAGE, "Home")
+        # Render the home page content if on the main page
+        if st._is_running_with_streamlit and pg.current.title == "Home":
+            render_home_page()
             
-        # Initialize breadcrumbs if not present
-        if StateKey.BREADCRUMBS.value not in st.session_state:
-            set_state(StateKey.BREADCRUMBS, [{"name": "Home", "path": "/"}])
-        
-        # Render layout
+        # Render sidebar navigation with additional options
         sidebar_navigation()
-        main_content()
         
     except Exception as e:
         logger.exception("Application error")
         st.error(f"Application error: {str(e)}")
         st.stop()
 
-
+# Run the main function
 if __name__ == "__main__":
-    # Run the application
     main()
+    # Run the navigation system
+    pg.run()
