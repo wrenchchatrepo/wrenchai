@@ -30,6 +30,7 @@ docs/
 *.swp
 *.swo
 .devcontainer/
+.zed
 
 # OS-specific
 .DS_Store
@@ -37,9 +38,16 @@ Thumbs.db
 
 # Documentation/Temp
 docs/
+examples/
+migrations/
 repo_mapper/
 secrets-manager/
+*prd.txt
+prd.mp
+prd_*.md
 taskmaster/
+tasklist.md
+tasklist_*
 streamlit_app/Streamlit_UI.html
 .$*
 *.pdf
