@@ -1,0 +1,19 @@
+[theme]
+# Primary accent color for interactive elements
+primaryColor = "#00CCFF"
+
+# Background color for the main content area
+backgroundColor = "#121212"
+
+# Background color used for the sidebar and most interactive widgets
+secondaryBackgroundColor = "#1E1E1E"
+
+# Color used for almost all text
+textColor = "#F0F0F0"
+
+# Font family for all text in the app, except code blocks
+font = "OpenDyslexic"
+
+# Additional custom CSS for advanced styling
+[server]
+enableStaticServing = true
