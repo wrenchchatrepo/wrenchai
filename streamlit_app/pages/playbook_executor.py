@@ -6,21 +6,24 @@ import httpx
 import asyncio
 import json
 import streamlit as st
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from datetime import datetime
 from pathlib import Path
 
+from streamlit_app.components.midnight_theme import apply_midnight_theme
+from streamlit_app.components.ui_components import code_block, info_card, warning_card, error_card, success_card
+from streamlit_app.components.progress_indicators import progress_bar, task_progress
 from streamlit_app.components.task_monitor import render_task_monitor
 from streamlit_app.components.playbook_results import render_playbook_results
-from streamlit_app.components.midnight_theme import apply_midnight_theme
-from streamlit_app.components.ui_components import code_block
-from streamlit_app.components.progress_indicators import progress_bar
+from streamlit_app.components.playbook_schema_integration import (
+    PlaybookSchemaManager, playbook_schema_browser, playbook_schema_editor
+)
 
 # Apply the midnight theme
 apply_midnight_theme()
 
-class DocusaurusPlaybookExecutor:
-    """Executes Docusaurus portfolio playbook via FastAPI."""
+class PlaybookExecutor:
+    """Executes playbooks via FastAPI."""
     
     def __init__(self, api_url: str = "http://localhost:8000"):
         """
@@ -32,31 +35,35 @@ class DocusaurusPlaybookExecutor:
         self.api_url = api_url
         self.session = httpx.AsyncClient()
         
-    async def execute_playbook(self, playbook_path: str) -> Dict[str, Any]:
+    async def execute_playbook(self, playbook_path: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Executes a Docusaurus playbook by validating the YAML file and submitting it to the FastAPI backend.
+        Executes a playbook by validating the file and submitting it to the FastAPI backend.
         
         Args:
-            playbook_path: Path to the YAML playbook file to execute.
+            playbook_path: Path to the playbook file to execute
+            parameters: Optional parameters to override in the playbook
         
         Returns:
-            A dictionary containing the execution result, including a 'success' flag and any error messages or API response details.
+            A dictionary containing the execution result
         """
+        from core.playbook_validator import perform_full_validation
+        
         try:
-            # Use the new playbook validator
-            from core.playbook_validator import perform_full_validation
-            from core.playbook_schema import Playbook
-            
+            # Validate the playbook first
             valid, error, playbook = perform_full_validation(playbook_path)
             
             if not valid:
-                st.error(f"Invalid playbook: {error}")
+                error_card("Invalid Playbook", error)
                 return {"success": False, "error": error}
-                
+            
+            # Apply parameters if provided
+            if parameters and playbook:
+                playbook = playbook.merge_user_config(parameters)
+            
             # Convert to API format and execute
-            api_payload = playbook.to_api_format()
+            api_payload = playbook.to_api_format() if playbook else {}
             response = await self.session.post(
-                f"{self.api_url}/api/playbooks/run",  # Using the correct endpoint path
+                f"{self.api_url}/api/playbooks/run",
                 json=api_payload,
                 timeout=30.0
             )
@@ -65,41 +72,62 @@ class DocusaurusPlaybookExecutor:
             # Parse response
             result = response.json()
             if result.get("status") == "started":
-                st.success("Playbook execution started successfully")
+                success_card("Playbook Execution Started", "The playbook execution has been initiated successfully.")
                 result["success"] = True
                 return result
             else:
-                st.error(f"Playbook execution failed: {result.get('error')}")
+                error_card("Execution Failed", result.get("error", "Unknown error"))
                 result["success"] = False
                 return result
                 
         except httpx.TimeoutException:
             error_msg = "API request timed out"
-            st.error(error_msg)
+            error_card("Timeout Error", error_msg)
             return {"success": False, "error": error_msg}
             
         except httpx.HTTPError as e:
             error_msg = f"HTTP error occurred: {str(e)}"
-            st.error(error_msg)
+            error_card("HTTP Error", error_msg)
             return {"success": False, "error": error_msg}
             
         except Exception as e:
             error_msg = f"Unexpected error: {str(e)}"
-            st.error(error_msg)
+            error_card("Error", error_msg)
             return {"success": False, "error": error_msg}
             
         finally:
             await self.session.aclose()
             
-    async def get_execution_results(self, playbook_id: str) -> Dict[str, Any]:
+    async def get_execution_status(self, playbook_id: str) -> Dict[str, Any]:
         """
-        Fetches the latest execution results for a playbook from the API.
+        Fetches the status of a playbook execution.
         
         Args:
-            playbook_id: The ID of the playbook execution to fetch results for.
+            playbook_id: The ID of the playbook execution
             
         Returns:
-            A dictionary containing the execution results, or None if the fetch fails.
+            Status information for the execution
+        """
+        try:
+            response = await self.session.get(
+                f"{self.api_url}/api/playbooks/status/{playbook_id}",
+                timeout=10.0
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            error_card("Status Check Failed", str(e))
+            return {"success": False, "error": str(e)}
+            
+    async def get_execution_results(self, playbook_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetches the results of a playbook execution.
+        
+        Args:
+            playbook_id: The ID of the playbook execution
+            
+        Returns:
+            Execution results or None if fetch failed
         """
         try:
             response = await self.session.get(
@@ -113,111 +141,17 @@ class DocusaurusPlaybookExecutor:
             if result.get("success"):
                 return result.get("data")
             else:
-                st.error(f"Failed to fetch results: {result.get('error')}")
+                error_card("Failed to Fetch Results", result.get("error", "Unknown error"))
                 return None
                 
-        except httpx.TimeoutException:
-            st.error("API request timed out when fetching results")
-            return None
-            
-        except httpx.HTTPError as e:
-            st.error(f"HTTP error occurred when fetching results: {str(e)}")
-            return None
-            
         except Exception as e:
-            st.error(f"Unexpected error when fetching results: {str(e)}")
+            error_card("Result Fetch Failed", str(e))
             return None
-
-
-def get_playbooks_from_directory(directory_path: str) -> List[Dict[str, Any]]:
-    """
-    Get all playbook files from a directory with their metadata.
-    
-    Args:
-        directory_path: The path to the directory containing playbook files
-        
-    Returns:
-        A list of dictionaries containing playbook information
-    """
-    playbooks = []
-    
-    try:
-        # Ensure the directory exists
-        if not os.path.exists(directory_path):
-            st.warning(f"Directory not found: {directory_path}")
-            return playbooks
-        
-        # Iterate through files in the directory
-        for filename in os.listdir(directory_path):
-            file_path = os.path.join(directory_path, filename)
-            
-            # Check if it's a YAML file
-            if os.path.isfile(file_path) and (filename.endswith(".yaml") or filename.endswith(".yml")):
-                try:
-                    # Read YAML content
-                    with open(file_path, 'r') as f:
-                        content = yaml.safe_load(f)
-                    
-                    # Extract basic metadata
-                    playbook_info = {
-                        "filename": filename,
-                        "path": file_path,
-                        "name": content.get("name", filename),
-                        "description": content.get("description", "No description available"),
-                        "content": content
-                    }
-                    
-                    playbooks.append(playbook_info)
-                except Exception as e:
-                    st.warning(f"Error reading {filename}: {str(e)}")
-    except Exception as e:
-        st.error(f"Error accessing playbooks directory: {str(e)}")
-    
-    return playbooks
-
-
-def display_playbook_content(playbook: Dict[str, Any]):
-    """
-    Display the content of a playbook.
-    
-    Args:
-        playbook: Dictionary containing playbook information
-    """
-    # Display basic metadata
-    st.subheader(playbook["name"])
-    st.write(playbook["description"])
-    
-    # Display file info
-    st.caption(f"File: {playbook['filename']}")
-    
-    # Display YAML content
-    with st.expander("View Playbook Content", expanded=True):
-        yaml_content = yaml.dump(playbook["content"], sort_keys=False, default_flow_style=False)
-        code_block(yaml_content, language="yaml")
-    
-    # Display additional metadata if available
-    if "agents" in playbook["content"]:
-        st.write("**Agents:**")
-        for agent in playbook["content"]["agents"]:
-            agent_type = agent.get("type", "Unknown")
-            st.markdown(f"- {agent_type}")
-    
-    if "steps" in playbook["content"]:
-        st.write("**Steps:**")
-        for i, step in enumerate(playbook["content"]["steps"]):
-            step_name = step.get("name", f"Step {i+1}")
-            step_action = step.get("action", "Unknown action")
-            st.markdown(f"- {step_name} ({step_action})")
 
 
 def main():
-    """
-    Runs the Streamlit user interface for selecting and executing a Docusaurus playbook.
-    
-    Provides configuration for the FastAPI backend URL, playbook selection from a directory,
-    and controls to trigger playbook execution. Displays progress, results, and playbook details.
-    """
-    st.title("ud83dudcc2 Docusaurus Portfolio Playbook Executor")
+    """Main function for the playbook executor page."""
+    st.title("ud83dudcc2 Playbook Executor")
     
     # Sidebar configuration
     st.sidebar.header("Configuration")
@@ -227,131 +161,193 @@ def main():
         help="URL of the FastAPI backend"
     )
     
-    playbooks_directory = st.sidebar.text_input(
+    playbooks_dir = st.sidebar.text_input(
         "Playbooks Directory",
         value="/Users/dionedge/dev/wrenchai/core/playbooks",
         help="Path to the directory containing playbook files"
     )
     
-    # Load playbooks from directory
-    playbooks = get_playbooks_from_directory(playbooks_directory)
+    # Create playbooks manager
+    playbook_manager = PlaybookSchemaManager(playbooks_dir)
     
-    # Main content
-    if not playbooks:
-        st.warning("No playbooks found in the specified directory.")
+    # Main content tabs
+    browse_tab, create_tab, execute_tab = st.tabs(["Browse Playbooks", "Create Playbook", "Execute Playbook"])
+    
+    # Browse playbooks tab
+    with browse_tab:
+        st.subheader("Available Playbooks")
         
-        # File uploader as fallback
-        st.write("Upload a playbook file instead:")
-        playbook_file = st.file_uploader(
-            "Upload Playbook YAML",
-            type=["yaml", "yml"],
-            help="Upload your Docusaurus portfolio playbook YAML file"
-        )
-        
-        if playbook_file:
-            # Save uploaded file temporarily
-            temp_path = Path("temp_playbook.yaml")
-            temp_path.write_bytes(playbook_file.getvalue())
+        # Check if directory exists
+        if not os.path.exists(playbooks_dir):
+            warning_card("Directory Not Found", f"The directory {playbooks_dir} does not exist. Please create it or specify a different directory.")
+        else:
+            # Browse playbooks
+            selected_playbook = playbook_schema_browser(playbooks_dir)
             
-            selected_playbook_path = str(temp_path)
-            try:
-                # Display content of uploaded playbook
-                with open(selected_playbook_path, 'r') as f:
-                    content = yaml.safe_load(f)
+            if selected_playbook:
+                st.markdown("---")
+                playbook_path = selected_playbook["path"]
                 
-                playbook_info = {
-                    "filename": playbook_file.name,
-                    "path": selected_playbook_path,
-                    "name": content.get("name", playbook_file.name),
-                    "description": content.get("description", "No description available"),
-                    "content": content
-                }
+                # Display playbook details
+                st.subheader(f"Selected Playbook: {selected_playbook['name']}")
+                st.write(selected_playbook["description"])
                 
-                display_playbook_content(playbook_info)
-            except Exception as e:
-                st.error(f"Error reading playbook: {str(e)}")
-    else:
-        # Display playbook selection
-        st.write(f"Found {len(playbooks)} playbooks in the directory.")
-        
-        # Create a selection box with playbook names
-        playbook_names = [p["name"] for p in playbooks]
-        selected_name = st.selectbox("Select a playbook to execute", playbook_names)
-        
-        # Find the selected playbook
-        selected_playbook = next((p for p in playbooks if p["name"] == selected_name), None)
-        selected_playbook_path = selected_playbook["path"]
-        
-        # Display playbook details
-        if selected_playbook:
-            display_playbook_content(selected_playbook)
+                # Create buttons for actions
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    if st.button("Execute", type="primary"):
+                        st.session_state.selected_playbook = selected_playbook
+                        st.session_state.active_tab = "execute_tab"
+                        st.rerun()
+                
+                with col2:
+                    if st.button("Edit"):
+                        st.session_state.selected_playbook = selected_playbook
+                        st.session_state.active_tab = "create_tab"
+                        st.rerun()
+                
+                with col3:
+                    if st.button("View YAML"):
+                        st.markdown("### Playbook YAML")
+                        with open(playbook_path, 'r') as f:
+                            yaml_content = f.read()
+                        code_block(yaml_content, language="yaml")
     
-    # Execution section
-    st.markdown("---")
-    st.subheader("Execute Playbook")
+    # Create playbook tab
+    with create_tab:
+        st.subheader("Create or Edit Playbook")
+        
+        # Check if we're editing an existing playbook
+        editing_playbook = None
+        if st.session_state.get("selected_playbook") and st.session_state.get("active_tab") == "create_tab":
+            editing_playbook = st.session_state.selected_playbook
+            st.write(f"Editing playbook: {editing_playbook['name']}")
+        
+        # Create/edit playbook form
+        saved_playbook = playbook_schema_editor(playbooks_dir, editing_playbook)
+        
+        if saved_playbook:
+            success_card("Playbook Saved", "Your playbook has been saved successfully.")
+            # Reset editing state
+            if "selected_playbook" in st.session_state:
+                del st.session_state.selected_playbook
+            if "active_tab" in st.session_state:
+                del st.session_state.active_tab
     
-    if st.button("Execute Selected Playbook", key="execute_button", type="primary"):
-        executor = DocusaurusPlaybookExecutor(api_url)
+    # Execute playbook tab
+    with execute_tab:
+        st.subheader("Execute Playbook")
         
-        # Show progress
-        st.markdown("### Execution Progress")
-        execution_progress = st.empty()
-        with execution_progress.container():
-            progress_value = 0.1  # Start with 10% to show something is happening
-            progress_bar(progress_value, "Initializing execution...")
-        
-        # Execute playbook
-        with st.spinner("Executing playbook..."):
-            result = asyncio.run(executor.execute_playbook(selected_playbook_path))
+        # Check if a playbook is selected for execution
+        playbook_to_execute = None
+        if st.session_state.get("selected_playbook") and st.session_state.get("active_tab") == "execute_tab":
+            playbook_to_execute = st.session_state.selected_playbook
+            st.write(f"Ready to execute: {playbook_to_execute['name']}")
+            st.write(playbook_to_execute["description"])
             
-            if result.get("success"):
-                playbook_id = result.get("playbook_id")
-                st.success(f"Playbook execution started! ID: {playbook_id}")
+            # Parameters section
+            st.markdown("### Execution Parameters")
+            
+            # Extract parameters from playbook
+            parameters = {}
+            if "steps" in playbook_to_execute["content"]:
+                for step in playbook_to_execute["content"]["steps"]:
+                    if "parameters" in step:
+                        st.write(f"Parameters for step: {step.get('description', step.get('step_id', 'unknown'))}")
+                        for param_name, param_value in step["parameters"].items():
+                            # Create input fields for each parameter
+                            if isinstance(param_value, bool):
+                                parameters[param_name] = st.checkbox(param_name, value=param_value)
+                            elif isinstance(param_value, int):
+                                parameters[param_name] = st.number_input(param_name, value=param_value)
+                            elif isinstance(param_value, float):
+                                parameters[param_name] = st.number_input(param_name, value=param_value, step=0.1)
+                            elif isinstance(param_value, list):
+                                parameters[param_name] = st.multiselect(param_name, options=param_value, default=param_value)
+                            else:
+                                parameters[param_name] = st.text_input(param_name, value=str(param_value))
+            
+            # Execute button
+            if st.button("Execute Playbook", type="primary"):
+                executor = PlaybookExecutor(api_url)
                 
-                # Update progress
+                # Progress tracking
+                execution_progress = st.empty()
                 with execution_progress.container():
-                    progress_bar(0.3, "Playbook submitted successfully")
+                    progress_bar(0.2, "Preparing to execute...")
                 
-                # Create tabs for different views
-                result_tab, progress_tab, raw_tab = st.tabs(["Results", "Live Progress", "Raw Response"])
-                
-                with raw_tab:
-                    st.json(result)
-                    
-                with progress_tab:
-                    # Start real-time progress tracking
+                # Execute playbook
+                with st.spinner("Executing playbook..."):
+                    # Update progress
                     with execution_progress.container():
-                        progress_bar(0.5, "Monitoring execution progress...")
-                    render_task_monitor(task_id=playbook_id)
+                        progress_bar(0.4, "Submitting playbook...")
                     
-                with result_tab:
-                    # Check if we have execution results
-                    if st.session_state.get("execution_results"):
+                    result = asyncio.run(executor.execute_playbook(
+                        playbook_to_execute["path"], 
+                        parameters
+                    ))
+                    
+                    if result.get("success"):
+                        playbook_id = result.get("playbook_id")
+                        
+                        # Update progress
                         with execution_progress.container():
-                            progress_bar(1.0, "Execution complete")
-                        render_playbook_results(st.session_state.execution_results)
+                            progress_bar(0.6, "Playbook submitted successfully")
+                        
+                        # Create tabs for tracking execution
+                        monitor_tab, results_tab, logs_tab = st.tabs(["Monitor Progress", "Results", "Logs"])
+                        
+                        with monitor_tab:
+                            # Update progress
+                            with execution_progress.container():
+                                progress_bar(0.8, "Monitoring execution...")
+                            
+                            # Display real-time monitoring
+                            render_task_monitor(task_id=playbook_id)
+                        
+                        with results_tab:
+                            # Check for results
+                            st.markdown("### Execution Results")
+                            if st.button("Refresh Results"):
+                                # Fetch latest results
+                                executor = PlaybookExecutor(api_url)
+                                results = asyncio.run(executor.get_execution_results(playbook_id))
+                                
+                                if results:
+                                    # Store in session state
+                                    st.session_state.execution_results = results
+                                    # Update progress to complete
+                                    with execution_progress.container():
+                                        progress_bar(1.0, "Execution complete")
+                                    # Display results
+                                    render_playbook_results(results)
+                                else:
+                                    info_card("No Results Yet", "The execution is still in progress or has not produced results yet.")
+                        
+                        with logs_tab:
+                            st.markdown("### Execution Logs")
+                            st.text_area("Log Output", "Logs will appear here...", height=300, disabled=True)
                     else:
-                        st.info("Results will appear here once execution is complete")
-                        # Add a refresh button
-                        if st.button("Refresh Results"):
-                            # Fetch latest results from API
-                            st.info("Refreshing results...")
-                            executor = DocusaurusPlaybookExecutor(api_url)
-                            results = asyncio.run(executor.get_execution_results(playbook_id))
-                            if results:
-                                # Store results in session state
-                                st.session_state.execution_results = results
-                                # Update progress
-                                with execution_progress.container():
-                                    progress_bar(1.0, "Results updated")
-                                # Force rerun to update the UI
-                                st.rerun()
-            else:
-                st.error("Failed to execute playbook")
-                st.json(result)
-                # Update progress
-                with execution_progress.container():
-                    progress_bar(1.0, "Execution failed", color="#FF453A")
+                        # Update progress to error state
+                        with execution_progress.container():
+                            progress_bar(1.0, "Execution failed", color="#FF453A")
+                        
+                        error_card("Execution Failed", result.get("error", "Unknown error occurred during execution"))
+        else:
+            info_card("No Playbook Selected", "Please select a playbook from the Browse tab to execute.")
+            
+            # Option to go to browse tab
+            if st.button("Browse Playbooks"):
+                st.session_state.active_tab = "browse_tab"
+                st.rerun()
+    
+    # Set active tab if specified
+    if st.session_state.get("active_tab") == "browse_tab":
+        st.session_state.active = 0  # Browse tab index
+    elif st.session_state.get("active_tab") == "create_tab":
+        st.session_state.active = 1  # Create tab index
+    elif st.session_state.get("active_tab") == "execute_tab":
+        st.session_state.active = 2  # Execute tab index
 
 
 if __name__ == "__main__":
