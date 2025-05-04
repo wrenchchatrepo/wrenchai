@@ -1,44 +1,109 @@
-# Streamlit App Configuration
+# WrenchAI Streamlit Application Configuration
 
-# API Settings
+# API Configuration
 api:
   base_url: "http://localhost:8000"
   websocket_url: "ws://localhost:8000/ws"
   version: "v1"
   timeout: 30
+  auth_enabled: false
+  verify_ssl: true
 
-# UI Settings
+# UI Configuration
 ui:
   page_title: "WrenchAI"
   page_icon: "🔧"
   layout: "wide"
   initial_sidebar_state: "expanded"
   theme:
-    primaryColor: "#FF10F0"  # Neon Pink
-    backgroundColor: "#0A0A0A"  # Pure Black
-    secondaryBackgroundColor: "#1B1B1B"  # Dark Grey
-    textColor: "#E3E3E3"  # Soft White
+    primaryColor: "#FF10F0"
+    backgroundColor: "#0A0A0A"
+    secondaryBackgroundColor: "#1B1B1B"
+    textColor: "#E3E3E3"
     font: "sans serif"
 
-# Logging
+# Logging Configuration
 logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "wrenchai-ui.log"
+  console: true
+  rotation: true
+  max_size: 10
+  backup_count: 5
 
-# Cache Settings
+# Cache Configuration
 cache:
-  ttl: 3600  # Time to live in seconds
+  enabled: true
+  ttl: 3600
   max_entries: 1000
+  persist: false
+  cache_dir: ".cache"
 
-# Session Settings
+# Session Configuration
 session:
-  expire_after: 3600  # Session expiry in seconds
-  max_size: 100  # Maximum session storage size in MB
+  expire_after: 3600
+  max_size: 100
+  secure: false
+  use_cookies: false
+  cookie_name: "wrenchai_session"
+
+# Playbook Configuration
+playbooks:
+  display_name: "Playbooks"
+  icon: "📚"
+  categories:
+    all: "All Playbooks"
+    code: "Code Generation"
+    docs: "Documentation"
+    analysis: "Code Analysis"
+    deployment: "Deployment"
+    portfolio: "Portfolio"
+  default_category: "all"
+  show_descriptions: true
+  grid_view: true
+  enable_search: true
+  enable_filtering: true
+  items_per_page: 12
+  show_pagination: true
+
+# Docusaurus Portfolio Configuration
+docusaurus:
+  display_name: "Portfolio Generator"
+  icon: "💼"
+  themes:
+    classic: "Classic"
+    dark: "Dark"
+    modern: "Modern"
+    tech: "Tech"
+    minimal: "Minimal"
+  default_theme: "classic"
+  default_sections:
+    - "introduction"
+    - "skills"
+    - "projects"
+    - "experience"
+    - "education"
+    - "contact"
+  github_integration: true
+  preview_enabled: true
+  deployment_options:
+    github_pages: true
+    vercel: true
+    netlify: true
+  max_projects: 10
 
 # Feature Flags
 features:
   enable_websocket: true
   enable_file_upload: true
   enable_code_preview: true
-  enable_agent_monitoring: true 
+  enable_agent_monitoring: true
+  enable_portfolio_generator: true
+  enable_playbook_browser: true
+  enable_realtime_logs: true
+  enable_advanced_config: true
+
+# Environment Configuration
+environment: "development"
+dev_mode: true
