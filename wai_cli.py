@@ -121,6 +121,10 @@ class WrenchAICliApp:
             "--mcp-config",
             help="Path to MCP server configuration"
         )
+        run_parser.add_argument(
+            "--log-file",
+            help="Path to a file to save execution logs"
+        )
         
         return parser
     
@@ -308,8 +312,25 @@ class WrenchAICliApp:
                 self.logger.error(f"Playbook execution failed: {result.get('error', 'Unknown error')}")
                 return 1
                 
-            # Display completion message
+            # Display completion message and result
             print("\n\nPlaybook execution completed successfully!")
+            final_result = result.get('result')
+            if final_result is not None:
+                print("\n--- Playbook Result ---")
+                if isinstance(final_result, (dict, list)):
+                    try:
+                        import json
+                        print(json.dumps(final_result, indent=2))
+                    except ImportError:
+                        print(final_result)
+                else:
+                    print(final_result)
+                print("-----------------------")
+
+            # Inform user about log file if saved
+            if args.log_file:
+                self.logger.info(f"Full execution log saved to: {args.log_file}")
+
             return 0
             
         except Exception as e:
@@ -326,10 +347,28 @@ class WrenchAICliApp:
         args = self.parser.parse_args(args)
         
         # Set log level based on verbosity
+        log_level = logging.INFO
         if args.verbose:
-            self.logger.setLevel(logging.DEBUG)
-            self.logger.debug("Verbose mode enabled")
-        
+            log_level = logging.DEBUG
+            self.logger.debug("Verbose mode enabled") # Log this using the instance logger
+
+        # Set the level for the CLI logger and root logger (to capture logs from other modules like super_agent)
+        self.logger.setLevel(log_level)
+        logging.root.setLevel(log_level)
+
+        # Configure file logging if --log-file is provided for the run command
+        if args.command == "run" and args.log_file:
+            try:
+                file_handler = logging.FileHandler(args.log_file)
+                formatter = logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+                file_handler.setFormatter(formatter)
+                logging.root.addHandler(file_handler)
+                self.logger.info(f"Logging execution details to {args.log_file}")
+            except Exception as e:
+                self.logger.error(f"Could not set up log file {args.log_file}: {e}")
+
         # Execute the appropriate command
         if args.command == "list":
             return self.cmd_list(args)

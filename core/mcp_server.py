@@ -148,7 +148,8 @@ class MCPServerManager:
             try:
                 server.stop()
                 logger.info(f"Stopped MCP server: {server_name}")
-            except Exception as e:\n                logger.error(f"Error stopping MCP server {server_name}: {e}")
+            except Exception as e:
+                logger.error(f"Error stopping MCP server {server_name}: {e}")
         elif server:
              logger.warning(f"Server {server_name} does not have a stop method.")
 
