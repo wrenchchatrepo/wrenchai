@@ -114,6 +114,52 @@ class MCPServerManager:
         """
         return list(self.config.keys())
 
+    def start_server(self, server_name: str) -> Optional[Any]:
+        """Starts a configured MCP server.
+
+        Args:
+            server_name: Name of the server to start.
+
+        Returns:
+            The started MCP server instance or None if not available or could not start.
+        """
+        server = self.get_server_from_config(server_name)
+        if server and hasattr(server, 'start'):
+            try:
+                server.start()
+                logger.info(f"Started MCP server: {server_name}")
+                return server
+            except Exception as e:
+                logger.error(f"Error starting MCP server {server_name}: {e}")
+                return None
+        elif server:
+             logger.warning(f"Server {server_name} does not have a start method.")
+             return server # Return the instance even if no start method
+        return None
+
+    def stop_server(self, server_name: str) -> None:
+        """Stops a running MCP server.
+
+        Args:
+            server_name: Name of the server to stop.
+        """
+        server = self.servers.get(server_name)
+        if server and hasattr(server, 'stop'):
+            try:
+                server.stop()
+                logger.info(f"Stopped MCP server: {server_name}")
+            except Exception as e:\n                logger.error(f"Error stopping MCP server {server_name}: {e}")
+        elif server:
+             logger.warning(f"Server {server_name} does not have a stop method.")
+
+    def stop_all_servers(self) -> None:
+        """Stops all currently managed MCP servers.
+        """
+        server_names = list(self.servers.keys())
+        for server_name in server_names:
+            self.stop_server(server_name)
+        self.servers.clear() # Clear the dictionary of server instances
+
 # Singleton instance of the MCP server manager
 _manager_instance = None
 

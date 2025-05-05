@@ -143,48 +143,55 @@ class SuperAgent:
             instructions=system_prompt,
             model=self.model
         )
-        
-        # Configure MCP servers if specified in the playbook
-        mcp_servers = []
-        if "mcp_servers" in playbook:
-            for server_name in playbook["mcp_servers"]:
-                server = self.mcp_manager.get_server_from_config(server_name)
-                if server:
-                    mcp_servers.append(server)
-                    logger.info(f"Added MCP server: {server_name}")
-        
-        # Prepare input data for the agent
-        input_data = {
-            "playbook": {
-                "id": playbook.get("id", ""),
-                "title": playbook.get("title", "Unnamed"),
-                "description": playbook.get("description", "No description"),
-                "steps": playbook.get("steps", []),
-            },
-            "parameters": parameters or {}
-        }
-        
-        # Execute the agent
+
+        # List to hold names of servers we successfully started and need to stop
+        servers_to_stop = []
+        mcp_server_instances_for_pydantic_ai = []
+
         try:
+            # Configure and start MCP servers if specified in the playbook
+            if "mcp_servers" in playbook:
+                for server_name in playbook["mcp_servers"]:
+                    started_server = self.mcp_manager.start_server(server_name)
+                    if started_server:
+                        servers_to_stop.append(server_name)
+                        mcp_server_instances_for_pydantic_ai.append(started_server)
+
             self.update_progress(0, "Starting playbook execution")
-            
+
+            # Prepare input data for the agent
+            input_data = {
+                "playbook": {
+                    "id": playbook.get("id", ""),
+                    "title": playbook.get("title", "Unnamed"),
+                    "description": playbook.get("description", "No description"),
+                    "steps": playbook.get("steps", []),
+                },
+                "parameters": parameters or {}
+            }
+
+            # Execute the agent
             # Stream response if verbose
             if self.verbose:
                 complete_response = ""
                 async for chunk in self.pydantic_ai.run_agent_stream(
-                    agent, input_data, mcp_servers
+                    agent, input_data, mcp_server_instances_for_pydantic_ai
                 ):
                     print(chunk, end="", flush=True)
                     complete_response += chunk
-                    
+
                 return {"result": complete_response, "success": True}
             else:
                 # Execute without streaming
                 response = await self.pydantic_ai.run_agent(
-                    agent, input_data, mcp_servers
+                    agent, input_data, mcp_server_instances_for_pydantic_ai
                 )
                 return {"result": response, "success": True}
-                
+
         except Exception as e:
             logger.error(f"Error executing playbook: {e}")
             return {"error": str(e), "success": False}
+        finally:
+            # Ensure all started servers are stopped
+            for server_name in servers_to_stop:
+                self.mcp_manager.stop_server(server_name)

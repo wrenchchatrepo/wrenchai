@@ -78,12 +78,12 @@ The WrenchAI CLI will leverage **Pydantic AI's agent infrastructure** for direct
   - Created progress bar and status update display
   - _Estimated time: 1 day_
 
-- [ ] **Task 3.3: MCP Server Integration for Run**
+- [x] **Task 3.3: MCP Server Integration for Run**
   - Configure and start required MCP servers for playbook execution
   - Implement context7 server for document handling
   - Set up proper server lifecycle management
   - _Estimated time: 2 days_
-  - **Current Status**: Basic MCP server configuration is in place, but lifecycle management needs improvement
+  - **Current Status**: Completed
 
 ### Phase 4: Enhanced Features (Week 4)
 
@@ -194,7 +194,7 @@ wai run <id>               # Execute the selected playbook via the SuperAgent
 |-------|----------|-------|
 | Phase 1: CLI Foundation & Pydantic AI | 100% | Completed |
 | Phase 2: Basic Commands | 100% | Completed |
-| Phase 3: Playbook Execution | 67% | Task 3.3 remains |
+| Phase 3: Playbook Execution | 100% | Completed |
 | Phase 4: Enhanced Features | 25% | Tasks 4.2, 4.3, 4.4 remain |
 | Phase 5: Testing & Docs | 50% | Tasks 5.1, 5.2 remain |
 
