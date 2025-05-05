@@ -1,19 +1,3 @@
-# Wrench AI
-
-This repository contains the code for Wrench AI, an open-source agentic AI framework. The framework allows you to define and orchestrate intelligent agents to perform complex tasks by combining the power of Large Language Models (LLMs) with Bayesian reasoning, Model Context Protocol (MCP), and a flexible tool integration system.
-
-## Architecture
-
-```
-┌───────────────┐    ┌────────────────┐    ┌─────────────────┐
-│  Streamlit UI │────│ FastAPI Backend │────│ Agent Framework │
-└───────────────┘    └────────────────┘    └─────────────────┘
-                                                │       │
-                            ┌─────────────────┐ │       │ ┌────────────────┐
-                            │ Bayesian Engine  │─┘       └─│   Tool System  │
-                            └─────────────────┘           └────────────────┘
-```
-
 ## Key Features
 
 - **Pydantic-AI Integration**: Fully compliant Pydantic-AI agents with proper dependency injection
@@ -22,7 +6,7 @@ This repository contains the code for Wrench AI, an open-source agentic AI frame
 - **Dynamic Tool Registry**: Plug-and-play tools with dependency resolution
 - **FastAPI Backend**: Performant API with websocket support
 - **Streamlit UI**: User-friendly interface for interacting with agents
-- **Command-Line Interface**: Discover and execute playbooks directly from the terminal
+- **Command-Line Interface**: Discover and execute playbooks directly from the terminal with enhanced logging, progress tracking, and error handling.
 - **Model Context Protocol**: Flexible context management across multiple backends
 - **Streaming Support**: Built-in streaming for real-time agent responses
 - **Type Safety**: Strong typing with generics for better code quality
@@ -50,10 +34,15 @@ The framework supports various agent interaction patterns:
 
 2.  **Install Dependencies:**
 
+    It is highly recommended to create a virtual environment to isolate project dependencies.
+
     ```bash
+    python -m venv .venv
+    source .venv/bin/activate  # On Linux/macOS
+    # .venv\Scripts\activate  # On Windows
     pip install -r requirements.txt
     pip install -r streamlit_app/requirements.txt
-    npm install task-master-ai # For Taskmaster AI integration
+    npm install task-master-ai   # For Taskmaster AI integration
     ```
 
 3.  **Run the FastAPI Backend:**
@@ -77,14 +66,14 @@ The framework supports various agent interaction patterns:
     ```bash
     # Install the CLI
     ./install_wai_cli.sh
-    
+
     # List available playbooks
     wai list
-    
+
     # Run a playbook
-    wai run <playbook_id>
+    wai run <playbook_id> --log-file /path/to/logfile.txt
     ```
-    
+
     See [CLI Usage Documentation](docs/cli_usage.md) for more details.
 
 6.  **Try Taskmaster AI Integration:**
@@ -92,6 +81,171 @@ The framework supports various agent interaction patterns:
     ```bash
     ./run_taskmaster.sh
     ```
+
+    This will run the Taskmaster AI example to demonstrate task creation and management.
+
+## Project Structure
+
+The repository is organized as follows:
+
+```
+wrenchai/
+├── .gitignore          # Files and directories to ignore in Git
+├── LICENSE             # Project license (MIT License)
+├── README.md           # Project description and instructions
+├── requirements.txt    # Python dependencies for the core framework
+├── wai_cli.py          # CLI for discovering and executing playbooks
+├── install_wai_cli.sh  # Installation script for the CLI
+├── streamlit_app/      # Directory for the Streamlit UI
+│   ├── app.py          # Main Streamlit application file
+│   └── requirements.txt# Python dependencies for the Streamlit app
+├── core/               # Core framework logic
+│   ├── agents/         # Agent definitions
+│   │   ├── super_agent.py      # Super agent class
+│   │   ├── inspector_agent.py  # Inspector agent class
+│   │   ├── journey_agent.py    # Base class for Journey agents
+│   │   ├── github_journey_agent.py # GitHub specialized journey agent
+│   │   └── __init__.py
+│   ├── agent_system.py # Pydantic-AI agent management system
+│   ├── api.py          # FastAPI backend implementation
+│   ├── bayesian_engine.py # PyMC-based Bayesian reasoning engine
+│   ├── config_loader.py  # Configuration loading and validation
+│   ├── tool_system.py    # Tool registry and management
+│   ├── pydantic_integration.py # Pydantic AI integration for CLI
+│   ├── mcp_server.py    # MCP server configuration for CLI
+│   ├── playbook_discovery.py # Playbook discovery for CLI
+│   ├── super_agent.py    # SuperAgent implementation for CLI
+│   ├── configs/        # YAML configuration files
+│   │   ├── agents.yaml   # Agent role definitions
+│   │   ├── tools.yaml    # Tool definitions with dependencies
+│   │   ├── playbooks.yaml # Workflow definitions
+│   │   ├── super_agent_config.yaml
+│   │   ├── inspector_agent_config.yaml
+│   │   ├── journey_agent_template.yaml
+│   │   ├── playbook_template.yaml
+│   │   └── pricing_data.yaml
+│   ├── playbooks/      # Playbook definitions (YAML)
+│   │   └── example_playbook.yaml # Example playbook
+│   ├── tools/          # Tool implementations
+│   │   ├── web_search.py      # Example tool: Web search
+│   │   ├── code_execution.py  # Example tool: Code execution
+│   │   ├── github_tool.py     # GitHub integration tool
+│   │   ├── mcp.py             # Model Context Protocol implementation
+│   │   ├── bayesian_tools.py  # PyMC bridge for bayesian reasoning
+│   │   ├── __init__.py
+│   │   └── ...  # Other tools
+│   ├── utils.py        # Utility functions (e.g., cost calculation, logging)
+│   └── __init__.py
+├── mcp_config.json     # MCP server configuration including Taskmaster AI
+├── run_taskmaster.sh   # Helper script to run Taskmaster AI MCP server
+├── TASKMASTER_AI.md    # Taskmaster AI documentation
+├── docker/            # Docker-related files (future)
+│    └── ...
+└── tests/              # Unit tests (future)
+    └── ...
+
+*   **`core/`**: Contains the core logic of the agentic framework, including agent definitions, configuration files, playbooks, and tools.
+*   **`core/agents/`**: Defines the agent classes (`SuperAgent`, `InspectorAgent`, `JourneyAgent`, etc.)
+*   **`core/agent_system.py`**: Implements the Pydantic-AI based agent system
+*   **`core/api.py`**: Provides the FastAPI backend endpoints
+*   **`core/bayesian_engine.py`**: Implements the PyMC-based Bayesian reasoning engine
+*   **`core/config_loader.py`**: Handles configuration loading and validation
+*   **`core/tool_system.py`**: Manages the tool registry and dependencies
+*   **`core/pydantic_integration.py`**: Handles integration with Pydantic AI for the CLI
+*   **`core/mcp_server.py`**: Manages MCP server configuration for the CLI
+*   **`core/playbook_discovery.py`**: Provides playbook discovery for the CLI
+*   **`core/super_agent.py`**: Implements SuperAgent for CLI playbook execution
+*   **`core/configs/`**: Stores YAML configuration files for agents, playbooks, and tools
+*   **`core/playbooks/`**: Contains example playbooks in YAML format
+*   **`core/tools/`**: Implements tools that agents can use (web search, MCP, Bayesian reasoning, etc.)
+*   **`core/utils.py`**: Provides utility functions
+*   **`core/__init__.py`**: Package initialization file
+*   **`streamlit_app/`**: Contains the Streamlit user interface
+*   **`mcp_config.json`**: Configuration file for Model Context Protocol servers including Taskmaster AI
+*   **`wai_cli.py`**: Main entry point for the CLI
+*   **`install_wai_cli.sh`**: Installation script for the CLI
+*   **`run_taskmaster.sh`**: Script to start the Taskmaster AI MCP server
+*   **`start_taskmaster.py`**: Python helper for Taskmaster AI MCP server
+*   **`TASKMASTER_AI.md`**: Documentation for Taskmaster AI integration
+*   **`docker/`**:  Contains Docker-related files (future)
+*   **`tests/`**: Contains unit tests (future)
+
+## Roadmap
+
+### MVP Implementation
+
+1. **Core Framework Components**
+   - Base Agent Structure ✅
+   - Agent Communication System 🚧
+   - Tool Registry ✅
+   - Message Queue ✅
+   - Database Integration 🚧
+   - Logging System ✅
+   - Error Handling ✅
+   - Security Layer 🚧
+
+2. **MVP Agents**
+   - SuperAgent (In Progress 🚧)
+     - Orchestration and task delegation
+     - Progress monitoring
+     - Result aggregation
+   - InspectorAgent (In Progress 🚧)
+     - Code analysis and quality assurance
+     - Standards checking
+     - Improvement suggestions
+   - JourneyAgent (Planned 📋)
+     - User interaction management
+     - Context tracking
+     - Conversation management
+   - DBAAgent (Planned 📋)
+     - Database operations
+     - Query optimization
+     - Schema management
+   - TestEngineerAgent (Planned 📋)
+     - Test suite design
+     - Coverage analysis
+     - Result reporting
+
+3. **FastAPI Backend Implementation**
+   - Basic API structure with versioning ✅
+   - Core endpoints with validation ✅
+   - Database integration with SQLAlchemy ✅
+   - Query optimization ✅
+   - WebSocket support ✅
+   - Basic authentication ✅
+   - Error handling ✅
+   - Rate limiting ✅
+   - CORS configuration ✅
+   - Health check endpoints ✅
+
+4. **Streamlit Implementation**
+   - Basic UI components ✅
+   - State management ✅
+   - Session handling ✅
+   - Authentication flow ✅
+   - WebSocket integration ✅
+
+5. **CLI Implementation**
+   - CLI Entry Point Structure ✅
+   - Pydantic AI Integration ✅
+   - MCP Server Configuration ✅
+   - Playbook Discovery ✅
+   - Basic Commands (`list`, `select`, `describe`, `run`) ✅
+   - SuperAgent Integration ✅
+   - Parameter Overrides ✅
+   - Installation Script ✅
+   - MCP Server Lifecycle Management 🚧
+   - Enhanced Error Handling 🚧
+   - Advanced Progress Tracking 🚧
+   - Comprehensive Testing 🚧
+
+6. **Documentation**
+   - Basic API documentation ✅
+   - Code documentation ✅
+   - Type hints ✅
+   - OpenAPI schema ✅
+   - Architecture documentation ✅
+   - CLI usage documentation ✅
 
     This will run the Taskmaster AI example to demonstrate task creation and management.
 

@@ -4,12 +4,17 @@
 
 import os
 import logging
+import asyncio # Import asyncio for sleep
 from typing import Dict, List, Any, Optional, Callable, Awaitable
 
 from core.pydantic_integration import PydanticAIIntegration
 from core.mcp_server import get_mcp_manager
 
 logger = logging.getLogger("wrenchai.super_agent")
+
+# Retry configuration constants
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 5
 
 class SuperAgent:
     """The SuperAgent for executing playbooks"""
@@ -93,7 +98,10 @@ class SuperAgent:
             self.progress_callback(percentage, message)
         elif self.verbose:
             print(f"[{percentage:.1f}%] {message}")
-    
+
+        # Also log progress updates
+        logger.debug(f"Progress: {percentage:.1f}% - {message}")
+
     def _get_playbook_system_prompt(self, playbook: Dict[str, Any]) -> str:
         """Generate a system prompt for the playbook
         
@@ -143,48 +151,131 @@ class SuperAgent:
             instructions=system_prompt,
             model=self.model
         )
-        
-        # Configure MCP servers if specified in the playbook
-        mcp_servers = []
-        if "mcp_servers" in playbook:
-            for server_name in playbook["mcp_servers"]:
-                server = self.mcp_manager.get_server_from_config(server_name)
-                if server:
-                    mcp_servers.append(server)
-                    logger.info(f"Added MCP server: {server_name}")
-        
-        # Prepare input data for the agent
-        input_data = {
-            "playbook": {
-                "id": playbook.get("id", ""),
-                "title": playbook.get("title", "Unnamed"),
-                "description": playbook.get("description", "No description"),
-                "steps": playbook.get("steps", []),
-            },
-            "parameters": parameters or {}
-        }
-        
-        # Execute the agent
+
+        logger.info(f"Starting execution of playbook: {playbook.get('title', 'Unnamed')}")
+
+        # List to hold names of servers we successfully started and need to stop
+        servers_to_stop = []
+        mcp_server_instances_for_pydantic_ai = []
+
         try:
-            self.update_progress(0, "Starting playbook execution")
-            
-            # Stream response if verbose
-            if self.verbose:
-                complete_response = ""
-                async for chunk in self.pydantic_ai.run_agent_stream(
-                    agent, input_data, mcp_servers
-                ):
-                    print(chunk, end="", flush=True)
-                    complete_response += chunk
-                    
-                return {"result": complete_response, "success": True}
+            # Configure and start MCP servers if specified in the playbook
+            if "mcp_servers" in playbook:
+                logger.info("Configuring and starting required MCP servers...")
+                self.update_progress(5, "Configuring MCP servers")
+                for server_name in playbook["mcp_servers"]:
+                    try:
+                        started_server = self.mcp_manager.start_server(server_name)
+                        if started_server:
+                            servers_to_stop.append(server_name)
+                            mcp_server_instances_for_pydantic_ai.append(started_server)
+                            logger.info(f"Successfully started MCP server: {server_name}")
+                        else:
+                            logger.warning(f"MCP server '{server_name}' could not be started or is not configured.")
+                    except Exception as e:
+                        logger.error(f"Error starting MCP server {server_name}: {e}")
+                        # Decide if a single failed server stops execution or if we continue
+                        # For now, we'll log and continue, but this might need refinement
+                        pass # Continue with other servers
+
+                if mcp_server_instances_for_pydantic_ai:
+                    self.update_progress(10, "Required MCP servers configured and started")
+                else:
+                    logger.warning("No required MCP servers were successfully started.")
+                    self.update_progress(10, "No MCP servers started")
+
+
+            self.update_progress(20, "Preparing input data")
+            logger.info("Preparing input data for the agent...")
+            # Prepare input data for the agent
+            input_data = {
+                "playbook": {
+                    "id": playbook.get("id", ""),
+                    "title": playbook.get("title", "Unnamed"),
+                    "description": playbook.get("description", "No description"),
+                    "steps": playbook.get("steps", []),
+                },
+                "parameters": parameters or {}
+            }
+            logger.debug(f"Input data: {input_data}")
+            self.update_progress(30, "Input data prepared")
+
+            # Execute the agent with retry logic
+            logger.info("Executing the agent...")
+            self.update_progress(40, "Executing agent")
+
+            attempts = 0
+            success = False
+            last_error = None
+            response_result = None
+
+            while attempts < MAX_RETRIES and not success:
+                attempts += 1
+                if attempts > 1:
+                    logger.info(f"Retrying agent execution (Attempt {attempts}/{MAX_RETRIES})...")
+                    self.update_progress(40 + (attempts - 1) * 10, f"Retrying agent (Attempt {attempts})")
+                else:
+                     logger.info(f"Starting agent execution (Attempt {attempts}/{MAX_RETRIES})...")
+
+                try:
+                    if self.verbose:
+                        logger.debug("Streaming output enabled.")
+                        complete_response = ""
+                        async for chunk in self.pydantic_ai.run_agent_stream(
+                            agent, input_data, mcp_server_instances_for_pydantic_ai
+                        ):
+                            print(chunk, end="", flush=True)
+                            complete_response += chunk
+
+                        logger.info("Agent execution completed successfully (streaming).")
+                        logger.debug(f"Complete response: {complete_response}")
+                        response_result = {"result": complete_response, "success": True}
+                        success = True
+                    else:
+                        logger.debug("Streaming output disabled.")
+                        response = await self.pydantic_ai.run_agent(
+                            agent, input_data, mcp_server_instances_for_pydantic_ai
+                        )
+                        logger.info("Agent execution completed successfully.")
+                        logger.debug(f"Response: {response}")
+                        response_result = {"result": response, "success": True}
+                        success = True
+
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Agent execution attempt {attempts} failed: {e}")
+                    if attempts < MAX_RETRIES:
+                        logger.info(f"Waiting {RETRY_DELAY_SECONDS} seconds before retrying...")
+                        await asyncio.sleep(RETRY_DELAY_SECONDS)
+                    else:
+                        logger.error(f"Agent execution failed after {MAX_RETRIES} attempts.")
+
+            if success:
+                self.update_progress(90, "Agent execution completed")
+                return response_result
             else:
-                # Execute without streaming
-                response = await self.pydantic_ai.run_agent(
-                    agent, input_data, mcp_servers
-                )
-                return {"result": response, "success": True}
-                
+                # Handle final failure after retries
+                error_message = f"Failed to execute agent after {MAX_RETRIES} attempts. Last error: {last_error}"
+                logger.error(error_message)
+                self.update_progress(100, f"Execution failed: {last_error}")
+                return {"error": error_message, "success": False}
+
         except Exception as e:
-            logger.error(f"Error executing playbook: {e}")
-            return {"error": str(e), "success": False}
+            # Catch any unexpected errors outside the retry loop
+            logger.error(f"An unexpected error occurred during playbook execution: {e}")
+            self.update_progress(100, f"Execution failed due to unexpected error: {e}")
+            return {"error": f"Unexpected execution error: {e}", "success": False}
+        finally:
+            # Ensure all started servers are stopped
+            if servers_to_stop:
+                logger.info("Stopping MCP servers...")
+                self.update_progress(95, "Stopping MCP servers")
+                for server_name in servers_to_stop:
+                    try:
+                        self.mcp_manager.stop_server(server_name)
+                    except Exception as e:
+                        logger.error(f"Error stopping MCP server {server_name}: {e}")
+                        # Continue stopping other servers even if one fails
+                        pass
+                logger.info("All started MCP servers stopped.")
+                self.update_progress(100, "MCP servers stopped")

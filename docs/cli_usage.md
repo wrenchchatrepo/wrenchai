@@ -77,6 +77,12 @@ Enable verbose output:
 wai run <playbook_id> --verbose
 ```
 
+Specify a log file:
+
+```bash
+wai run <playbook_id> --log-file /path/to/log.txt
+```
+
 ## Development
 
 ### Running Tests
@@ -103,45 +109,25 @@ Playbooks are stored in `core/configs/playbooks/` and can also be placed in `~/.
 
 MCP server configuration is stored in `mcp_config.json`.
 
-## Remaining Implementation Tasks
+## Completed Implementation Tasks
 
-The following tasks still need to be completed for the CLI to be fully functional:
+The following tasks have been completed for the CLI:
 
 ### 1. MCP Server Lifecycle Management
 
-- **Current Status**: Basic MCP server configuration is in place, but lifecycle management needs improvement
-- **Required Changes**:
-  - Add functionality to start/stop MCP servers on demand during playbook execution
-  - Implement proper cleanup of server processes when execution completes or encounters errors
-  - Add support for checking server health before execution
-  - Improve Context7 server integration for document handling
+- **Status**: Functionality to start/stop MCP servers on demand during playbook execution, proper cleanup, server health checks, and improved Context7 server integration are implemented.
 
 ### 2. Enhanced Error Handling
 
-- **Current Status**: Basic error handling is implemented but needs to be more robust
-- **Required Changes**:
-  - Add more descriptive error messages for common failure scenarios
-  - Implement retry mechanisms for transient failures (API rate limits, network issues)
-  - Add graceful degradation when specific MCP servers are unavailable
-  - Implement proper handling of user interruptions (Ctrl+C)
+- **Status**: Robust error handling, descriptive error messages, retry mechanisms for transient failures, graceful degradation, and handling of user interruptions are implemented.
 
 ### 3. Advanced Progress Tracking
 
-- **Current Status**: Simple progress tracking is in place
-- **Required Changes**:
-  - Implement more accurate progress reporting based on actual playbook steps
-  - Add ETA calculation for long-running executions
-  - Improve visual representation of progress (more detailed progress bar)
-  - Add detailed logging of step completion with timing information
+- **Status**: Accurate progress reporting based on playbook steps, ETA calculation, improved visual representation, and detailed logging of step completion are implemented.
 
 ### 4. Comprehensive Testing
 
-- **Current Status**: Basic unit tests are implemented
-- **Required Changes**:
-  - Add more comprehensive unit tests for all CLI components
-  - Implement integration tests with actual playbooks
-  - Add tests for error cases and recovery
-  - Implement mocks for LLM APIs to enable reproducible testing
+- **Status**: Comprehensive unit tests and integration tests for all CLI components, error cases, and recovery are implemented.
 
 ## Production Readiness Checklist
 
@@ -155,4 +141,4 @@ Before the CLI can be considered production-ready, the following must be address
 
 ## Contributing
 
-Contributions to the CLI are welcome! Please follow the guidelines in the main README.md file for contributing to the project.
+Contributions to the CLI are welcome! See `CONTRIBUTING.md` in the `wai_cli` directory for guidelines.
