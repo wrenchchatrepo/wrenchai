@@ -1,0 +1,70 @@
+# Task ID: 1
+# Title: Set up Project Structure and Environment
+# Status: done
+# Dependencies: None
+# Priority: high
+# Description: Create the basic project structure, install dependencies, and configure environment variables for the Wrench AI Toolbox.
+# Details:
+1. Create the directory structure as specified in the PRD (wrenchai/streamlit_app/ with subdirectories for components, pages, models, services, and utils)
+2. Set up a virtual environment using Python 3.9+
+3. Install required dependencies: streamlit>=1.46.0, httpx, websockets, pydantic, python-dotenv
+4. Create a .env file template with placeholders for API_URL, OPENAI_API_KEY, and other required secrets
+5. Create a README.md with setup instructions
+6. Initialize Git repository with .gitignore for Python projects and environment files
+
+# Test Strategy:
+Verify the project structure exists with all required directories. Confirm dependencies install correctly and the application can be started with 'streamlit run app.py' without errors.
+
+# Subtasks:
+## 1. Create Basic Project Structure and Git Repository [done]
+### Dependencies: None
+### Description: Set up the directory structure for the Wrench AI Toolbox and initialize Git version control
+### Details:
+1. Create the main project directory 'wrenchai'
+2. Inside 'wrenchai', create the 'streamlit_app' directory
+3. Within 'streamlit_app', create subdirectories: components/, pages/, models/, services/, and utils/
+4. Create placeholder __init__.py files in each directory to make them proper Python packages
+5. Initialize Git repository with 'git init'
+6. Create a .gitignore file with standard Python ignores (pycache, virtual environments, etc.) and add .env to it
+7. Create an empty README.md file (content will be added in subtask 3)
+
+## 2. Set Up Python Environment and Install Dependencies [done]
+### Dependencies: 1.1
+### Description: Create a virtual environment and install all required packages for the project
+### Details:
+1. Navigate to the project root directory
+2. Create a virtual environment using Python 3.9+: 'python -m venv venv' (or 'python3 -m venv venv')
+3. Activate the virtual environment (source venv/bin/activate on Unix/Mac or venv\Scripts\activate on Windows)
+4. Create requirements.txt file with the following dependencies:
+   - streamlit>=1.46.0
+   - httpx
+   - websockets
+   - pydantic
+   - python-dotenv
+5. Install dependencies using pip: 'pip install -r requirements.txt'
+6. Create a setup.py file for potential package distribution
+
+## 3. Configure Environment Variables and Documentation [done]
+### Dependencies: 1.1, 1.2
+### Description: Set up environment configuration and complete project documentation
+### Details:
+1. Create a .env.example file in the project root with the following placeholders:
+   ```
+   # API Configuration
+   API_URL=your_api_url_here
+   
+   # OpenAI Configuration
+   OPENAI_API_KEY=your_openai_key_here
+   
+   # Add any other required environment variables
+   ```
+2. Create a simple .env file with actual development values (this will be ignored by git)
+3. Create a utils/config.py file that uses python-dotenv to load environment variables
+4. Complete the README.md with:
+   - Project overview and purpose
+   - Installation instructions
+   - Setup steps for environment variables
+   - Basic usage instructions
+   - Development guidelines
+5. Make an initial git commit with the message 'Initial project structure setup'
+

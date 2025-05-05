@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 from pydantic import BaseModel
-from core.agents.base_agent import BaseAgent
+from core.agents.base import BaseAgent
 from core.tools.documentation_tools import (
     DocstringParser,
     TypeHintAnalyzer,
