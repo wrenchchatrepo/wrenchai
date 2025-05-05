@@ -1,0 +1,54 @@
+# Task ID: 2
+# Title: Implement Midnight UI Theme
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create the custom Midnight UI dark theme for the Streamlit application using the color palette specified in the PRD.
+# Details:
+1. Create utils/theme.py with the Midnight UI color palette constants
+2. Implement the apply_midnight_theme() function using Streamlit's custom CSS injection
+3. Apply styling for base elements, buttons, cards, text, links, and scrollbars
+4. Add custom classes for success/error messages and other UI components
+5. Ensure the theme is responsive and works on different screen sizes
+6. Create utility functions for theme variations (if needed)
+7. Add comments explaining the color system and usage guidelines
+
+# Test Strategy:
+Visually inspect the theme by running the app and verifying colors match the PRD specifications. Test on different screen sizes to ensure responsiveness. Verify all UI elements (buttons, containers, text) have proper styling.
+
+# Subtasks:
+## 1. Create theme definition file with color palette [pending]
+### Dependencies: None
+### Description: Create a theme utility file containing the Midnight UI color palette constants and basic theme structure
+### Details:
+1. Create utils/theme.py file
+2. Define color palette constants from the PRD (primary, secondary, background, text, accent colors)
+3. Create a dictionary structure to organize theme colors by category (text, backgrounds, controls, etc.)
+4. Add documentation comments explaining the color system and usage guidelines
+5. Include any helper functions for color manipulation if needed (e.g., generating lighter/darker variants)
+
+## 2. Implement core theme application function [pending]
+### Dependencies: 2.1
+### Description: Create the main theme application function that injects custom CSS for base elements and core components
+### Details:
+1. Create apply_midnight_theme() function in utils/theme.py
+2. Implement Streamlit's custom CSS injection using st.markdown() with unsafe_allow_html=True
+3. Style base elements (body, containers, fonts, headings)
+4. Style primary UI components (buttons, inputs, selects, checkboxes)
+5. Style navigation elements (sidebar, menu items)
+6. Add responsive media queries for different screen sizes
+7. Test the function by calling it from the main app file
+
+## 3. Add advanced styling and component-specific theming [pending]
+### Dependencies: 2.2
+### Description: Extend the theme with custom classes for specialized components and interactive elements
+### Details:
+1. Add custom CSS classes for success/error/warning messages
+2. Implement styling for cards, panels, and container elements
+3. Style interactive elements (tooltips, popovers, modals)
+4. Add custom scrollbar styling
+5. Create utility CSS classes for theme variations (if needed)
+6. Implement any animation or transition effects
+7. Test all components across different browsers and screen sizes
+8. Document any component-specific styling in code comments
+

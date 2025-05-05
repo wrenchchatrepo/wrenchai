@@ -1,0 +1,62 @@
+# Task ID: 8
+# Title: Implement API and WebSocket Clients
+# Status: pending
+# Dependencies: 4
+# Priority: high
+# Description: Create service clients for communicating with the FastAPI backend and WebSocket server for real-time updates.
+# Details:
+1. Create services/api_client.py with a class for HTTP communication with the backend
+2. Implement methods for all required API endpoints (playbooks, agents, tasks, tools)
+3. Create services/websocket_client.py for real-time updates
+4. Implement authentication and error handling for API requests
+5. Add retry logic for failed requests
+6. Create a connection status monitoring system
+7. Implement proper logging for API interactions
+8. Create services/playbook_service.py with specific methods for playbook operations
+9. Ensure all clients have proper type hints and documentation
+
+# Test Strategy:
+Test API client with mock responses to verify correct handling of success and error cases. Test WebSocket client connection and message handling. Verify retry logic works as expected for temporary failures.
+
+# Subtasks:
+## 1. Implement HTTP API Client for Backend Communication [pending]
+### Dependencies: None
+### Description: Create a base API client class that handles HTTP requests to the FastAPI backend with authentication, error handling, and retry logic.
+### Details:
+1. Create services/api_client.py with a BaseAPIClient class
+2. Implement authentication mechanism (token handling, headers setup)
+3. Add methods for common HTTP operations (GET, POST, PUT, DELETE)
+4. Implement error handling for different HTTP status codes
+5. Add retry logic with configurable parameters for failed requests
+6. Set up proper logging for all API interactions
+7. Include connection status monitoring
+8. Add comprehensive type hints and docstrings
+
+## 2. Implement Endpoint-Specific API Services [pending]
+### Dependencies: 8.1
+### Description: Create specialized service classes for different backend resources that utilize the base API client.
+### Details:
+1. Create services/playbook_service.py with methods for playbook operations (list, get, create, update, delete)
+2. Implement services/agent_service.py for agent-related operations
+3. Add services/task_service.py for task management operations
+4. Create services/tool_service.py for tool-related operations
+5. Ensure all services extend or use the BaseAPIClient
+6. Add proper error handling specific to each resource type
+7. Include comprehensive type hints and docstrings for all methods
+8. Add unit tests for each service
+
+## 3. Implement WebSocket Client for Real-time Updates [pending]
+### Dependencies: 8.1
+### Description: Create a WebSocket client class for handling real-time communications with the backend.
+### Details:
+1. Create services/websocket_client.py with a WebSocketClient class
+2. Implement connection establishment with authentication
+3. Add message handling with appropriate event dispatching
+4. Implement automatic reconnection logic
+5. Create a connection status monitoring system
+6. Add methods to subscribe/unsubscribe to specific event types
+7. Implement proper error handling for WebSocket errors
+8. Set up logging for WebSocket interactions
+9. Add comprehensive type hints and docstrings
+10. Create simple demo of using the WebSocket client
+

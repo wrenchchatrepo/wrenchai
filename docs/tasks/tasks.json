@@ -1,0 +1,436 @@
+{
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Set up Project Structure and Environment",
+      "description": "Create the basic project structure, install dependencies, and configure environment variables for the Wrench AI Toolbox.",
+      "status": "done",
+      "dependencies": [],
+      "priority": "high",
+      "details": "1. Create the directory structure as specified in the PRD (wrenchai/streamlit_app/ with subdirectories for components, pages, models, services, and utils)\n2. Set up a virtual environment using Python 3.9+\n3. Install required dependencies: streamlit>=1.46.0, httpx, websockets, pydantic, python-dotenv\n4. Create a .env file template with placeholders for API_URL, OPENAI_API_KEY, and other required secrets\n5. Create a README.md with setup instructions\n6. Initialize Git repository with .gitignore for Python projects and environment files",
+      "testStrategy": "Verify the project structure exists with all required directories. Confirm dependencies install correctly and the application can be started with 'streamlit run app.py' without errors.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create Basic Project Structure and Git Repository",
+          "description": "Set up the directory structure for the Wrench AI Toolbox and initialize Git version control",
+          "status": "done",
+          "dependencies": [],
+          "details": "1. Create the main project directory 'wrenchai'\n2. Inside 'wrenchai', create the 'streamlit_app' directory\n3. Within 'streamlit_app', create subdirectories: components/, pages/, models/, services/, and utils/\n4. Create placeholder __init__.py files in each directory to make them proper Python packages\n5. Initialize Git repository with 'git init'\n6. Create a .gitignore file with standard Python ignores (pycache, virtual environments, etc.) and add .env to it\n7. Create an empty README.md file (content will be added in subtask 3)"
+        },
+        {
+          "id": 2,
+          "title": "Set Up Python Environment and Install Dependencies",
+          "description": "Create a virtual environment and install all required packages for the project",
+          "status": "done",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Navigate to the project root directory\n2. Create a virtual environment using Python 3.9+: 'python -m venv venv' (or 'python3 -m venv venv')\n3. Activate the virtual environment (source venv/bin/activate on Unix/Mac or venv\\Scripts\\activate on Windows)\n4. Create requirements.txt file with the following dependencies:\n   - streamlit>=1.46.0\n   - httpx\n   - websockets\n   - pydantic\n   - python-dotenv\n5. Install dependencies using pip: 'pip install -r requirements.txt'\n6. Create a setup.py file for potential package distribution"
+        },
+        {
+          "id": 3,
+          "title": "Configure Environment Variables and Documentation",
+          "description": "Set up environment configuration and complete project documentation",
+          "status": "done",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1. Create a .env.example file in the project root with the following placeholders:\n   ```\n   # API Configuration\n   API_URL=your_api_url_here\n   \n   # OpenAI Configuration\n   OPENAI_API_KEY=your_openai_key_here\n   \n   # Add any other required environment variables\n   ```\n2. Create a simple .env file with actual development values (this will be ignored by git)\n3. Create a utils/config.py file that uses python-dotenv to load environment variables\n4. Complete the README.md with:\n   - Project overview and purpose\n   - Installation instructions\n   - Setup steps for environment variables\n   - Basic usage instructions\n   - Development guidelines\n5. Make an initial git commit with the message 'Initial project structure setup'"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Implement Midnight UI Theme",
+      "description": "Create the custom Midnight UI dark theme for the Streamlit application using the color palette specified in the PRD.",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "high",
+      "details": "1. Create utils/theme.py with the Midnight UI color palette constants\n2. Implement the apply_midnight_theme() function using Streamlit's custom CSS injection\n3. Apply styling for base elements, buttons, cards, text, links, and scrollbars\n4. Add custom classes for success/error messages and other UI components\n5. Ensure the theme is responsive and works on different screen sizes\n6. Create utility functions for theme variations (if needed)\n7. Add comments explaining the color system and usage guidelines",
+      "testStrategy": "Visually inspect the theme by running the app and verifying colors match the PRD specifications. Test on different screen sizes to ensure responsiveness. Verify all UI elements (buttons, containers, text) have proper styling.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create theme definition file with color palette",
+          "description": "Create a theme utility file containing the Midnight UI color palette constants and basic theme structure",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create utils/theme.py file\n2. Define color palette constants from the PRD (primary, secondary, background, text, accent colors)\n3. Create a dictionary structure to organize theme colors by category (text, backgrounds, controls, etc.)\n4. Add documentation comments explaining the color system and usage guidelines\n5. Include any helper functions for color manipulation if needed (e.g., generating lighter/darker variants)"
+        },
+        {
+          "id": 2,
+          "title": "Implement core theme application function",
+          "description": "Create the main theme application function that injects custom CSS for base elements and core components",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Create apply_midnight_theme() function in utils/theme.py\n2. Implement Streamlit's custom CSS injection using st.markdown() with unsafe_allow_html=True\n3. Style base elements (body, containers, fonts, headings)\n4. Style primary UI components (buttons, inputs, selects, checkboxes)\n5. Style navigation elements (sidebar, menu items)\n6. Add responsive media queries for different screen sizes\n7. Test the function by calling it from the main app file"
+        },
+        {
+          "id": 3,
+          "title": "Add advanced styling and component-specific theming",
+          "description": "Extend the theme with custom classes for specialized components and interactive elements",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "1. Add custom CSS classes for success/error/warning messages\n2. Implement styling for cards, panels, and container elements\n3. Style interactive elements (tooltips, popovers, modals)\n4. Add custom scrollbar styling\n5. Create utility CSS classes for theme variations (if needed)\n6. Implement any animation or transition effects\n7. Test all components across different browsers and screen sizes\n8. Document any component-specific styling in code comments"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Develop Reusable UI Components",
+      "description": "Create reusable Streamlit components for the application as specified in the components directory structure.",
+      "status": "pending",
+      "dependencies": [
+        2
+      ],
+      "priority": "high",
+      "details": "1. Create the following component files in the components directory:\n   - agent_card.py: Component to display agent information and status\n   - error_handler.py: Error display and handling component\n   - playbook_card.py: Component to display playbook information\n   - playbook_results.py: Component to display execution results\n   - task_monitor.py: Real-time task monitoring component\n   - tooltips.py: Contextual help tooltip system\n   - ai_assistant.py: Synthia AI assistant integration\n2. Each component should be a modular function that can be imported and reused\n3. Implement proper type hints and docstrings\n4. Ensure components use the Midnight UI theme consistently\n5. Add demo/preview functionality for each component",
+      "testStrategy": "Create a test page that imports and displays all components with sample data. Verify each component renders correctly, is responsive, and follows the theme guidelines. Test edge cases like empty data, long content, and error states.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create Core UI Components for Information Display",
+          "description": "Develop the fundamental UI components that display information within the application: agent_card.py, playbook_card.py, and playbook_results.py.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "Implement three core display components with the following specifications:\n\n1. agent_card.py:\n   - Create a function `render_agent_card(agent_data: dict) -> None` that displays agent information\n   - Include fields for agent name, status, capabilities, and last active timestamp\n   - Add a visual status indicator (active/inactive)\n   - Ensure responsive design for different screen sizes\n\n2. playbook_card.py:\n   - Create a function `render_playbook_card(playbook_data: dict) -> None` that displays playbook information\n   - Include fields for playbook name, description, number of steps, and tags\n   - Add a 'Run Playbook' button with callback functionality\n   - Implement collapsible sections for detailed information\n\n3. playbook_results.py:\n   - Create a function `render_playbook_results(results_data: dict) -> None` that displays execution results\n   - Include execution status, timestamp, and execution time\n   - Implement a step-by-step results display with success/failure indicators\n   - Add option to download results as JSON\n\nAll components should follow the Midnight UI theme, include proper type hints and comprehensive docstrings."
+        },
+        {
+          "id": 2,
+          "title": "Implement Interactive and Monitoring Components",
+          "description": "Develop the UI components that handle user interaction and monitoring: task_monitor.py, tooltips.py, and ai_assistant.py.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "Implement three interactive components with the following specifications:\n\n1. task_monitor.py:\n   - Create a function `render_task_monitor(task_list: List[dict]) -> None` for real-time task monitoring\n   - Implement progress bars for ongoing tasks\n   - Add auto-refresh functionality (every 5 seconds)\n   - Include task filtering options (all, active, completed, failed)\n   - Display estimated completion time for running tasks\n\n2. tooltips.py:\n   - Create a function `create_tooltip(element: str, tooltip_text: str) -> None` for contextual help\n   - Implement hover-triggered tooltips that display helpful information\n   - Add support for rich text formatting in tooltips (markdown)\n   - Ensure tooltips are positioned correctly relative to trigger elements\n   - Include option for dismissible tooltips\n\n3. ai_assistant.py:\n   - Create a function `render_ai_assistant(context: dict = None) -> None` for Synthia integration\n   - Implement chat interface with message history\n   - Add context-awareness based on current application state\n   - Include typing indicator and response formatting\n   - Implement user query suggestions based on current view\n\nEnsure all components maintain the Midnight UI theme consistency and include proper error handling."
+        },
+        {
+          "id": 3,
+          "title": "Develop Error Handling and Component Testing System",
+          "description": "Implement the error handling component and create a demo/preview system for all UI components.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Complete the component library with error handling and testing capabilities:\n\n1. error_handler.py:\n   - Create a function `display_error(error: Exception, level: str = 'error') -> None` for error display\n   - Implement different display styles for warnings, errors, and critical failures\n   - Add option to copy error details to clipboard\n   - Include suggestions for common error resolutions\n   - Implement error logging functionality\n\n2. Create a component demonstration system:\n   - Develop a `demo.py` file in the components directory\n   - Implement a function `preview_component(component_name: str, sample_data: dict = None) -> None`\n   - Create sample data generators for each component type\n   - Add interactive controls to modify component parameters during preview\n   - Implement a component gallery page that showcases all components\n\n3. Final integration and documentation:\n   - Ensure all components import correctly and can be used together\n   - Verify theme consistency across all components\n   - Create a components README.md with usage examples for each component\n   - Add type hints and docstrings for all public functions\n   - Implement unit tests for each component\n\nThis subtask completes the component library and ensures all components are properly tested and documented."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Implement Session State and Configuration Management",
+      "description": "Develop utilities for managing application state and configuration throughout the Streamlit app.",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "medium",
+      "details": "1. Create utils/session.py with functions to initialize and manage session state\n2. Create utils/config.py with functions to load and validate configuration\n3. Implement functions to handle persistent state between page navigations\n4. Create utilities for API connection state management\n5. Add functions for user preferences and settings\n6. Implement a mechanism to reset state when needed\n7. Add proper error handling and defaults for missing configuration\n8. Ensure type hints and documentation for all functions",
+      "testStrategy": "Test state persistence by navigating between pages and verifying state is maintained. Test configuration loading with valid and invalid configurations. Verify error handling works when required configuration is missing.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create Session State Management Module",
+          "description": "Implement core session state utilities to initialize, access, and manage application state throughout the Streamlit app lifecycle",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create utils/session.py with session state initialization functions\n2. Implement get_session_state() function to access the global Streamlit session state\n3. Add functions for setting/getting values with type safety (get_state_value, set_state_value)\n4. Implement state persistence between page navigations\n5. Create reset_state() function to clear specific or all state variables\n6. Add proper error handling with informative messages\n7. Include comprehensive docstrings and type hints for all functions"
+        },
+        {
+          "id": 2,
+          "title": "Develop Configuration Management System",
+          "description": "Create a robust configuration management system to handle application settings, defaults, and validation",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create utils/config.py to centralize configuration management\n2. Implement load_config() function to read from config files (YAML/JSON)\n3. Add config validation with schema checking and type validation\n4. Create get_config() function with support for default values\n5. Implement environment-specific configuration loading (dev/prod)\n6. Add proper error handling for missing or invalid configuration\n7. Include configuration reloading capabilities\n8. Document all functions with type hints and usage examples"
+        },
+        {
+          "id": 3,
+          "title": "Implement User Preferences and API Connection State",
+          "description": "Create utilities to manage user preferences and API connection state across the application",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1. Build on session.py to add user_preferences management functions\n2. Create save_user_preferences() and load_user_preferences() functions\n3. Implement API connection state tracking in session state\n4. Add functions to manage API authentication tokens and connection status\n5. Create utilities to detect and handle API connection failures\n6. Implement timeout and retry logic for API connections\n7. Add functions to restore previous user settings on app restart\n8. Ensure proper integration with the session state and config modules"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Create Main App Entry Point",
+      "description": "Implement the main app.py file with navigation, layout, and core functionality as shown in the PRD.",
+      "status": "pending",
+      "dependencies": [
+        2,
+        3,
+        4
+      ],
+      "priority": "high",
+      "details": "1. Create app.py with the structure shown in the PRD implementation plan\n2. Implement the main() function with page configuration\n3. Set up the sidebar with navigation links to all pages\n4. Create the welcome screen with quick start buttons\n5. Implement system status indicators\n6. Add recent executions section (if available)\n7. Set up the interactive tour functionality\n8. Apply the Midnight UI theme\n9. Initialize session state and configuration\n10. Add proper error handling and documentation",
+      "testStrategy": "Run the app and verify all UI elements render correctly. Test navigation links to ensure they direct to the correct pages. Verify system status indicators show appropriate information. Test the interactive tour functionality if implemented.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Set up app.py core structure with configuration and sidebar",
+          "description": "Create the main application file with page configuration, sidebar navigation, and state initialization",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create app.py file with basic imports (streamlit, other required libraries)\n2. Implement main() function with st.set_page_config() for title, layout, and theme settings\n3. Initialize session_state variables for tracking application state\n4. Create sidebar with logo and navigation links to all pages\n5. Add system status indicators in the sidebar\n6. Apply the Midnight UI theme using custom CSS\n7. Add error handling for initialization issues"
+        },
+        {
+          "id": 2,
+          "title": "Implement welcome screen with quick start functionality",
+          "description": "Create the main page content with welcome message, quick start buttons, and recent executions section",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Create a welcome header with app title and brief description\n2. Implement quick start buttons for common actions as shown in the PRD\n3. Add a recent executions section that displays previous runs (if available)\n4. Create placeholder for metrics/stats about previous executions\n5. Implement conditional rendering based on whether the user is new or returning\n6. Add proper error handling for retrieving execution history\n7. Ensure responsive layout for different screen sizes"
+        },
+        {
+          "id": 3,
+          "title": "Add interactive tour and documentation features",
+          "description": "Implement the interactive tour functionality and add documentation elements throughout the interface",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1. Create an interactive tour feature that guides new users through the interface\n2. Implement tour step sequence with highlights and explanations for key UI elements\n3. Add help tooltips to important UI components\n4. Create a help modal or panel with more detailed documentation\n5. Add links to external documentation resources\n6. Implement keyboard shortcuts and accessibility features\n7. Add a footer with version information and support contact\n8. Ensure all interactive elements have proper documentation"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Implement Pydantic Models for Playbook Configuration",
+      "description": "Create the Pydantic models for playbook configuration as specified in the PRD, focusing on the Docusaurus Portfolio Playbook.",
+      "status": "pending",
+      "dependencies": [
+        1
+      ],
+      "priority": "medium",
+      "details": "1. Create models/playbook_config.py with the models specified in the PRD\n2. Implement ThemeType enum for Docusaurus themes\n3. Implement Technology enum for project technologies\n4. Create the Project model for portfolio projects\n5. Implement SocialLinks model for social media profiles\n6. Create the DocusaurusConfig model with validation rules\n7. Add example configurations and schema extras\n8. Ensure all models have proper validation, type hints, and field descriptions\n9. Add methods for serialization and deserialization if needed",
+      "testStrategy": "Create unit tests for model validation using valid and invalid data. Verify that validation errors are raised appropriately for invalid inputs. Test serialization and deserialization of model instances.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement base enum types and foundational models",
+          "description": "Create the foundational enum types and basic models that other components will depend on, including ThemeType, Technology, and SocialLinks models.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create models/playbook_config.py file with proper imports (pydantic, typing, etc.)\n2. Implement ThemeType enum for Docusaurus themes (classic, dark, etc.)\n3. Implement Technology enum for project technologies (Python, React, etc.)\n4. Create the SocialLinks model for social media profiles with appropriate field validations\n5. Add proper type hints, field descriptions, and validation rules to all models\n6. Include docstrings explaining the purpose of each model/enum"
+        },
+        {
+          "id": 2,
+          "title": "Implement Project model and related components",
+          "description": "Create the Project model for portfolio projects with all required fields, validations, and relationships to other models.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Implement the Project model with fields for title, description, image, link, etc.\n2. Add validation for project fields (URL format, required fields, etc.)\n3. Connect the Project model with the Technology enum to categorize projects\n4. Implement any helper methods needed for project data manipulation\n5. Add schema extras and examples to improve documentation\n6. Ensure proper field descriptions and type hints are included"
+        },
+        {
+          "id": 3,
+          "title": "Implement DocusaurusConfig model with validation and serialization",
+          "description": "Create the main DocusaurusConfig model that integrates all other models, with complete validation rules and serialization methods.",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1. Implement the DocusaurusConfig model that includes SocialLinks and Project models\n2. Add all required configuration fields as specified in the PRD\n3. Implement complex validation rules (e.g., required combinations of fields)\n4. Add methods for serialization and deserialization if needed\n5. Create comprehensive examples of complete configurations\n6. Add schema extras for improved documentation\n7. Implement any utility methods for working with the configuration\n8. Ensure the model structure matches the expected Docusaurus configuration format"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Develop Multi-page Navigation Structure",
+      "description": "Create the pages directory with the multi-page structure for the Streamlit application.",
+      "status": "pending",
+      "dependencies": [
+        5
+      ],
+      "priority": "medium",
+      "details": "1. Create the following files in the pages directory:\n   - 01_chat.py: Conversational interface page\n   - 02_playbooks.py: Playbook browser and executor page\n   - 03_agents.py: Agent management page\n   - 04_tools.py: Tool browser and testing page\n   - 05_metrics.py: Monitoring and analytics page\n2. Implement basic structure for each page with proper titles and layouts\n3. Ensure consistent navigation and state management across pages\n4. Add page-specific sidebar elements if needed\n5. Implement breadcrumb navigation for better user experience\n6. Add proper error handling for each page\n7. Ensure theme consistency across all pages",
+      "testStrategy": "Navigate through all pages and verify proper rendering and state persistence. Test navigation between pages in different sequences. Verify sidebar elements are consistent and functional across pages.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Create Basic Page Files with Structure",
+          "description": "Create the initial page files in the pages directory with basic structure and consistent layout",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create the pages directory if it doesn't exist\n2. Create the following files with basic structure:\n   - 01_chat.py: Conversational interface page\n   - 02_playbooks.py: Playbook browser and executor page\n   - 03_agents.py: Agent management page\n   - 04_tools.py: Tool browser and testing page\n   - 05_metrics.py: Monitoring and analytics page\n3. For each page, implement:\n   - Proper page title using st.title()\n   - Basic page layout with containers\n   - Page description\n   - Placeholder sections for content\n4. Ensure consistent header/footer elements across pages\n5. Test that all pages load without errors"
+        },
+        {
+          "id": 2,
+          "title": "Implement Navigation and State Management",
+          "description": "Develop a consistent navigation system and state management across all pages",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Create a shared navigation component that shows the current page location\n2. Implement breadcrumb navigation at the top of each page\n3. Set up session state management to maintain context between pages\n4. Create a utils.py file with common functions for state management\n5. Add sidebar navigation elements that are consistent across pages\n6. Implement page-specific sidebar elements where needed\n7. Test navigation flow between pages to ensure state is properly maintained\n8. Add proper highlighting for the current active page in navigation"
+        },
+        {
+          "id": 3,
+          "title": "Implement Error Handling and Theme Consistency",
+          "description": "Add error handling for each page and ensure visual consistency across the application",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "1. Create a centralized error handling system in utils.py\n2. Implement try/except blocks for critical operations on each page\n3. Add user-friendly error messages with guidance on resolution\n4. Create a theme.py file with color schemes and styling variables\n5. Apply consistent styling to all UI elements across pages\n6. Implement responsive layouts that work on different screen sizes\n7. Add loading indicators for operations that may take time\n8. Test error scenarios to ensure graceful error handling\n9. Perform final review of all pages for visual consistency"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Implement API and WebSocket Clients",
+      "description": "Create service clients for communicating with the FastAPI backend and WebSocket server for real-time updates.",
+      "status": "pending",
+      "dependencies": [
+        4
+      ],
+      "priority": "high",
+      "details": "1. Create services/api_client.py with a class for HTTP communication with the backend\n2. Implement methods for all required API endpoints (playbooks, agents, tasks, tools)\n3. Create services/websocket_client.py for real-time updates\n4. Implement authentication and error handling for API requests\n5. Add retry logic for failed requests\n6. Create a connection status monitoring system\n7. Implement proper logging for API interactions\n8. Create services/playbook_service.py with specific methods for playbook operations\n9. Ensure all clients have proper type hints and documentation",
+      "testStrategy": "Test API client with mock responses to verify correct handling of success and error cases. Test WebSocket client connection and message handling. Verify retry logic works as expected for temporary failures.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement HTTP API Client for Backend Communication",
+          "description": "Create a base API client class that handles HTTP requests to the FastAPI backend with authentication, error handling, and retry logic.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Create services/api_client.py with a BaseAPIClient class\n2. Implement authentication mechanism (token handling, headers setup)\n3. Add methods for common HTTP operations (GET, POST, PUT, DELETE)\n4. Implement error handling for different HTTP status codes\n5. Add retry logic with configurable parameters for failed requests\n6. Set up proper logging for all API interactions\n7. Include connection status monitoring\n8. Add comprehensive type hints and docstrings"
+        },
+        {
+          "id": 2,
+          "title": "Implement Endpoint-Specific API Services",
+          "description": "Create specialized service classes for different backend resources that utilize the base API client.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Create services/playbook_service.py with methods for playbook operations (list, get, create, update, delete)\n2. Implement services/agent_service.py for agent-related operations\n3. Add services/task_service.py for task management operations\n4. Create services/tool_service.py for tool-related operations\n5. Ensure all services extend or use the BaseAPIClient\n6. Add proper error handling specific to each resource type\n7. Include comprehensive type hints and docstrings for all methods\n8. Add unit tests for each service"
+        },
+        {
+          "id": 3,
+          "title": "Implement WebSocket Client for Real-time Updates",
+          "description": "Create a WebSocket client class for handling real-time communications with the backend.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Create services/websocket_client.py with a WebSocketClient class\n2. Implement connection establishment with authentication\n3. Add message handling with appropriate event dispatching\n4. Implement automatic reconnection logic\n5. Create a connection status monitoring system\n6. Add methods to subscribe/unsubscribe to specific event types\n7. Implement proper error handling for WebSocket errors\n8. Set up logging for WebSocket interactions\n9. Add comprehensive type hints and docstrings\n10. Create simple demo of using the WebSocket client"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Develop Playbook Browser and Execution UI",
+      "description": "Implement the playbook browser page with filtering, configuration, and execution functionality.",
+      "status": "pending",
+      "dependencies": [
+        6,
+        7,
+        8
+      ],
+      "priority": "high",
+      "details": "1. Enhance pages/02_playbooks.py with a complete implementation\n2. Create a filterable grid of playbook cards using the playbook_card component\n3. Implement playbook selection and detailed view\n4. Create dynamic configuration forms using the Pydantic models\n5. Add execution controls and confirmation\n6. Implement real-time monitoring using the task_monitor component\n7. Create results display using the playbook_results component\n8. Add error handling and recovery options\n9. Implement playbook history and saved configurations\n10. Ensure all UI elements follow the Midnight UI theme",
+      "testStrategy": "Test the playbook browser with sample playbooks to verify filtering and selection works. Test configuration forms with valid and invalid inputs. Test execution flow with mock execution data. Verify error handling works as expected.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement Playbook Browser with Filtering and Selection",
+          "description": "Create the core playbook browsing interface with filtering capabilities and detailed playbook view",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Enhance pages/02_playbooks.py with the basic structure and layout\n2. Implement a filterable grid of playbook cards using the playbook_card component\n3. Add search and filter controls (by category, tags, etc.)\n4. Create the detailed view that appears when a playbook is selected\n5. Ensure the UI follows the Midnight UI theme with proper styling\n6. Implement basic state management for selected playbooks\n7. Add error handling for loading playbooks"
+        },
+        {
+          "id": 2,
+          "title": "Develop Dynamic Configuration Forms and Execution Controls",
+          "description": "Create the configuration interface for playbooks and add execution controls",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Build dynamic configuration forms using the Pydantic models from selected playbooks\n2. Implement form validation for configuration inputs\n3. Add execution controls (start, cancel buttons)\n4. Create confirmation dialogs for execution\n5. Implement configuration saving and loading functionality\n6. Add playbook history view for previously run playbooks\n7. Create UI for saved configurations management\n8. Ensure all forms and controls follow the Midnight UI theme"
+        },
+        {
+          "id": 3,
+          "title": "Implement Real-time Monitoring and Results Display",
+          "description": "Add real-time execution monitoring and results visualization for playbooks",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "1. Integrate the task_monitor component for real-time execution tracking\n2. Implement the playbook_results component to display execution outcomes\n3. Add progress indicators and status updates during execution\n4. Implement error handling and recovery options for failed executions\n5. Create expandable sections for detailed logs and outputs\n6. Add export functionality for execution results\n7. Implement notifications for completed executions\n8. Ensure responsive design for all monitoring and results components"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Implement Docusaurus Portfolio Playbook Specialized UI",
+      "description": "Create a specialized UI for the Docusaurus Portfolio Playbook with all required configuration options.",
+      "status": "pending",
+      "dependencies": [
+        9
+      ],
+      "priority": "medium",
+      "details": "1. Enhance the playbook browser to detect when the Docusaurus Portfolio Playbook is selected\n2. Create a specialized configuration UI for this playbook\n3. Implement form sections for all required configuration:\n   - Portfolio title and description\n   - Theme selection with visual previews\n   - Project configuration with add/edit/remove functionality\n   - Social links configuration\n   - Custom domain and analytics settings\n4. Add validation for all inputs using the Pydantic models\n5. Create a preview functionality to show how the portfolio might look\n6. Implement a step-by-step wizard for easier configuration\n7. Add specialized monitoring for this playbook's execution\n8. Create a results page that showcases the generated portfolio\n9. Add deployment options and instructions",
+      "testStrategy": "Test the specialized UI with various configuration options. Verify all validation rules work as expected. Test the configuration wizard flow. Verify the preview functionality accurately represents the final output. Test with edge cases like many projects or long descriptions.",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Implement basic Docusaurus Portfolio Playbook UI with core configuration options",
+          "description": "Create the foundation of the specialized UI for the Docusaurus Portfolio Playbook, including the detection mechanism and basic configuration form with essential settings.",
+          "status": "pending",
+          "dependencies": [],
+          "details": "1. Enhance the playbook browser to detect when Docusaurus Portfolio Playbook is selected\n2. Create the basic structure of the specialized configuration UI\n3. Implement core configuration form sections:\n   - Portfolio title and description fields\n   - Basic theme selection dropdown\n   - Simple project list with add/remove functionality\n   - Essential social links configuration\n4. Add validation for these core inputs using Pydantic models\n5. Ensure proper state management for the form data\n6. Connect the UI to the existing playbook execution flow"
+        },
+        {
+          "id": 2,
+          "title": "Implement advanced configuration options and preview functionality",
+          "description": "Extend the UI with advanced configuration options and add the ability to preview the portfolio based on the current configuration.",
+          "status": "pending",
+          "dependencies": [
+            1
+          ],
+          "details": "1. Add advanced configuration sections:\n   - Enhanced project configuration with detailed editing capabilities\n   - Visual theme selection with previews of different themes\n   - Custom domain configuration\n   - Analytics settings integration\n2. Implement a preview functionality that generates a visual representation of how the portfolio will look\n3. Create a responsive preview that works on different screen sizes\n4. Add tooltips and help text for advanced options\n5. Implement form section navigation for better UX\n6. Ensure all advanced configuration options are properly validated"
+        },
+        {
+          "id": 3,
+          "title": "Implement wizard flow, results page, and deployment options",
+          "description": "Create a step-by-step wizard for configuration, specialized monitoring for execution, results visualization, and deployment guidance.",
+          "status": "pending",
+          "dependencies": [
+            2
+          ],
+          "details": "1. Design and implement a step-by-step wizard interface for easier configuration:\n   - Break configuration into logical steps\n   - Add progress indicators\n   - Implement navigation between steps\n2. Create specialized monitoring UI for tracking the playbook's execution\n3. Develop a results page that showcases the generated portfolio:\n   - Screenshot previews\n   - Links to the generated site\n   - Success/error messaging\n4. Add deployment options section with:\n   - Instructions for different hosting platforms\n   - Copy-paste commands for deployment\n   - Links to documentation\n5. Implement final validation before execution\n6. Add ability to save/load configuration templates"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "projectName": "PRD Implementation",
+    "totalTasks": 10,
+    "sourceFile": "scripts/prd.txt",
+    "generatedAt": "2023-11-14"
+  }
+}
