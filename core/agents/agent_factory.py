@@ -12,7 +12,6 @@ from typing import Dict, Any, List, Optional, Union
 from .agent_definitions import Agent, get_agent, LLMProvider
 from .codifier_agent import CodifierAgent, Codifier
 from .ux_designer_agent import UXDesignerAgent, UXDesigner
-from .uat_agent import UATAgent, UAT
 from .agent_llm_mapping import agent_llm_manager
 from .agent_state import agent_state_manager
 
