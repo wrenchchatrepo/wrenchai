@@ -1,65 +1,61 @@
-# Python
+# Directories
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
 venv/
 env/
 .venv/
 *.egg-info/
 dist/
+node_modules/
 build/
 .pytest_cache/
-.coverage
 htmlcov/
 chromadb_env/
+archive/
+code-digest-output/
+taskmaster/
+repo_mapper/
+secrets-manager/
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+.Python
+.coverage
 
 # Environment variables
 .env
 *.env*
-# Project-specific
-archive/
-wrenchai_backup/
-*.log
-docs/
 
 # Editor/IDE
-.vscode/
 .idea/
+.vscode/
+.devcontainer/
+.zed/
+.cursor/
 *.swp
 *.swo
-.devcontainer/
-.zed
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+**/.claude/settings.local.json
 
 # OS-specific
 .DS_Store
 Thumbs.db
 
-# Documentation/Temp
-docs/
-examples/
-migrations/
-repo_mapper/
-secrets-manager/
-*prd.txt
-prd.mp
-prd_*.md
-taskmaster/
-tasklist.md
-tasklist_*
-streamlit_app/Streamlit_UI.html
-.$*
-*.pdf
-
-# Scripts
-create_doc_issues.sh
-create_labels.sh
-create_missing_labels.sh
-create_mvp_issues.sh
-create_mvp_phase2_issues.sh
-get_refresh_token.js
-test_stripe.js
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+streamlit.log
+fastapi.log
+streamlit.pid
+fastapi.pid
 
 # Temporary/Personal
 ML_Models.md
@@ -71,29 +67,14 @@ agenticFramework.drawio
 agenticFramework.pdf
 agenticFrameworkParts.pdf
 
-# Added by Claude Task Master
-# Logs
-logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-dev-debug.log
-# Dependency directories
-node_modules/
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-# OS specific
-# Task files
-tasks.json
-tasks/
+# Scripts
+create_doc_issues.sh
+create_labels.sh
+create_missing_labels.sh
+create_mvp_issues.sh
+create_mvp_phase2_issues.sh
+get_refresh_token.js
+test_stripe.js
 
-**/.claude/settings.local.json
-
-# Exclude generated code digest files
-code-digest-output/
+# Specific files
+streamlit_app/Streamlit_UI.html
