@@ -56,7 +56,7 @@ class TestCliRunCommand(unittest.TestCase):
         self.mock_asyncio_run.side_effect = fake_asyncio_run
 
         # Patch SuperAgent class creation
-        self.mock_super_agent_cls = patch('wai_cli.SuperAgent').start()
+        self.mock_super_agent_cls = patch('core.super_agent.SuperAgent').start()
         # Create an instance mock and configure its execute_playbook method
         self.mock_super_agent_instance = MagicMock()
         self.mock_super_agent_instance.execute_playbook = AsyncMock(
@@ -66,7 +66,7 @@ class TestCliRunCommand(unittest.TestCase):
         self.mock_super_agent_cls.return_value = self.mock_super_agent_instance
 
         # Mock get_playbook_manager
-        self.mock_get_playbook_manager = patch('wai_cli.get_playbook_manager').start()
+        self.mock_get_playbook_manager = patch('core.playbook_discovery.get_playbook_manager').start()
         self.mock_manager_instance = MagicMock()
         self.mock_manager_instance.get_playbook.return_value = {
             'id': 'test-playbook',

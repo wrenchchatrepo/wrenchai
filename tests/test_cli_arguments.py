@@ -63,8 +63,8 @@ class TestCliArguments(unittest.TestCase):
 
     def test_run_command_all_args(self):
         args = self.app.parser.parse_args([
-            'run', 'another-playbook-id', 
             '--verbose',
+            'run', 'another-playbook-id', 
             '--param', 'name1=value1', 
             '--param', 'name2=value2',
             '--model', 'gpt-4',

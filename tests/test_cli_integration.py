@@ -38,14 +38,14 @@ class TestCliIntegration(unittest.TestCase):
         # Patch key external dependencies
         self.patcher_pydantic_ai_check = patch.object(self.app, '_check_pydantic_ai', return_value=True).start()
         
-        self.patcher_playbook_manager = patch('wai_cli.get_playbook_manager').start()
+        self.patcher_playbook_manager = patch('core.playbook_discovery.get_playbook_manager').start()
         self.mock_playbook_manager = MagicMock()
         self.mock_playbook_manager.get_playbook.return_value = mock_playbook
         self.mock_playbook_manager.get_playbook_summary.return_value = mock_playbook_summary
         self.mock_playbook_manager.get_playbook_parameters.return_value = mock_playbook_parameters
         self.patcher_playbook_manager.return_value = self.mock_playbook_manager
 
-        self.patcher_super_agent = patch('wai_cli.SuperAgent').start()
+        self.patcher_super_agent = patch('core.super_agent.SuperAgent').start()
         self.mock_super_agent_instance = MagicMock()
         # Configure execute_playbook to return a successful result by default
         self.mock_super_agent_instance.execute_playbook = AsyncMock(
@@ -104,7 +104,7 @@ class TestCliIntegration(unittest.TestCase):
         self.mock_playbook_manager.get_playbook_parameters.assert_called_once_with('test-playbook')
         # Basic check of output format (should be table by default)
         output = self.held_output.getvalue()
-        self.assertIn('Parameters for playbook 'test-playbook':', output)
+        self.assertIn(f"Parameters for playbook '{mock_playbook['id']}':", output)
         self.assertIn('param1', output)
         self.assertIn('string', output)
 
@@ -136,8 +136,8 @@ class TestCliIntegration(unittest.TestCase):
         )
 
         exit_code = self.app.run([
+            '--verbose', # Global arg first
             'run', 'test-playbook',
-            '--verbose',
             '--model', 'gpt-4',
             '--mcp-config', './config.json',
             '--param', 'param1=value1',
